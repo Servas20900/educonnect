@@ -12,12 +12,23 @@ const CircularesEdit = Loadable(lazy(() => import('../pages/admin/CircularesEdit
 const Horarios = Loadable(lazy(() => import('../pages/admin/Horarios')));
 const Reportes = Loadable(lazy(() => import('../pages/admin/Reportes')));
 const Usuarios = Loadable(lazy(() => import('../pages/admin/Usuarios')));
+const Permisos = Loadable(lazy(() => import('../pages/admin/Permisos')));
+const Incapacidades = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
+const Comites = Loadable(lazy(() => import('../pages/admin/Comites')));
+const Seguridad = Loadable(lazy(() => import('../pages/admin/Seguridad')));
 
 const DocenteDashboard = Loadable(lazy(() => import('../pages/docente/DocenteDashboard')));
 const Evaluaciones = Loadable(lazy(() => import('../pages/docente/Evaluaciones')));
+const Asistencia = Loadable(lazy(() => import('../pages/docente/RegistroAsistencia')));
 
 const HomeEstudiante = Loadable(lazy(() => import('../pages/estudiante/Home')));
-const HorarioConsulta = Loadable(lazy(() => import('../pages/estudiante/HorarioConsulta')));
+const Notificaciones = Loadable(lazy(() => import('../pages/estudiante/Notificaciones')));
+const CircularesYHorarios = Loadable(lazy(() => import('../pages/estudiante/CircularesYHorarios')));
+
+const HomeComite = Loadable(lazy(() => import('../pages/comite/Home')));
+const CrearActa = Loadable(lazy(() => import('../pages/comite/CrearActa')));
+const AgendarReunion = Loadable(lazy(() => import('../pages/comite/AgendarReunion')));
+
 
 
 // ==============================|| MAIN ROUTING ||============================== //
@@ -60,6 +71,22 @@ const MainRoutes = {
       element: <Usuarios />
     },
     {
+      path: 'permisos',
+      element: <Permisos />
+    },
+    {
+      path: 'incapacidades',
+      element: <Incapacidades />
+    },
+    {
+      path: 'comites',
+      element: <Comites />
+    },
+    {
+      path: 'seguridad',
+      element: <Seguridad />
+    },
+    {
       path: 'docente',
       children: [
         {
@@ -69,6 +96,10 @@ const MainRoutes = {
         {
           path: 'evaluaciones',
           element: <Evaluaciones />
+        },
+        {
+          path: 'asistencia',
+          element: <Asistencia/>
         }
       ]
     },
@@ -80,8 +111,29 @@ const MainRoutes = {
           element: <HomeEstudiante />
         },
         {
-          path: 'horario-consulta',
-          element: <HorarioConsulta />
+          path: 'notificaciones',
+          element: <Notificaciones />
+        },
+        {
+          path: 'circulares_horarios',
+          element: <CircularesYHorarios />
+        }
+      ]
+    },
+    {
+      path: 'comite',
+      children: [
+        {
+          path: 'home',
+          element: <HomeComite />
+        },
+        {
+          path: 'crear-acta',
+          element: <CrearActa />
+        },
+        {
+          path: 'reunion',
+          element: <AgendarReunion />
         }
       ]
     }
