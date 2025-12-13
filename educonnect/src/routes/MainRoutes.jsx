@@ -3,12 +3,16 @@ import { lazy } from 'react';
 // project imports
 import MainLayout from '../layout/MainLayout/index';
 import Loadable from '../components/ui/Loadable';
+import PublicLayout from '../layout/PublicLayout/index';
+const PublicHome = Loadable(lazy(() => import('../pages/public/Home')));
+const Login = Loadable(lazy(() => import('../pages/public/Login')));
+const Register = Loadable(lazy(() => import('../pages/public/Register')));
 
 
 // pages routing
 const Dashboard = Loadable(lazy(() => import('../pages/admin/Dashboard')));
 const CircularesList = Loadable(lazy(() => import('../pages/admin/CircularesList')));
-const CircularesEdit = Loadable(lazy(() => import('../pages/admin/CircularesEdit')));
+// CircularesEdit removed
 const Horarios = Loadable(lazy(() => import('../pages/admin/Horarios')));
 const Reportes = Loadable(lazy(() => import('../pages/admin/Reportes')));
 const Usuarios = Loadable(lazy(() => import('../pages/admin/Usuarios')));
@@ -35,29 +39,36 @@ const AgendarReunion = Loadable(lazy(() => import('../pages/comite/AgendarReunio
 
 const MainRoutes = {
   path: '/',
-  element: <MainLayout />,
+  element: <PublicLayout />,
   children: [
     {
       index: true,
-      element: <Dashboard />
+      element: <PublicHome />
     },
     {
+      path: 'login',
+      element: <Login />
+    },
+    {
+      path: 'register',
+      element: <Register />
+    },
+  ]
+};
+
+const AppRoutes = {
+  path: '/',
+  element: <MainLayout />,
+  children: [
+    {
       path: 'dashboard',
-      children: [
-        {
-          path: 'default',
-          element: <Dashboard />
-        }
-      ]
+      element: <Dashboard />
     },
     {
       path: 'circulares',
       element: <CircularesList />
     },
-    {
-      path: 'circulares/edit',
-      element: <CircularesEdit />
-    },
+    // Removed edit route
     {
       path: 'horarios',
       element: <Horarios />
@@ -140,4 +151,4 @@ const MainRoutes = {
   ]
 };
 
-export default MainRoutes;
+export default [MainRoutes, AppRoutes];

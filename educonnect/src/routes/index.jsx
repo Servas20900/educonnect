@@ -5,7 +5,8 @@ import MainRoutes from './MainRoutes';
 
 // ==============================|| ROUTING RENDER ||============================== //
 
-const router = createBrowserRouter([MainRoutes], {
+// `MainRoutes` is an array of route objects; pass directly.
+const router = createBrowserRouter(MainRoutes, {
   basename: '/'
 });
 

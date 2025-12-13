@@ -14,7 +14,6 @@ const menuItems = {
           children: [
             { id: 'dashboard', title: 'Dashboard', type: 'item', url: '/dashboard' },
             { id: 'circulares', title: 'Circulares', type: 'item', url: '/circulares' },
-            { id: 'circulares-edit', title: 'Editar Circular', type: 'item', url: '/circulares/edit' },
             { id: 'horarios', title: 'Horarios', type: 'item', url: '/horarios' },
             { id: 'reportes', title: 'Reportes', type: 'item', url: '/reportes' },
             { id: 'usuarios', title: 'Usuarios', type: 'item', url: '/usuarios' },
