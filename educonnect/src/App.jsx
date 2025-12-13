@@ -11,6 +11,7 @@ import theme from './theme';
 // project imports
 import NavigationScroll from './layout/NavigationScroll';
 import { ConfigProvider } from './contexts/ConfigContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 
 // ==============================|| APP ||============================== //
@@ -19,13 +20,15 @@ export default function App() {
   // Theme is centralized in src/theme (imported at module top)
 
   return (
-    <ConfigProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <NavigationScroll>
-          <RouterProvider router={router} />
-        </NavigationScroll>
-      </ThemeProvider>
-    </ConfigProvider>
+    <AuthProvider>
+      <ConfigProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <NavigationScroll>
+            <RouterProvider router={router} />
+          </NavigationScroll>
+        </ThemeProvider>
+      </ConfigProvider>
+    </AuthProvider>
   );
 }

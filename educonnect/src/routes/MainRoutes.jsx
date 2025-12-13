@@ -4,6 +4,8 @@ import { lazy } from 'react';
 import MainLayout from '../layout/MainLayout/index';
 import Loadable from '../components/ui/Loadable';
 import PublicLayout from '../layout/PublicLayout/index';
+import RequireAuth from './RequireAuth';
+import { ROLES } from '../constants/roles';
 const PublicHome = Loadable(lazy(() => import('../pages/public/Home')));
 const Login = Loadable(lazy(() => import('../pages/public/Login')));
 const Register = Loadable(lazy(() => import('../pages/public/Register')));
@@ -19,11 +21,23 @@ const Usuarios = Loadable(lazy(() => import('../pages/admin/Usuarios')));
 const Permisos = Loadable(lazy(() => import('../pages/admin/Permisos')));
 const Incapacidades = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
 const Comites = Loadable(lazy(() => import('../pages/admin/Comites')));
-const Seguridad = Loadable(lazy(() => import('../pages/admin/Seguridad')));
+const ProgramacionCirculares = Loadable(lazy(() => import('../pages/admin/ProgramacionCirculares')));
+const AprobacionesHorarios = Loadable(lazy(() => import('../pages/admin/AprobacionesHorarios')));
+const OficiosPlantillas = Loadable(lazy(() => import('../pages/admin/OficiosPlantillas')));
+const Repositorios = Loadable(lazy(() => import('../pages/admin/Repositorios')));
+const Backups = Loadable(lazy(() => import('../pages/admin/Backups')));
+const Retencion = Loadable(lazy(() => import('../pages/admin/Retencion')));
 
 const DocenteDashboard = Loadable(lazy(() => import('../pages/docente/DocenteDashboard')));
 const Evaluaciones = Loadable(lazy(() => import('../pages/docente/Evaluaciones')));
 const Asistencia = Loadable(lazy(() => import('../pages/docente/RegistroAsistencia')));
+const RegistroEstudiantes = Loadable(lazy(() => import('../pages/docente/RegistroEstudiantes')));
+const Calificaciones = Loadable(lazy(() => import('../pages/docente/Calificaciones')));
+const Promedios = Loadable(lazy(() => import('../pages/docente/Promedios')));
+const Planeamientos = Loadable(lazy(() => import('../pages/docente/Planeamientos')));
+const Comunicados = Loadable(lazy(() => import('../pages/docente/Comunicados')));
+const Exportaciones = Loadable(lazy(() => import('../pages/docente/Exportaciones')));
+const RiesgoEstudiantes = Loadable(lazy(() => import('../pages/docente/RiesgoEstudiantes')));
 
 const HomeEstudiante = Loadable(lazy(() => import('../pages/estudiante/Home')));
 const Notificaciones = Loadable(lazy(() => import('../pages/estudiante/Notificaciones')));
@@ -32,6 +46,15 @@ const CircularesYHorarios = Loadable(lazy(() => import('../pages/estudiante/Circ
 const HomeComite = Loadable(lazy(() => import('../pages/comite/Home')));
 const CrearActa = Loadable(lazy(() => import('../pages/comite/CrearActa')));
 const AgendarReunion = Loadable(lazy(() => import('../pages/comite/AgendarReunion')));
+const RolesComite = Loadable(lazy(() => import('../pages/comite/RolesComite')));
+
+const InformesEconomicos = Loadable(lazy(() => import('../pages/auxiliares/InformesEconomicos')));
+const Reglamentos = Loadable(lazy(() => import('../pages/auxiliares/Reglamentos')));
+const InformesPAT = Loadable(lazy(() => import('../pages/auxiliares/InformesPAT')));
+const ReportesCumplimiento = Loadable(lazy(() => import('../pages/auxiliares/ReportesCumplimiento')));
+
+const Perfil = Loadable(lazy(() => import('../pages/profile/Perfil')));
+const Configuracion = Loadable(lazy(() => import('../pages/profile/Configuracion')));
 
 
 
@@ -58,76 +81,208 @@ const MainRoutes = {
 
 const AppRoutes = {
   path: '/',
-  element: <MainLayout />,
+  element: (
+    <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.ESTUDIANTE]}>
+      <MainLayout />
+    </RequireAuth>
+  ),
   children: [
     {
       path: 'dashboard',
-      element: <Dashboard />
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Dashboard />
+        </RequireAuth>
+      )
     },
     {
       path: 'circulares',
-      element: <CircularesList />
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <CircularesList />
+        </RequireAuth>
+      )
+    },
+    {
+      path: 'circulares/programacion',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <ProgramacionCirculares />
+        </RequireAuth>
+      )
     },
     // Removed edit route
     {
       path: 'horarios',
-      element: <Horarios />
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Horarios />
+        </RequireAuth>
+      )
+    },
+    {
+      path: 'horarios/aprobaciones',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <AprobacionesHorarios />
+        </RequireAuth>
+      )
     },
     {
       path: 'reportes',
-      element: <Reportes />
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Reportes />
+        </RequireAuth>
+      )
     },
     {
       path: 'usuarios',
-      element: <Usuarios />
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Usuarios />
+        </RequireAuth>
+      )
     },
     {
       path: 'permisos',
-      element: <Permisos />
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Permisos />
+        </RequireAuth>
+      )
     },
     {
       path: 'incapacidades',
-      element: <Incapacidades />
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Incapacidades />
+        </RequireAuth>
+      )
     },
     {
       path: 'comites',
-      element: <Comites />
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Comites />
+        </RequireAuth>
+      )
     },
     {
-      path: 'seguridad',
-      element: <Seguridad />
+      path: 'oficios',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <OficiosPlantillas />
+        </RequireAuth>
+      )
     },
+    {
+      path: 'repositorios',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Repositorios />
+        </RequireAuth>
+      )
+    },
+    {
+      path: 'backups',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Backups />
+        </RequireAuth>
+      )
+    },
+    {
+      path: 'retencion',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <Retencion />
+        </RequireAuth>
+      )
+    },
+
     {
       path: 'docente',
       children: [
         {
           path: 'dashboard',
-          element: <DocenteDashboard />
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <DocenteDashboard />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'estudiantes',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <RegistroEstudiantes />
+            </RequireAuth>
+          )
         },
         {
           path: 'evaluaciones',
-          element: <Evaluaciones />
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <Evaluaciones />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'calificaciones',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <Calificaciones />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'promedios',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <Promedios />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'planeamientos',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <Planeamientos />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'comunicados',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <Comunicados />
+            </RequireAuth>
+          )
         },
         {
           path: 'asistencia',
-          element: <Asistencia/>
-        }
-      ]
-    },
-    {
-      path: 'estudiante',
-      children: [
-        {
-          path: 'home',
-          element: <HomeEstudiante />
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <Asistencia />
+            </RequireAuth>
+          )
         },
         {
-          path: 'notificaciones',
-          element: <Notificaciones />
+          path: 'exportaciones',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <Exportaciones />
+            </RequireAuth>
+          )
         },
         {
-          path: 'circulares_horarios',
-          element: <CircularesYHorarios />
+          path: 'riesgo',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <RiesgoEstudiantes />
+            </RequireAuth>
+          )
         }
       ]
     },
@@ -136,17 +291,119 @@ const AppRoutes = {
       children: [
         {
           path: 'home',
-          element: <HomeComite />
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <HomeComite />
+            </RequireAuth>
+          )
         },
         {
           path: 'crear-acta',
-          element: <CrearActa />
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <CrearActa />
+            </RequireAuth>
+          )
         },
         {
           path: 'reunion',
-          element: <AgendarReunion />
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <AgendarReunion />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'roles',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+              <RolesComite />
+            </RequireAuth>
+          )
         }
       ]
+    },
+    {
+      path: 'auxiliares',
+      children: [
+        {
+          path: 'informes-economicos',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+              <InformesEconomicos />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'reglamentos',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+              <Reglamentos />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'informes-pat',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+              <InformesPAT />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'reportes-cumplimiento',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+              <ReportesCumplimiento />
+            </RequireAuth>
+          )
+        }
+      ]
+    },
+    {
+      path: 'estudiante',
+      children: [
+        {
+          path: 'home',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.ESTUDIANTE]}>
+              <HomeEstudiante />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'notificaciones',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.ESTUDIANTE]}>
+              <Notificaciones />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'circulares_horarios',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.ESTUDIANTE]}>
+              <CircularesYHorarios />
+            </RequireAuth>
+          )
+        }
+      ]
+    },
+    {
+      path: 'perfil',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.ESTUDIANTE]}>
+          <Perfil />
+        </RequireAuth>
+      )
+    },
+    {
+      path: 'configuracion',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.ESTUDIANTE]}>
+          <Configuracion />
+        </RequireAuth>
+      )
     }
   ]
 };
