@@ -5,7 +5,7 @@ export default function PublicLayout() {
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white text-gray-800">
       <header className="sticky top-0 bg-white/80 backdrop-blur border-b border-gray-100">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="font-bold text-indigo-700">EduConnect</Link>
+          <Link to="/" className="font-extrabold text-indigo-700 text-xl sm:text-2xl tracking-wide">EduConnect</Link>
           <nav className="flex gap-4 text-sm">
             <Link to="/" className="hover:text-indigo-700">Inicio</Link>
             <Link to="/login" className="hover:text-indigo-700">Iniciar sesión</Link>

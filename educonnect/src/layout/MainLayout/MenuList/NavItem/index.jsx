@@ -148,13 +148,11 @@ export default function NavItem({ item, level, isParents = false, setSelectedID 
               primary={
                 <Typography
                   ref={ref}
-                  noWrap
                   variant={isSelected ? 'h5' : 'body1'}
                   color="inherit"
                   sx={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    width: 102
+                    whiteSpace: 'normal',
+                    wordBreak: 'break-word'
                   }}
                 >
                   {item.title}

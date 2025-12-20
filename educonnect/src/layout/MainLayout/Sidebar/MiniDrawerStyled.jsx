@@ -13,6 +13,7 @@ function openedMixin(theme) {
     background: theme.palette.background.default,
     overflowX: 'hidden',
     boxShadow: 'none',
+    marginTop: 11,
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.enteringScreen + 200
@@ -27,6 +28,7 @@ function closedMixin(theme) {
     background: theme.palette.background.default,
     overflowX: 'hidden',
     width: 72,
+    marginTop: 11,
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen + 200

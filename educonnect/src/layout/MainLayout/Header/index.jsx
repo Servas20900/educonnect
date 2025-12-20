@@ -71,7 +71,7 @@ export default function Header() {
         </Avatar>
 
         <Box component="span" sx={{ display: { xs: 'none', md: 'block' }, flexGrow: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, letterSpacing: 0.2 }}>
             Educonnect
           </Typography>
         </Box>

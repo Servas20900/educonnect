@@ -30,7 +30,7 @@ function Sidebar() {
   const logo = useMemo(
     () => (
       <Box sx={{ display: 'flex', p: 2 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
           Escuela Manuela Santamaria
         </Typography>
       </Box>
