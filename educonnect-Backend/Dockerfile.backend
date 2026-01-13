@@ -1,0 +1,19 @@
+#Dockerfile.backend
+# Usa una imagen base de Python
+FROM python:3.11-slim
+
+# Variables de entorno 
+# Evita que Python cree archivos .pyc
+ENV PYTHONDONTWRITEBYTECODE 1 
+# Envia los mensajes a la consola de Docker en tiempo real
+ENV PYTHONUNBUFFERED 1
+
+RUN apt-get update && apt-get install -y pkg-config default-libmysqlclient-dev build-essential 
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
