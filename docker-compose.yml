@@ -1,25 +1,44 @@
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.backend
-    container_name: educonnectBackend
-    env_file:
-      # <--- AÑADE ESTA SECCIÓN
-      - .env
-    volumes:
-      - ./backend:/app
+  postgres:
+    image: postgres:16-alpine
+    container_name: Educonnect_postgres
+    environment:
+      POSTGRES_USER: Educonnect_user
+      POSTGRES_PASSWORD: Educonnect_secure_password_2024
+      POSTGRES_DB: Educonnect_db
     ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-    command: >
-      sh -c "python manage.py wait_for_db &&
-             python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - Educonnect_network
+
+
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile.backend
+  #   container_name: educonnectBackend
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - ./backend:/app
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   command: >
+  #     sh -c "python manage.py wait_for_db &&
+  #            python manage.py migrate &&
+  #            python manage.py runserver 0.0.0.0:8000"
+  #   networks:
+  #     - Educonnect_network
 
 volumes:
-  pos_db_data:
+  postgres_data:
 
-    # Nota: Asegúrate de que los nombres de los servicios y las variables de entorno coincidan con tu configuración real.
+networks:
+  Educonnect_network:
+    driver: bridge
+
