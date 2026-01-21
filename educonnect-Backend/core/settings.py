@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     #Apps
-    "databaseModels",
+    'databaseModels',
 ]
 
 MIDDLEWARE = [
