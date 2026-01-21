@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 load_dotenv()
@@ -44,7 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     #Apps
-    
+    "databaseModels",
 ]
 
 MIDDLEWARE = [
@@ -84,12 +85,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql', 
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'Educonnect_db',
+        'USER': 'Educonnect_user',
+        'PASSWORD': 'Educonnect_secure_password_2024',
+        'HOST': 'postgres',
+        'PORT': '5432',
     }
 }
 
