@@ -166,3 +166,5 @@ SIMPLE_JWT = {
     'AUTH_COOKIE_PATH': '/',
     'AUTH_COOKIE_SAMESITE': 'Lax',  
 }
+
+AUTH_USER_MODEL = 'databaseModels.AuthUsuario'

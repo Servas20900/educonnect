@@ -1,3 +1,5 @@
 from django.contrib import admin
+from .models import AuthUsuario, PersonasPersona
 
-# Register your models here.
+admin.site.register(AuthUsuario)
+admin.site.register(PersonasPersona)

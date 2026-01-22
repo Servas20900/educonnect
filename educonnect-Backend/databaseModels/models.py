@@ -6,7 +6,7 @@
 #   * Remove `managed = True` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
-
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 
 class AcademicoAsignatura(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -210,23 +210,45 @@ class AuthSesion(models.Model):
         db_table = 'auth_sesion'
 
 
-class AuthUsuario(models.Model):
+class AuthUsuarioManager(BaseUserManager):
+    def get_by_natural_key(self, username):
+        return self.get(username=username)
+    def create_user(self, username, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('El correo electrónico es obligatorio')
+        email = self.normalize_email(email)
+        user = self.model(username=username, email=email, **extra_fields)
+        user.set_password(password) 
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, username, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(username, email, password, **extra_fields)
+
+
+class AuthUsuario(AbstractBaseUser, PermissionsMixin):
     id = models.BigAutoField(primary_key=True)
     username = models.CharField(unique=True, max_length=150)
     email = models.CharField(unique=True, max_length=255)
     password = models.CharField(max_length=128)
-    is_active = models.BooleanField()
-    is_staff = models.BooleanField()
-    is_superuser = models.BooleanField()
-    fecha_registro = models.DateTimeField()
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
     fecha_ultimo_login = models.DateTimeField(blank=True, null=True)
     ultima_actualizacion_password = models.DateTimeField(blank=True, null=True)
-    intentos_fallidos = models.IntegerField()
-    bloqueado = models.BooleanField()
+    intentos_fallidos = models.IntegerField(default=0)
+    bloqueado = models.BooleanField(default=False)
     fecha_bloqueo = models.DateTimeField(blank=True, null=True)
-    motivo_bloqueo = models.TextField()
-    debe_cambiar_password = models.BooleanField()
+    motivo_bloqueo = models.TextField(blank=True, null=True)
+    debe_cambiar_password = models.BooleanField(default=False)
     persona = models.OneToOneField('PersonasPersona', models.DO_NOTHING, blank=True, null=True)
+    
+    objects = AuthUsuarioManager()
+    USERNAME_FIELD = 'username' 
+    REQUIRED_FIELDS = ['email']
 
     class Meta:
         managed = True
@@ -769,8 +791,8 @@ class PersonasPersona(models.Model):
     fotografia = models.CharField(max_length=255, blank=True, null=True)
     estado_civil = models.CharField(max_length=20)
     notas = models.TextField()
-    activo = models.BooleanField()
-    fecha_registro = models.DateTimeField()
+    activo = models.BooleanField(default=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField()
     creado_por = models.ForeignKey(AuthUsuario, models.DO_NOTHING, blank=True, null=True)
 

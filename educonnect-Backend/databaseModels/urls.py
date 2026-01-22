@@ -9,4 +9,5 @@ router.register(r'ComunicacionesCircular', ViewComunicacionesCircular)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('auth/register/', RegistroUsuarioView.as_view(), name='auth_register'),
 ]
