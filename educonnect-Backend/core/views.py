@@ -1,10 +1,10 @@
-#Aca solo ira esta vista que es la que inyecta el token a la cookie y el eliminarlo
-#Las otras vistas van en apps aparte
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class ObtencionTokens(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
@@ -12,7 +12,7 @@ class ObtencionTokens(TokenObtainPairView):
         
         if response.status_code == 200:
             access_token = response.data.get('access')
-            refresh_token = response.data.get('refresh')
+            # refresh_token = response.data.get('refresh') # Opcional si usas refresh cookies
 
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
@@ -23,7 +23,8 @@ class ObtencionTokens(TokenObtainPairView):
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
             )
             
-            del response.data['access']
+            if 'access' in response.data:
+                del response.data['access']
             
         return response
 
@@ -35,3 +36,21 @@ class EliminacionTokens(APIView):
         response.delete_cookie(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
         
         return response
+
+class SessionStatusView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        
+        rol_nombre = "administrador" 
+        
+        if user.is_superuser:
+            rol_nombre = "administrador"
+
+        return Response({
+            "isAuthenticated": True,
+            "user": user.username,
+            "role": rol_nombre 
+        })
