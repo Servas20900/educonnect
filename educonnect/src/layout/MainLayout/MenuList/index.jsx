@@ -17,15 +17,15 @@ import { useGetMenuMaster } from '../../../api/menu';
 function MenuList() {
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
-  const { role } = useAuth();
-
+  const { role: authData } = useAuth();
+  const currentRole = authData?.role;
   const [selectedID, setSelectedID] = useState('');
-
+  
   const lastItem = null;
 
   const filteredItems = menuItems.items.filter((item) => {
     if (!item.allowedRoles) return true;
-    return role ? item.allowedRoles.includes(role) : false;
+    return currentRole ? item.allowedRoles.includes(currentRole) : false;
   });
 
   let lastItemIndex = filteredItems.length - 1;

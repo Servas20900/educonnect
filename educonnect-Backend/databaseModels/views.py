@@ -13,7 +13,14 @@ class ViewComunicacionesCircular(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return WriteSerializerComunicacionesCircular
         return ReadSerializerComunicacionesCircular
-
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.estado = 'Inactivo' 
+        instance.save()
+        return response.Response(
+            {"message": f"Circular '{instance.titulo}' marcada como inactiva."}, 
+            status=status.HTTP_200_OK
+        )
 
 class RegistroUsuarioView(APIView):
     permission_classes = [permissions.AllowAny]

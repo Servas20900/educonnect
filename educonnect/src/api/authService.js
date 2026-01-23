@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const api = axios.create({
+export const api = axios.create({
     baseURL: 'http://localhost:8000/',
     withCredentials: true,
     headers: {
@@ -19,12 +19,18 @@ export const registrarUsuario = async (userData) => {
 
 export const loginUsuario = async (credentials) => {
     try {
-        // La URL debe coincidir con: path('api/auth/login/', ObtencionTokens.as_view())
-        const response = await axios.post('http://localhost:8000/api/auth/login/', credentials, {
-            withCredentials: true,
-        });
+        const response = await api.post('api/auth/login/', credentials);
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error en el inicio de sesión');
+    }
+};
+
+export const getSessionStatus = async () => {
+    try {
+        const response = await api.get('api/auth/session/');
+        return response.data;
+    } catch (error) {
+        return { isAuthenticated: false };
     }
 };

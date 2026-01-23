@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLogin } from '../../hooks/useLogin'; 
+import { useLogin } from '../../hooks/useLogin';
 import { ROLES } from '../../constants/roles';
+import useAuth from '../../hooks/useAuth';
 
 const ROLE_REDIRECT = {
   [ROLES.ADMIN]: '/dashboard',
@@ -11,11 +12,12 @@ const ROLE_REDIRECT = {
 
 export default function Login() {
   const navigate = useNavigate();
-  const { executeLogin, loading, error } = useLogin(); 
+  const { login } = useAuth();
+  const { executeLogin, loading, error } = useLogin();
   const [selectedRole, setSelectedRole] = useState(ROLES.ADMIN);
-  
+
   const [credentials, setCredentials] = useState({
-    username: '', 
+    username: '',
     password: ''
   });
 
@@ -26,20 +28,28 @@ export default function Login() {
     });
   };
 
+
   const onSubmit = async (e) => {
     e.preventDefault();
-    
+
     const result = await executeLogin(credentials);
-    
+
     if (result.success) {
+      login({
+        user: credentials.username,
+        role: selectedRole
+      });
+
+      console.log("Estado actualizado, navegando a:", selectedRole);
       navigate(ROLE_REDIRECT[selectedRole] || '/dashboard', { replace: true });
     }
   };
 
+
   return (
     <div className="max-w-md mx-auto">
       <h2 className="text-2xl font-bold">Iniciar sesión</h2>
-      
+
       {error && (
         <p className="text-red-500 mt-2 text-sm bg-red-50 p-2 rounded">
           Usuario o contraseña incorrectos
@@ -51,7 +61,7 @@ export default function Login() {
           <label className="block text-sm text-gray-600">Usuario (Cédula)</label>
           <input
             type="text"
-            name="username" 
+            name="username"
             onChange={handleChange}
             className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-indigo-200"
             placeholder="Tu usuario"
@@ -69,7 +79,7 @@ export default function Login() {
             required
           />
         </div>
-        
+
         <div>
           <label className="block text-sm text-gray-600">Nivel de acceso</label>
           <select
@@ -83,8 +93,8 @@ export default function Login() {
           </select>
         </div>
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={loading}
           className={`w-full rounded-lg bg-indigo-600 px-4 py-2 text-white shadow hover:bg-indigo-700 ${loading ? 'opacity-50' : ''}`}
         >

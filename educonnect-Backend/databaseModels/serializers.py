@@ -22,36 +22,28 @@ from datetime import date
 #         db_table = 'comunicaciones_circular'
 
 
-class ReadSerializerComunicacionesCircular ():
+class ReadSerializerComunicacionesCircular (serializers.ModelSerializer):
+    creada_por = serializers.StringRelatedField()
     class Meta:
         model = ComunicacionesCircular
         fields = "__all__"
 
-class WriteSerializerComunicacionesCircular ():
+class WriteSerializerComunicacionesCircular (serializers.ModelSerializer):
     class Meta:
         model = ComunicacionesCircular
         fields = "__all__"
-    
+    def validate_fecha_vigencia_fin(self, value):
+        if value == "" or value is None:
+            return None
+        return value
 
-# class ComunicacionesComunicado(models.Model):
-#     id = models.BigAutoField(primary_key=True)
-#     titulo = models.CharField(max_length=200)
-#     contenido = models.TextField()
-#     tipo_comunicado = models.CharField(max_length=50)
-#     destinatarios = models.JSONField()
-#     fecha_publicacion = models.DateTimeField()
-#     fecha_vigencia = models.DateTimeField(blank=True, null=True)
-#     visible = models.BooleanField()
-#     publicado_por = models.ForeignKey(AuthUsuario, models.DO_NOTHING)
+    def validate_archivo_adjunto(self, value):
+        if value == "":
+            return None
+        return value
 
-#     class Meta:
-#         managed = False
-#         db_table = 'comunicaciones_comunicado'
-class SerializerComunicacionesComunicado ():
-    class Meta:
-        model = ComunicacionesComunicado
-        fields = "__all__"
 
+#Necesario para registrarse
 class RegistroSerializer(serializers.ModelSerializer):
     nombre = serializers.CharField(write_only=True)
     primer_apellido = serializers.CharField(write_only=True)
@@ -74,7 +66,6 @@ class RegistroSerializer(serializers.ModelSerializer):
         fecha_nacimiento = validated_data.pop('fecha_nacimiento')
         genero = validated_data.pop('genero')
         validated_data['password'] = make_password(validated_data['password'])
-        identificacion_usuario = validated_data.get('username')
         persona = PersonasPersona.objects.create(
             nombre=nombre,
             primer_apellido=primer_apellido,

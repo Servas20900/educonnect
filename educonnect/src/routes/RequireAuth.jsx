@@ -4,14 +4,17 @@ import { Navigate, useLocation } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 
 export default function RequireAuth({ children, allowedRoles }) {
-  const { role } = useAuth();
+  const { role: authData } = useAuth();
   const location = useLocation();
 
-  if (!role) {
+  const currentRole = authData?.role;
+
+  if (!currentRole) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles?.length && !allowedRoles.includes(role)) {
+  if (allowedRoles?.length && !allowedRoles.includes(currentRole)) {
+    console.warn(`Acceso denegado. Rol actual: ${currentRole}. Esperados:`, allowedRoles);
     return <Navigate to="/login" replace />;
   }
 
