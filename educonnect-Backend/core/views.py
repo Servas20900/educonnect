@@ -5,6 +5,22 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from databaseModels.models import AuthUsuarioRol
+
+def obtener_rol_usuario(user):
+    """
+    Obtiene el rol del usuario desde la BD.
+    Si tiene múltiples roles, devuelve el primero.
+    Si no tiene rol, devuelve 'usuario' como rol por defecto.
+    """
+    if user.is_superuser:
+        return 'administrador'
+    
+    usuario_rol = AuthUsuarioRol.objects.filter(usuario=user).select_related('rol').first()
+    if usuario_rol and usuario_rol.rol:
+        return usuario_rol.rol.nombre.lower()
+    
+    return 'usuario'
 
 class ObtencionTokens(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
@@ -12,7 +28,9 @@ class ObtencionTokens(TokenObtainPairView):
         
         if response.status_code == 200:
             access_token = response.data.get('access')
-            # refresh_token = response.data.get('refresh') # Opcional si usas refresh cookies
+            # Obtener el usuario y su rol
+            user = request.user
+            rol = obtener_rol_usuario(user)
 
             response.set_cookie(
                 key=settings.SIMPLE_JWT['AUTH_COOKIE'],
@@ -22,6 +40,10 @@ class ObtencionTokens(TokenObtainPairView):
                 httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
                 samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
             )
+            
+            # Agregar información del usuario y rol a la respuesta
+            response.data['user'] = user.username
+            response.data['role'] = rol
             
             if 'access' in response.data:
                 del response.data['access']
@@ -43,14 +65,10 @@ class SessionStatusView(APIView):
 
     def get(self, request):
         user = request.user
-        
-        rol_nombre = "administrador" 
-        
-        if user.is_superuser:
-            rol_nombre = "administrador"
+        rol = obtener_rol_usuario(user)
 
         return Response({
             "isAuthenticated": True,
             "user": user.username,
-            "role": rol_nombre 
+            "role": rol
         })
