@@ -2,25 +2,6 @@ from rest_framework import serializers
 from .models import * 
 from django.contrib.auth.hashers import make_password
 from datetime import date
-# class ComunicacionesCircular(models.Model):
-#     id = models.BigAutoField(primary_key=True) generada bd
-#     titulo = models.CharField(max_length=200) frontend
-#     contenido = models.TextField() frontend
-#     fecha_emision = models.DateField() frontend
-#     fecha_vigencia_inicio = models.DateField() frontend
-#     fecha_vigencia_fin = models.DateField(blank=True, null=True) frontend
-#     prioridad = models.CharField(max_length=20) frontend
-#     requiere_confirmacion = models.BooleanField()frontend
-#     archivo_adjunto = models.CharField(max_length=255, blank=True, null=True) frontend
-#     roles_destinatarios = models.JSONField() frontend
-#     activa = models.BooleanField() 
-#     fecha_creacion = models.DateTimeField()
-#     creada_por = models.ForeignKey(AuthUsuario, models.DO_NOTHING) 
-
-#     class Meta:
-#         managed = False
-#         db_table = 'comunicaciones_circular'
-
 
 class ReadSerializerComunicacionesCircular (serializers.ModelSerializer):
     creada_por = serializers.StringRelatedField()

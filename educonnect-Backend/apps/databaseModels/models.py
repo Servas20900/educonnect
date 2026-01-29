@@ -644,7 +644,6 @@ class HorariosHorario(models.Model):
     id = models.BigAutoField(primary_key=True)
     grupo = models.ForeignKey(AcademicoGrupo, models.SET_NULL , blank=True, null=True)
     docente = models.ForeignKey('PersonasDocente', models.SET_NULL , blank=True, null=True)
-    periodo = models.ForeignKey(AcademicoPeriodo, models.SET_NULL , null=True )
     nombre = models.CharField(max_length=200)
     tipo_horario = models.CharField(max_length=20)
     version = models.IntegerField()
@@ -654,13 +653,12 @@ class HorariosHorario(models.Model):
     fecha_vigencia_fin = models.DateField(blank=True, null=True)
     notas = models.TextField()
     creado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
-    fecha_creacion = models.DateTimeField()
-    fecha_modificacion = models.DateTimeField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = True
         db_table = 'horarios_horario'
-
 
 class HorariosIncapacidad(models.Model):
     id = models.BigAutoField(primary_key=True)

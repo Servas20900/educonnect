@@ -11,4 +11,5 @@ urlpatterns = [
     # Nueva ruta para verificar sesión al recargar
     path('api/auth/session/', SessionStatusView.as_view(), name='session-status'),
     path('api/v1/', include('databaseModels.urls')),
+    path('api/v1/horario', include('horarios.urls'))
 ]
