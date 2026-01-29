@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     #Apps
     'databaseModels',
     'horarios',
+    'permisos',
 ]
 
 MIDDLEWARE = [
@@ -144,6 +145,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", # La dirección del front
+    "http://localhost:5174", # Puerto alternativo
 ]
 
 REST_FRAMEWORK = {

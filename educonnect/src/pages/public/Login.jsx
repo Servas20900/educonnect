@@ -1,20 +1,26 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLogin } from '../../hooks/useLogin';
-import { ROLES } from '../../constants/roles';
 import useAuth from '../../hooks/useAuth';
 
-const ROLE_REDIRECT = {
-  [ROLES.ADMIN]: '/dashboard',
-  [ROLES.DOCENTE]: '/docente/dashboard',
-  [ROLES.ESTUDIANTE]: '/estudiante/home'
+// Mapear roles desde el backend a rutas
+const getRoleRedirect = (rolBackend) => {
+  if (!rolBackend) return '/dashboard';
+  
+  const rolLower = rolBackend.toLowerCase();
+  
+  if (rolLower.includes('admin')) return '/dashboard';
+  if (rolLower.includes('docente')) return '/docente/dashboard';
+  if (rolLower.includes('estudiante')) return '/estudiante/home';
+  if (rolLower.includes('comite')) return '/comite/home';
+  
+  return '/dashboard';
 };
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { executeLogin, loading, error } = useLogin();
-  const [selectedRole, setSelectedRole] = useState(ROLES.ADMIN);
 
   const [credentials, setCredentials] = useState({
     username: '',
@@ -28,23 +34,24 @@ export default function Login() {
     });
   };
 
-
   const onSubmit = async (e) => {
     e.preventDefault();
 
     const result = await executeLogin(credentials);
 
     if (result.success) {
+      // El rol viene del backend en result.data.role
+      const rolBackend = result.data?.role || 'usuario';
+      
       login({
         user: credentials.username,
-        role: selectedRole
+        role: rolBackend
       });
 
-      console.log("Estado actualizado, navegando a:", selectedRole);
-      navigate(ROLE_REDIRECT[selectedRole] || '/dashboard', { replace: true });
+      console.log("Login exitoso, rol obtenido del backend:", rolBackend);
+      navigate(getRoleRedirect(rolBackend) || '/dashboard', { replace: true });
     }
   };
-
 
   return (
     <div className="max-w-md mx-auto">
@@ -78,19 +85,6 @@ export default function Login() {
             placeholder="••••••••"
             required
           />
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">Nivel de acceso</label>
-          <select
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 focus:ring-2 focus:ring-indigo-200 bg-white"
-            value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
-          >
-            <option value={ROLES.ADMIN}>Administrador (todo el sistema)</option>
-            <option value={ROLES.DOCENTE}>Docente (docentes y comité)</option>
-            <option value={ROLES.ESTUDIANTE}>Estudiante (solo estudiante)</option>
-          </select>
         </div>
 
         <button
