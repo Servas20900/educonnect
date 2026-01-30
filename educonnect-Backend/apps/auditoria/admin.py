@@ -1,6 +1,5 @@
 from django.contrib import admin
-from apps.databaseModels.models import AuthAuditoriaLog
-
+from databaseModels.models import AuthAuditoriaLog
 
 @admin.register(AuthAuditoriaLog)
 class AuthAuditoriaLogAdmin(admin.ModelAdmin):
