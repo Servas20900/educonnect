@@ -5,7 +5,7 @@ const initialState = {
   openedItem: 'dashboard',
   openedComponent: 'buttons',
   openedHorizontalItem: null,
-  isDashboardDrawerOpened: false,
+  isDashboardDrawerOpened: true,
   isComponentDrawerOpened: true
 };
 
