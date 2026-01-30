@@ -1,0 +1,81 @@
+HISTORIAL DE IMPLEMENTACIÓN - EDUCONNECT
+
+=== HU10 - REPORTES DE USO Y AUDITORÍA ===
+Estado: COMPLETADO ✓
+Fecha: 29-01-2025
+
+FUNCIONALIDADES IMPLEMENTADAS:
+✓ RF-010: Reporte de Uso del Sistema
+✓ RF-029: Reporte de Cumplimiento (base)
+✓ RF-036: Logs de Auditoría y Trazabilidad
+
+BACKEND:
+✓ Creado: ViewAuthAuditoriaLog con filtros avanzados
+✓ Creado: Endpoints para reportes (uso_sistema, por_modulo, errores)
+✓ Creado: Serializer para AuthAuditoriaLog
+✓ Creado: Middleware de auditoría automática
+✓ Creado: Signals para capturar cambios de modelos
+✓ Registro: Rutas API en databaseModels/urls.py
+✓ Configuración: Middleware en core/settings.py
+
+FRONTEND:
+✓ Creado: api/reportesService.js con funciones de API
+✓ Refactorizado: Reportes.jsx (fue estático, ahora funcional)
+✓ Implementados: Hooks (useState, useEffect)
+✓ Implementados: Filtros (fecha, usuario, módulo, resultado)
+✓ Implementadas: Dos pestañas (Auditoría, Reportes de Uso)
+✓ Implementada: Exportación a CSV
+✓ Mejorada: Interfaz responsive con Tailwind CSS
+
+ARCHIVOS MODIFICADOS:
+- educonnect-Backend/apps/databaseModels/serializers.py
+- educonnect-Backend/apps/databaseModels/views.py
+- educonnect-Backend/apps/databaseModels/urls.py
+- educonnect-Backend/apps/databaseModels/apps.py
+- educonnect-Backend/core/settings.py
+- educonnect/src/pages/admin/Reportes.jsx
+
+ARCHIVOS CREADOS:
+- educonnect-Backend/apps/databaseModels/signals.py
+- educonnect-Backend/apps/databaseModels/middleware.py
+- educonnect/src/api/reportesService.js
+- HU10_IMPLEMENTACION.md
+- CAMBIOS_HU10.md
+- GUIA_USO_REPORTES.md
+
+NOTAS TÉCNICAS HU10:
+- Endpoint: /api/v1/auditoria/ (con filtros GET)
+- Limita resultados a 1000 registros (optimización)
+- Registro automático de todas las peticiones API
+- Almacenamiento en tabla: auth_auditoria_log
+- Compatibilidad: Django 3.x+, React 18+
+
+===== ERRORES CORREGIDOS =====
+
+1. Error 500 en /api/auth/login/
+   - Causa: request.user no disponible en solicitud POST sin autenticación
+   - Solución: Decodificar token JWT para obtener user_id
+   - Status: CORREGIDO ✓
+
+2. Error 401 en /api/auth/session/
+   - Causa: Token JWT no se guardaba en localStorage
+   - Causa: Interceptor de axios no enviaba token en headers
+   - Solución Implementada:
+     * Backend devuelve token en respuesta de login
+     * Frontend guarda token en localStorage
+     * Interceptor request agrega Authorization header automáticamente
+     * Interceptor response maneja 401 (token expirado)
+   - Status: CORREGIDO ✓
+
+ARCHIVOS MODIFICADOS PARA FIX:
+- educonnect-Backend/core/views.py (devolver tokens)
+- educonnect/src/api/authService.js (interceptores, guardar tokens)
+- educonnect/src/contexts/AuthContext.jsx (mejorar checkAuth)
+
+===== PRÓXIMOS PASOS (Opcional) =====
+- Agregar gráficos con Chart.js
+- Implementar alertas automáticas
+- Crear reportes programados
+- Agregar 2FA para operaciones sensibles
+- Archivado de logs antiguos
+

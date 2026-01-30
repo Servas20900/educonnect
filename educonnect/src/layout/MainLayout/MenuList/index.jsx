@@ -17,8 +17,8 @@ import { useGetMenuMaster } from '../../../api/menu';
 function MenuList() {
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
-  const { role: authData } = useAuth();
-  const currentRole = authData?.role;
+  const { role } = useAuth();
+  const currentRole = role;
   const [selectedID, setSelectedID] = useState('');
   
   const lastItem = null;

@@ -47,9 +47,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     #Apps
-    'databaseModels',
-    'horarios',
-    'permisos',
+    'apps.databaseModels',
+    'apps.horarios',
+    'apps.permisos',
+    'apps.auditoria',
 ]
 
 MIDDLEWARE = [
@@ -61,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.databaseModels.middleware.AuditoriaMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'

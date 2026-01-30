@@ -43,13 +43,22 @@ export default function Login() {
       // El rol viene del backend en result.data.role
       const rolBackend = result.data?.role || 'usuario';
       
+      console.log("Login exitoso, rol obtenido del backend:", rolBackend);
+      
+      // Actualizar el estado del contexto de auth
       login({
         user: credentials.username,
         role: rolBackend
       });
 
-      console.log("Login exitoso, rol obtenido del backend:", rolBackend);
-      navigate(getRoleRedirect(rolBackend) || '/dashboard', { replace: true });
+      // Navegar después de actualizar el estado
+      const redirectPath = getRoleRedirect(rolBackend) || '/dashboard';
+      console.log("Redirigiendo a:", redirectPath);
+      
+      // Usar setTimeout para asegurar que el estado se actualice primero
+      setTimeout(() => {
+        navigate(redirectPath, { replace: true });
+      }, 0);
     }
   };
 
