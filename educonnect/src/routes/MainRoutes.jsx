@@ -17,8 +17,7 @@ const CircularesList = Loadable(lazy(() => import('../pages/admin/CircularesList
 // CircularesEdit removed
 const Horarios = Loadable(lazy(() => import('../pages/admin/Horarios')));
 const Reportes = Loadable(lazy(() => import('../pages/admin/Reportes')));
-const Usuarios = Loadable(lazy(() => import('../pages/admin/Usuarios')));
-const Permisos = Loadable(lazy(() => import('../pages/admin/Permisos')));
+const GestionPermisosModulos = Loadable(lazy(() => import('../pages/admin/GestionPermisosModulos')));
 const Incapacidades = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
 const Comites = Loadable(lazy(() => import('../pages/admin/Comites')));
 const ProgramacionCirculares = Loadable(lazy(() => import('../pages/admin/ProgramacionCirculares')));
@@ -137,18 +136,10 @@ const AppRoutes = {
       )
     },
     {
-      path: 'usuarios',
-      element: (
-        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
-          <Usuarios />
-        </RequireAuth>
-      )
-    },
-    {
       path: 'permisos',
       element: (
         <RequireAuth allowedRoles={[ROLES.ADMIN]}>
-          <Permisos />
+          <GestionPermisosModulos />
         </RequireAuth>
       )
     },

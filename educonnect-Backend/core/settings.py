@@ -47,8 +47,10 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     #Apps
-    'databaseModels',
-    'horarios',
+    'apps.databaseModels',
+    'apps.horarios',
+    'apps.permisos',
+    'apps.auditoria',
 ]
 
 MIDDLEWARE = [
@@ -60,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.databaseModels.middleware.AuditoriaMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -144,6 +147,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173", # La dirección del front
+    "http://localhost:5174", # Puerto alternativo
 ]
 
 REST_FRAMEWORK = {

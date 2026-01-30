@@ -30,12 +30,13 @@ class RegistroSerializer(serializers.ModelSerializer):
     primer_apellido = serializers.CharField(write_only=True)
     fecha_nacimiento = serializers.DateField(write_only=True)
     genero = serializers.CharField(write_only=True)
+    rol = serializers.CharField(write_only=True, required=False, default='estudiante')
     
     class Meta:
         model = AuthUsuario
         fields = [
             'username', 'email', 'password', 'nombre', 
-            'primer_apellido', 'fecha_nacimiento', 'genero'
+            'primer_apellido', 'fecha_nacimiento', 'genero', 'rol'
         ]
         extra_kwargs = {
             'password': {'write_only': True}
@@ -46,6 +47,8 @@ class RegistroSerializer(serializers.ModelSerializer):
         primer_apellido = validated_data.pop('primer_apellido')
         fecha_nacimiento = validated_data.pop('fecha_nacimiento')
         genero = validated_data.pop('genero')
+        rol_nombre = validated_data.pop('rol', 'estudiante')
+        
         validated_data['password'] = make_password(validated_data['password'])
         persona = PersonasPersona.objects.create(
             nombre=nombre,
@@ -62,4 +65,22 @@ class RegistroSerializer(serializers.ModelSerializer):
             persona=persona,
             **validated_data
         )
+        
+        # Asignar rol al usuario
+        try:
+            from .models import AuthRol, AuthUsuarioRol
+            from django.utils import timezone
+            
+            # Buscar o crear el rol
+            rol = AuthRol.objects.filter(nombre__iexact=rol_nombre).first()
+            if rol:
+                AuthUsuarioRol.objects.create(
+                    usuario=usuario,
+                    rol=rol,
+                    fecha_asignacion=timezone.now()
+                )
+        except Exception as e:
+            # Si hay error al asignar rol, continuar sin bloquear
+            pass
+        
         return usuario
