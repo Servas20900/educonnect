@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'apps.horarios',
     'apps.permisos',
     'apps.auditoria',
+    'apps.comites',
 ]
 
 MIDDLEWARE = [

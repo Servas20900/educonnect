@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from databaseModels.models import AuthUsuarioRol
+from apps.databaseModels.models import AuthUsuarioRol
 
 def obtener_rol_usuario(user):
     """
@@ -22,7 +22,7 @@ def obtener_rol_usuario(user):
     
     # Si no tiene rol, intentar crear uno por defecto
     try:
-        from databaseModels.models import AuthRol
+        from apps.databaseModels.models import AuthRol
         from django.utils import timezone
         
         rol_estudiante = AuthRol.objects.filter(nombre__iexact='estudiante').first()
@@ -58,7 +58,7 @@ class ObtencionTokens(TokenObtainPairView):
                 user_id = token.get('user_id')
                 
                 # Obtener el usuario desde la BD
-                from databaseModels.models import AuthUsuario
+                from apps.databaseModels.models import AuthUsuario
                 user = AuthUsuario.objects.get(id=user_id)
                 rol = obtener_rol_usuario(user)
                 

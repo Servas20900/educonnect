@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions
-from databaseModels.models import HorariosHorario
+from apps.databaseModels.models import HorariosHorario
 from .serializers import ReadSerializerHorariosHorario, WriteSerializerHorariosHorario
 
 class ViewHorariosHorario(viewsets.ModelViewSet):

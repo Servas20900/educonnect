@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from databaseModels.models import AuthRol, AuthPermiso, AuthRolPermiso
+from apps.databaseModels.models import AuthRol, AuthPermiso, AuthRolPermiso
 
 class Command(BaseCommand):
     help = 'Inserta los roles y permisos iniciales del sistema'

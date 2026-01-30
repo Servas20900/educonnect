@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import serializers
-from databaseModels.models import HorariosAprobacion,HorariosDetalle,HorariosHorario 
+from apps.databaseModels.models import HorariosAprobacion,HorariosDetalle,HorariosHorario 
 
 class HorariosDetalleReadSerializer(serializers.ModelSerializer):
     class Meta:
