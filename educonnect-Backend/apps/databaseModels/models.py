@@ -255,7 +255,9 @@ class AuthUsuario(AbstractBaseUser, PermissionsMixin):
         db_table = 'auth_usuario'
     
     def __str__(self):
-        return self.persona.nombre +" " +self.persona.primer_apellido 
+        if self.persona:
+            return f"{self.persona.nombre} {self.persona.primer_apellido}"
+        return f"Usuario ID: {self.id} (Sin Persona asignada)"
 
 
 class AuthUsuarioRol(models.Model):
@@ -718,7 +720,9 @@ class PersonasDocente(models.Model):
         managed = True
         db_table = 'personas_docente'
     def __str__(self):
-        return self.persona.nombre +" " +self.persona.primer_apellido 
+        if self.persona:
+            return f"{self.persona.nombre} {self.persona.primer_apellido}"
+        return f"Usuario ID: {self.id} (Sin Persona asignada)"
 
 class PersonasEncargado(models.Model):
     persona = models.OneToOneField('PersonasPersona', models.CASCADE , primary_key=True)
