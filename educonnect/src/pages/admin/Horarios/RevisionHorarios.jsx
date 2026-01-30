@@ -4,7 +4,7 @@ import { RenderAprobar } from "./RenderAprobar"
 import { RenderVer } from "./RenderVer"
 import { RenderRechazo } from "./RenderRechazo"
 import { RenderDelete } from "./RenderDelete"
-const RevisionHorarios = ({ horarios, deleteHorario, }) => {
+const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }) => {
     const [modal, setModal] = useState(false);
     const [accion, setAccion] = useState("");
     const [horario, setHorario] = useState("");
@@ -14,8 +14,24 @@ const RevisionHorarios = ({ horarios, deleteHorario, }) => {
         setHorario(horario)
     };
 
-    const onConfirm = () => {
-        console.log("HOla");    
+    const onConfirm = (comentarioAdmin) => {
+        const esRechazo = accion === "Rechazar";
+
+        const payload = {
+            ...horario,
+            estado: esRechazo ? "Borrador" : "Publicado",
+            aprobaciones: [
+                {
+                    nivel_aprobacion: 1, 
+                    estado_aprobacion: esRechazo ? "Rechazado" : "Aprobado",
+                    comentarios: comentarioAdmin || (esRechazo ? "Sin motivo especificado" : "Aprobado por administración"),
+                    fecha_revision: new Date().toISOString()
+                }
+            ]
+        };
+
+        actualizarHorario(horario.id, payload);
+        setModal(false);
     };
 
     const onDelete = (horario) => {
@@ -43,6 +59,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, }) => {
                         <RenderRechazo
                             onConfirm={onConfirm}
                             onCancel={() => setModal(false)}
+                            comentario={setComentario}
                         />
                     ) :
                         (
@@ -85,12 +102,22 @@ const RevisionHorarios = ({ horarios, deleteHorario, }) => {
                                 {horario.estado}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button
-                                    className="text-green-600 hover:text-green-900 mr-3"
-                                    onClick={() => handleOption("Aprobar", horario)}
-                                >
-                                    Aprobar
-                                </button>
+                                {horario.estado != "Publicado" ?
+                                    (
+                                        <button
+                                            className="text-green-600 hover:text-green-900 mr-3"
+                                            onClick={() => handleOption("Aprobar", horario)}
+                                        >
+                                            Aprobar
+                                        </button>
+                                    ) : (
+                                        <button
+                                            className="text-green-600 hover:text-green-900 mr-3"
+                                            onClick={() => onEdit(horario)}
+                                        >
+                                            Editar
+                                        </button>
+                                    )}
                                 <button
                                     className="text-yellow-500 hover:text-yellow-700 mr-3"
                                     onClick={() => handleOption("Ver", horario)}

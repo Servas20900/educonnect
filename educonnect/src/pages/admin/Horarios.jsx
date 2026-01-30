@@ -5,50 +5,6 @@ import { useHorarios } from './Horarios/hooks/useHorarios';
 import { useEffect, useState } from 'react';
 import Toast from '../../../components/Toast';
 
-const HorariosExistentes = [
-  {
-    "nombre": "Horario Matemáticas - Grupo A",
-    "tipo_horario": "Presencial",
-    "version": 1,
-    "estado": "Borrador",
-    "notas": "Primer bloque del semestre",
-    "grupo": 1,
-    "docente": "Adrian",
-    "detalles": [
-      {
-        "dia_semana": "Lunes",
-        "hora_inicio": "08:00:00",
-        "hora_fin": "10:00:00",
-        "aula": "Aula 101",
-        "asignatura": 10,
-        "docente": 5,
-        "notas": "Traer calculadora"
-      }
-    ],
-    "aprobaciones": []
-  },
-  {
-    "nombre": "Horario Programación - Grupo B",
-    "tipo_horario": "Virtual",
-    "version": 2,
-    "estado": "Publicado",
-    "notas": "Actualizado según disponibilidad de docente",
-    "grupo": 2,
-    "docente": "Julia",
-    "detalles": [
-      {
-        "dia_semana": "Martes",
-        "hora_inicio": "14:00:00",
-        "hora_fin": "16:00:00",
-        "aula": "Sala Zoom 1",
-        "asignatura": 15,
-        "docente": 3,
-        "notas": ""
-      }
-    ],
-    "aprobaciones": []
-  }
-]
 
 export default function Horarios() {
   const { cargarHorario, HorarioExistentes, loading, error, uploading, errorUploading, crearHorario, actualizarHorario, eliminarHorario } = useHorarios();
@@ -63,6 +19,11 @@ export default function Horarios() {
   const handleModalForm = () => {
     setForm(!form);
     setObject({})
+  };
+
+  const onEdit = (horario) => {
+    setObject(horario);
+    setForm(true);
   };
 
   if (loading) return <div className="p-10 text-center">Cargando circulares...</div>;
@@ -104,10 +65,12 @@ export default function Horarios() {
           Revisión de horarios propuestos por docentes.
         </p>
 
-        {HorariosExistentes.length > 0 ? (
-          <RevisionHorarios 
-          horarios={HorariosExistentes} 
-          deleteHorario = {eliminarHorario}
+        {HorarioExistentes.length > 0 ? (
+          <RevisionHorarios
+            horarios={HorarioExistentes}
+            deleteHorario={eliminarHorario}
+            onEdit={onEdit}
+            actualizarHorario = {actualizarHorario}
           />
         ) : (
           <div className="flex flex-col items-center py-16">
