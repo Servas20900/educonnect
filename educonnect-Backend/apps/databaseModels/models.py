@@ -255,7 +255,9 @@ class AuthUsuario(AbstractBaseUser, PermissionsMixin):
         db_table = 'auth_usuario'
     
     def __str__(self):
-        return self.persona.nombre +self.persona.primer_apellido 
+        if self.persona:
+            return f"{self.persona.nombre} {self.persona.primer_apellido}"
+        return f"Usuario ID: {self.id} (Sin Persona asignada)"
 
 
 class AuthUsuarioRol(models.Model):
@@ -633,7 +635,7 @@ class HorariosDetalle(models.Model):
     asignatura = models.ForeignKey(AcademicoAsignatura, models.SET_NULL , blank=True, null=True)
     docente = models.ForeignKey('PersonasDocente', models.SET_NULL , blank=True, null=True)
     aula = models.CharField(max_length=50)
-    notas = models.TextField()
+    notas = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = True
@@ -645,13 +647,13 @@ class HorariosHorario(models.Model):
     grupo = models.ForeignKey(AcademicoGrupo, models.SET_NULL , blank=True, null=True)
     docente = models.ForeignKey('PersonasDocente', models.SET_NULL , blank=True, null=True)
     nombre = models.CharField(max_length=200)
-    tipo_horario = models.CharField(max_length=20)
+    tipo_horario = models.CharField(max_length=20, blank=True, null=True)
     version = models.IntegerField()
-    horario_anterior = models.ForeignKey('self', models.SET_NULL , blank=True, null=True)
+    horario_anterior = models.ForeignKey('self', on_delete=models.SET_NULL , blank=True, null=True,related_name='sucesores')
     estado = models.CharField(max_length=20)
-    fecha_vigencia_inicio = models.DateField()
+    fecha_vigencia_inicio = models.DateField(blank=True, null=True)
     fecha_vigencia_fin = models.DateField(blank=True, null=True)
-    notas = models.TextField()
+    notas = models.TextField(blank=True, null=True)
     creado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
@@ -717,7 +719,10 @@ class PersonasDocente(models.Model):
     class Meta:
         managed = True
         db_table = 'personas_docente'
-
+    def __str__(self):
+        if self.persona:
+            return f"{self.persona.nombre} {self.persona.primer_apellido}"
+        return f"Usuario ID: {self.id} (Sin Persona asignada)"
 
 class PersonasEncargado(models.Model):
     persona = models.OneToOneField('PersonasPersona', models.CASCADE , primary_key=True)

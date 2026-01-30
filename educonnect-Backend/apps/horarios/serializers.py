@@ -16,7 +16,7 @@ class HorariosAprobacionReadSerializer(serializers.ModelSerializer):
 class ReadSerializerHorariosHorario(serializers.ModelSerializer):
     detalles = HorariosDetalleReadSerializer(many=True, read_only=True, source='horarios_detalle_set')
     aprobaciones = HorariosAprobacionReadSerializer(many=True, read_only=True, source='horarios_aprobacion_set')
-
+    docente = serializers.StringRelatedField()
     class Meta:
         model = HorariosHorario
         fields = [
@@ -36,8 +36,8 @@ class HorariosAprobacionWriteSerializer(serializers.ModelSerializer):
         fields = ['aprobador', 'nivel_aprobacion', 'estado_aprobacion', 'fecha_revision', 'comentarios']
 
 class WriteSerializerHorariosHorario(serializers.ModelSerializer):
-    detalles = HorariosDetalleWriteSerializer(many=True)
-    aprobaciones = HorariosAprobacionWriteSerializer(many=True)
+    detalles = HorariosDetalleWriteSerializer(many=True,required=False, default=[])
+    aprobaciones = HorariosAprobacionWriteSerializer(many=True,required=False, default=[])
 
     class Meta:
         model = HorariosHorario
@@ -75,12 +75,17 @@ class WriteSerializerHorariosHorario(serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
-        detalles_data = validated_data.pop('detalles')
-        aprobaciones_data = validated_data.pop('aprobaciones')
+        detalles_data = validated_data.pop('detalles', [])
+        aprobaciones_data = validated_data.pop('aprobaciones', [])
 
         horario = HorariosHorario.objects.create(**validated_data)
 
-        self._bulk_create_hijos(horario, detalles_data, aprobaciones_data)
+        if detalles_data:
+            self._process_detalles_bulk(horario, detalles_data)
+
+        if aprobaciones_data:
+            self._process_aprobaciones_bulk(horario, aprobaciones_data)
+
         return horario
 
     @transaction.atomic
@@ -94,10 +99,11 @@ class WriteSerializerHorariosHorario(serializers.ModelSerializer):
 
         if detalles_data is not None:
             instance.horarios_detalle_set.all().delete()
-            if aprobaciones_data is not None:
-                instance.horarios_aprobacion_set.all().delete()
-            
-            self._bulk_create_hijos(instance, detalles_data, aprobaciones_data)
+            self._process_detalles_bulk(instance, detalles_data)
+
+        if aprobaciones_data is not None:
+            instance.horarios_aprobacion_set.all().delete()
+            self._process_aprobaciones_bulk(instance, aprobaciones_data)
 
         return instance
 
