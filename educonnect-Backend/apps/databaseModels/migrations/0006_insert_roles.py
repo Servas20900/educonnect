@@ -51,7 +51,7 @@ def delete_roles(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('databaseModels', '0005_alter_horarioshorario_horario_anterior'),
+        ('databaseModels', '0003_remove_horarioshorario_periodo_and_more'),
     ]
 
     operations = [

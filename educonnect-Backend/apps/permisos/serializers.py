@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso, PersonasPersona
+from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso, PersonasPersona
 
 
 class PersonaSimpleSerializer(serializers.ModelSerializer):

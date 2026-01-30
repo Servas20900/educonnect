@@ -47,10 +47,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     #Apps
-    'databaseModels',
-    'horarios',
-    'permisos',
-    'auditoria',
+    'apps.databaseModels',
+    'apps.horarios',
+    'apps.permisos',
+    'apps.auditoria',
+    'apps.comites',
 ]
 
 MIDDLEWARE = [

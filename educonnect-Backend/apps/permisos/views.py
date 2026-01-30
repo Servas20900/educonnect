@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
-from databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso
+from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso
 from .serializers import (
     UsuarioListSerializer, UsuarioDetailSerializer, UsuarioUpdateSerializer,
     RolSerializer, RolUpdateSerializer, PermisoSerializer, ModuloSerializer
