@@ -13,6 +13,8 @@ class ViewComunicacionesCircular(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return WriteSerializerComunicacionesCircular
         return ReadSerializerComunicacionesCircular
+    def perform_create(self, serializer):
+        serializer.save(creada_por=self.request.user)
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.estado = 'Inactivo' 

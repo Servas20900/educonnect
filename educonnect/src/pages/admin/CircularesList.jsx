@@ -8,9 +8,9 @@ import PopUp from '../../../components/PopUp';
 export default function CircularesList() {
   const { cargarCirculares, circularesExistentes, loading, error, uploading, errorUploading, crearCircular, actualizarCircular, eliminarCircular } = useCirculares();
   const [form, setForm] = useState(false);
-  const [object, setObject] = useState({})
-  const [modal, setModal] = useState(false)
-  const [information, setInformation] = useState("")
+  const [object, setObject] = useState({});
+  const [modal, setModal] = useState(false);
+  const [information, setInformation] = useState("");
   const [idToDelete, setIdToDelete] = useState(null);
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export default function CircularesList() {
         </div>
       </PopUp>
       <div className="flex justify-between items-center mb-6 border-b border-gray-200 pb-4">
-        <h2 className="text-3xl font-extrabold text-gray-800">
+        <h2 className="text-3xl font-bold text-gray-800">
           Gestión de Circulares
         </h2>
         <button
