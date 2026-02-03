@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from databaseModels.models import AuthAuditoriaLog
+from apps.databaseModels.models import AuthAuditoriaLog
 
 
 class ReadSerializerAuthAuditoriaLog(serializers.ModelSerializer):

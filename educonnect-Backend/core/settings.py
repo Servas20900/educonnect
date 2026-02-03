@@ -15,9 +15,7 @@ import os
 from datetime import timedelta
 from dotenv import load_dotenv
 import sys
-from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -34,7 +32,7 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
-sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
+# sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -63,7 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'databaseModels.middleware.AuditoriaMiddleware',    
+    'apps.databaseModels.middleware.AuditoriaMiddleware'    
 ]
 
 ROOT_URLCONF = 'core.urls'
