@@ -72,17 +72,6 @@ export default function Register() {
             <option value="prefiero_no_decir">Prefiero no decir</option>
           </select>
         </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">Tipo de Usuario</label>
-          <select name="rol" value={formData.rol} onChange={handleChange} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 bg-white" required>
-            <option value="estudiante">Estudiante</option>
-            <option value="docente">Docente</option>
-            <option value="administrador">Administrador</option>
-            <option value="comite">Comité</option>
-          </select>
-        </div>
-
         <div>
           <label className="block text-sm text-gray-600">Contraseña</label>
           <input type="password" name="password" onChange={handleChange} className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2" required />
