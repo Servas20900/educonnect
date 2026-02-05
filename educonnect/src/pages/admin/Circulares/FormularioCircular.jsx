@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-const FormularioCircular = ({ uploading, errorUploading, crearCircular, handleModalForm, object,actualizarCircular,setInformation }) => {
+const FormularioCircular = ({ uploading, errorUploading, crearCircular, handleModalForm, object, actualizarCircular, setInformation }) => {
     const { register, handleSubmit, formState: { errors } } = useForm({
         defaultValues: {
             titulo: object.titulo || "",
             contenido: object.contenido || "",
-            archivo_adjunto: object.archivo_adjunto || "",  
+            archivo_adjunto: null,
             fecha_vigencia_inicio: object.fecha_vigencia_inicio || "",
             fecha_vigencia_fin: object.fecha_vigencia_fin || null,
             estado: object.estado || "",
@@ -15,25 +15,38 @@ const FormularioCircular = ({ uploading, errorUploading, crearCircular, handleMo
     });
     const [estado, setEstado] = useState("");
 
+    const MAX_FILE_SIZE = 5242880;
 
-    const onSubmitHandler = async(data) => {
-        const dataFinal = { ...data, estado: estado};
+    const onSubmitHandler = async (data) => {
+        const archivoParaSubir = (data.archivo_adjunto instanceof FileList && data.archivo_adjunto.length > 0)
+            ? data.archivo_adjunto[0]
+            : null;
+        
+        const dataFinal = {
+            titulo: data.titulo,
+            contenido: data.contenido,
+            fecha_vigencia_inicio: data.fecha_vigencia_inicio,
+            fecha_vigencia_fin: data.fecha_vigencia_fin || null,
+            estado: estado,
+            categoria: data.categoria
+        };
+
         var response;
         var objetivo;
-        if (!object.id){
-            response =await crearCircular(dataFinal);
-            objetivo = "Creado";
-        }else{
-            console.log(object)
-            response = await actualizarCircular(dataFinal, object.id)
-            objetivo = "Actualizado"
-        }
 
+        if (!object.id) {
+            response = await crearCircular(dataFinal, archivoParaSubir);
+            objetivo = "Creado";
+        } else {
+            response = await actualizarCircular(dataFinal, object.id, archivoParaSubir);
+            objetivo = "Actualizado";
+        }
+        console.log(response)
         if (response.success) {
-            setInformation(objetivo+" con exito")
+            setInformation(objetivo + " con éxito");
             handleModalForm();
-        }else{
-            setInformation("Hubo un error porfavor intente mas tarde")
+        } else {
+            setInformation("Hubo un error, por favor intente más tarde");
         }
     };
 
@@ -94,9 +107,31 @@ const FormularioCircular = ({ uploading, errorUploading, crearCircular, handleMo
                                 type="file"
                                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                                 accept="application/pdf"
-                                {...register("archivo_adjunto")}
+                                {...register("archivo_adjunto", {
+                                    validate: {
+                                        lessThan5MB: (files) => {
+                                            if (!files || files.length === 0) return true;
+                                            return files[0].size <= MAX_FILE_SIZE || "El archivo es demasiado grande (Máx 5MB)";
+                                        },
+                                        acceptedFormats: (files) => {
+                                            if (!files[0]) return true;
+                                            const validExtensions = ['application/pdf', 'image/jpeg', 'image/png', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+                                            return validExtensions.includes(files[0].type) || "Formato no permitido";
+                                        }
+                                    }
+                                })}
                             />
                         </div>
+                        {errors.archivo_adjunto && (
+                            <p className="mt-1 text-xs text-red-500 font-medium">
+                                {errors.archivo_adjunto.message}
+                            </p>
+                        )}
+                        {object.archivo_adjunto && (
+                            <p className="text-xs text-indigo-600 mt-1">
+                                Archivo actual: <a href={object.archivo_adjunto} target="_blank" rel="noreferrer" className="underline">Ver PDF</a>
+                            </p>
+                        )}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Categoría</label>
                             <select
@@ -111,7 +146,7 @@ const FormularioCircular = ({ uploading, errorUploading, crearCircular, handleMo
                         </div>
                     </div>
 
-                    {errorUploading && (console.log(errorUploading))}
+                    {errorUploading && <span className="mt-1 text-xs text-red-500 font-medium text-red-600">Hubo un error porfavor intentelo mas tarde</span>}
 
                     <div className="flex justify-end space-x-4 pt-4 border-t border-gray-100">
                         <button

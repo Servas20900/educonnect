@@ -7,10 +7,12 @@ from django.db.models import Q, Count, Max
 from rest_framework.decorators import action
 from datetime import datetime, timedelta
 
+from rest_framework.parsers import MultiPartParser, FormParser 
 # Create your views here.
 
 class ViewComunicacionesCircular(viewsets.ModelViewSet):
     queryset = ComunicacionesCircular.objects.all().order_by('id')
+    parser_classes = (MultiPartParser, FormParser)
     permission_classes = [permissions.IsAuthenticated]
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:

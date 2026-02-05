@@ -15,6 +15,9 @@ import os
 from datetime import timedelta
 from dotenv import load_dotenv
 import sys
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +38,9 @@ ALLOWED_HOSTS = []
 # sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 INSTALLED_APPS = [
+    #Cloud
+    'cloudinary_storage',
+    'cloudinary',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -98,7 +104,7 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.RawMediaCloudinaryStorage'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -174,3 +180,15 @@ SIMPLE_JWT = {
 }
 
 AUTH_USER_MODEL = 'databaseModels.AuthUsuario'
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+}
+
+cloudinary.config(
+    cloud_name = CLOUDINARY_STORAGE['CLOUD_NAME'],
+    api_key = CLOUDINARY_STORAGE['API_KEY'],
+    api_secret = CLOUDINARY_STORAGE['API_SECRET'],
+    secure = True
+)
