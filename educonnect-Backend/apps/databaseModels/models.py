@@ -7,6 +7,7 @@
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from apps.databaseModels.validators import validar_extension_archivo
 
 class AcademicoAsignatura(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -390,7 +391,12 @@ class ComunicacionesCircular(models.Model):
     categoria = models.CharField(max_length=255) 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     creada_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True)
-
+    archivo_adjunto = models.FileField(
+        upload_to='circulares/', 
+        null=True, 
+        blank=True,
+        validators=[validar_extension_archivo]
+    )
     class Meta:
         managed = True
         db_table = 'comunicaciones_circular'
@@ -406,7 +412,6 @@ class ComunicacionesComunicado(models.Model):
     fecha_vigencia = models.DateTimeField(blank=True, null=True)
     visible = models.BooleanField()
     publicado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
-
     class Meta:
         managed = True
         db_table = 'comunicaciones_comunicado'
@@ -814,3 +819,19 @@ class PersonasPersonaRol(models.Model):
         managed = True
         db_table = 'personas_persona_rol'
         unique_together = (('persona', 'rol'),)
+
+
+class ComunicacionMaterial(models.Model):
+    titulo = models.CharField(max_length=255)
+    archivo = models.FileField(
+        upload_to='comunicaciones/materiales/', 
+        validators=[validar_extension_archivo]
+    )
+    fecha_subida = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'comunicaciones_material'
+        verbose_name = 'Material de Comunicación'
+
+    def __str__(self):
+        return self.titulo

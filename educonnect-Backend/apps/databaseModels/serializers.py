@@ -4,25 +4,33 @@ from django.contrib.auth.hashers import make_password
 from datetime import date
 
 class ReadSerializerComunicacionesCircular (serializers.ModelSerializer):
+    publicado_por = serializers.ReadOnlyField(source='publicado_por.username')
     creada_por = serializers.StringRelatedField()
     class Meta:
         model = ComunicacionesCircular
         fields = "__all__"
 
-class WriteSerializerComunicacionesCircular (serializers.ModelSerializer):
+class WriteSerializerComunicacionesCircular(serializers.ModelSerializer):
+    autor_nombre = serializers.ReadOnlyField(source='creada_por.username')
+
     class Meta:
         model = ComunicacionesCircular
-        fields = "__all__"
+        fields = [
+            'id', 'titulo', 'contenido', 'archivo_adjunto', 
+            'fecha_vigencia_inicio', 'fecha_vigencia_fin', 
+            'estado', 'categoria', 'fecha_creacion', 'autor_nombre'
+        ]
+        read_only_fields = ['id', 'fecha_creacion', 'creada_por']
+
     def validate_fecha_vigencia_fin(self, value):
         if value == "" or value is None:
             return None
         return value
-
+    
     def validate_archivo_adjunto(self, value):
-        if value == "":
+        if isinstance(value, str):
             return None
         return value
-
 
 #Necesario para registrarse
 class RegistroSerializer(serializers.ModelSerializer):

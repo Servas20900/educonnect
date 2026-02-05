@@ -21,11 +21,11 @@ export function useCirculares() {
         }
     }, []);
 
-    const crearCircular = async (data) => {
+    const crearCircular = async (data,archivoSeleccionado) => {
         setUploading(true);
         setErrorUploading(null);
         try {
-            const sendingData = await createCirculares(data);
+            const sendingData = await createCirculares(data,archivoSeleccionado);
             await cargarCirculares();
             return { success: true, sendingData };
         } catch (err) {
@@ -36,11 +36,11 @@ export function useCirculares() {
         }
     }
 
-    const actualizarCircular = async (data, id) => {
+    const actualizarCircular = async (data, archivoSeleccionado,id) => {
         setUploading(true);
         setError(null);
         try {
-            const sendingData = await updateCirculares(data, id);
+            const sendingData = await updateCirculares(data,archivoSeleccionado, id);
             await cargarCirculares();
             return { success: true, sendingData };
         } catch (err) {

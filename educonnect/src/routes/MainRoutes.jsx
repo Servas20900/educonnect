@@ -20,7 +20,6 @@ const Reportes = Loadable(lazy(() => import('../pages/admin/Reportes')));
 const GestionPermisosModulos = Loadable(lazy(() => import('../pages/admin/GestionPermisosModulos')));
 const Incapacidades = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
 const Comites = Loadable(lazy(() => import('../pages/admin/Comites')));
-const ProgramacionCirculares = Loadable(lazy(() => import('../pages/admin/ProgramacionCirculares')));
 const AprobacionesHorarios = Loadable(lazy(() => import('../pages/admin/AprobacionesHorarios')));
 const OficiosPlantillas = Loadable(lazy(() => import('../pages/admin/OficiosPlantillas')));
 const Repositorios = Loadable(lazy(() => import('../pages/admin/Repositorios')));
@@ -102,15 +101,6 @@ const AppRoutes = {
         </RequireAuth>
       )
     },
-    {
-      path: 'circulares/programacion',
-      element: (
-        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
-          <ProgramacionCirculares />
-        </RequireAuth>
-      )
-    },
-    // Removed edit route
     {
       path: 'horarios',
       element: (
