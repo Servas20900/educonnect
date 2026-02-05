@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso, PersonasPersona
-
+from datetime import datetime
 
 class PersonaSimpleSerializer(serializers.ModelSerializer):
     """Serializer simplificado para datos de persona"""
@@ -75,7 +75,7 @@ class UsuarioUpdateSerializer(serializers.ModelSerializer):
             AuthUsuarioRol.objects.create(
                 usuario=instance,
                 rol=rol,
-                fecha_asignacion=timezone.now()
+                fecha_asignacion= datetime.now()
             )
         
         return instance
