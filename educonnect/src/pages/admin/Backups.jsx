@@ -9,7 +9,7 @@ export default function Backups() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Respaldos</h2>
+          <h2 className="text-2xl font-bold">Administracion de Respaldos</h2>
         </div>
         <button className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700">Nuevo Respaldo</button>
       </div>
