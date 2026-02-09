@@ -9,14 +9,13 @@ export default function Backups() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Backups</h2>
-          <p className="text-sm text-gray-500">Configura y monitorea tareas de respaldo.</p>
+          <h2 className="text-2xl font-bold">Respaldos</h2>
         </div>
-        <button className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700">Nueva tarea</button>
+        <button className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700">Nuevo Respaldo</button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {[{ l: 'Tareas activas', v: 3 }, { l: 'Último backup', v: '2025-12-11' }, { l: 'Fallidos', v: 1 }].map((s) => (
+        {[{ l: 'Último Respaldo', v: '2025-12-11' }, { l: 'Fallidos', v: 1 }].map((s) => (
           <div key={s.l} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
             <p className="text-sm text-gray-500">{s.l}</p>
             <p className="mt-1 text-2xl font-semibold text-gray-900">{s.v}</p>

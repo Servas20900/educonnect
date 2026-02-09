@@ -26,7 +26,7 @@ const menuItems = {
             { id: 'comite', title: 'Comites', type: 'item', url: '/comites'},
             { id: 'oficios', title: 'Oficios/Plantillas', type: 'item', url: '/oficios'},
             { id: 'repositorios', title: 'Repositorios', type: 'item', url: '/repositorios'},
-            { id: 'backups', title: 'Backups', type: 'item', url: '/backups'},
+            { id: 'backups', title: 'Respaldos', type: 'item', url: '/backups'},
             { id: 'retencion', title: 'Retención', type: 'item', url: '/retencion'}          ]
         }
       ]
