@@ -9,16 +9,17 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
     const [accion, setAccion] = useState("");
     const [horario, setHorario] = useState("");
     const handleOption = (accion, horario) => {
-        setAccion(accion)
-        setModal(true)
-        setHorario(horario)
+        setAccion(accion);
+        setModal(true);
+        setHorario(horario);
     };
 
     const onConfirm = (comentarioAdmin) => {
         const esRechazo = accion === "Rechazar";
-
+        const { docente_info, ...datosParaEnviar } = horario;
         const payload = {
-            ...horario,
+            ...datosParaEnviar,
+            docente:horario.docente_info.id,
             estado: esRechazo ? "Borrador" : "Publicado",
             aprobaciones: [
                 {
@@ -30,12 +31,13 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
             ]
         };
 
-        actualizarHorario(horario.id, payload);
+
+        actualizarHorario( payload,horario.id);
         setModal(false);
     };
 
     const onDelete = (horario) => {
-        deleteHorario(horario);
+        deleteHorario(horario.id);
         setModal(false)
     };
 
@@ -59,7 +61,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                         <RenderRechazo
                             onConfirm={onConfirm}
                             onCancel={() => setModal(false)}
-                            comentario={setComentario}
+                            // comentario={setComentario}
                         />
                     ) :
                         (
@@ -96,7 +98,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                                 {horario.nombre}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {horario.docente}
+                                {horario.docente_info.nombre}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {horario.estado}

@@ -1,7 +1,13 @@
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import CustomSelect from "../../../components/ui/CustomSelect"
 
-const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModalForm, object, actualizarHorario }) => {
-    const { register, handleSubmit, formState: { errors } } = useForm({
+const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModalForm, object, actualizarHorario, usuarios,grupos,asignaturas }) => {
+    const [docentesOptions, setDocentesOptions] = useState([]);
+    const [gruposOptions, setGruposOptions] = useState([]);
+    const [asignaturaOptions, setAsignaturaOptions] = useState([]);
+
+    const { register, handleSubmit, control, formState: { errors } } = useForm({
         defaultValues: {
             nombre: object.nombre || "",
             tipo_horario: object.tipo_horario || "Presencial",
@@ -14,10 +20,37 @@ const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModa
             hora_inicio: "",
             hora_fin: "",
             aula: "",
-            asignatura: "",
+            asignatura: object.asignatura || "",
             docente_detalle: ""
         }
     });
+
+    useEffect(() => {
+        const cargarDatos = async () => {
+            if (usuarios && usuarios.length > 0) {
+                const docentes = usuarios
+                    .filter(u => u.rol?.nombre === "docente")
+                    .map(u => ({
+                        value: u.id,
+                        label: u.persona
+                            ? `${u.persona.nombre} ${u.persona.primer_apellido}`
+                            : u.username
+                    }));
+                setDocentesOptions(docentes);
+            }
+            setGruposOptions(grupos.map(grupo => ({
+                value: grupo.id,
+                label: grupo.label 
+            })));
+
+            setAsignaturaOptions(asignaturas.map(asignatura => ({
+                value: asignatura.id,
+                label: asignatura.label 
+            })));
+        };
+
+        cargarDatos();
+    }, []);
 
     const onSubmitHandler = (data) => {
         const { dia_semana, hora_inicio, hora_fin, aula, asignatura, docente_detalle, ...cabecera } = data;
@@ -37,9 +70,6 @@ const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModa
             ],
             aprobaciones: []
         };
-
-        console.log(dataFinal)
-
         if (object.id) {
             actualizarHorario(object.id, dataFinal);
         } else {
@@ -54,7 +84,6 @@ const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModa
             : 'border-gray-200 bg-gray-50/50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'
         }
     `;
-
     return (
         <div >
             <div className=" px-6 flex justify-between mb-4">
@@ -93,22 +122,23 @@ const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModa
 
                         <div className="space-y-1">
                             <label className="text-sm font-semibold text-gray-700 ml-1">Docente Principal</label>
-                            {/* Aca va un fetch de PersonasDocente */}
-                            <select className={inputClasses(errors.docente)} {...register("docente", { required: "Requerido" })}>
-                                <option value="">Seleccione un docente...</option>
-                                <option value="1">Docente A</option>
-                                <option value="2">Docente B</option>
-                            </select>
+                            <CustomSelect
+                                name="docente"
+                                control={control}
+                                options={docentesOptions}
+                                placeholder="Buscar docente..."
+                                rules={{ required: "Seleccione un docente" }}
+                            />
                         </div>
-
                         <div className="space-y-1">
                             <label className="text-sm font-semibold text-gray-700 ml-1">Grupo</label>
-                            {/* Aca va un fetch de AcademicoGrupo */}
-                            <select className={inputClasses(errors.grupo)} {...register("grupo", { required: "Requerido" })}>
-                                <option value="">Seleccione un grupo...</option>
-                                <option value="1">Grupo A</option>
-                                <option value="2">Grupo B</option>
-                            </select>
+                            <CustomSelect
+                                name="grupo"
+                                control={control}
+                                options={gruposOptions}
+                                placeholder="Buscar grupo..."
+                                rules={{ required: "Seleccione un grupo" }}
+                            />
                         </div>
                     </div>
                 </section>
@@ -145,19 +175,19 @@ const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModa
                             <input type="text" className={inputClasses()} placeholder="Ej: 302-B" {...register("aula")} />
                         </div>
 
-                        <div className="space-y-1 md:col-span-2">
+                        <div className="space-y-1">
                             <label className="text-sm font-semibold text-gray-700 ml-1">Asignatura</label>
-                            {/* Aca va un fetch de AcademicoAsignatura */}
-                            <select className={inputClasses(errors.asignatura)} {...register("asignatura", { required: "Requerido" })}>
-                                <option value="">Seleccione una asignatura...</option>
-                                <option value="1">Ciencias</option>
-                                <option value="2">Matematica</option>
-                            </select>
+                            <CustomSelect
+                                name="asignatura"
+                                control={control}
+                                options={asignaturaOptions}
+                                placeholder="Buscar asignatura..."
+                                rules={{ required: "Seleccione una asignatura" }}
+                            />
                         </div>
                     </div>
                 </section>
 
-                {/* BOTONES DE ACCIÓN */}
                 <div className="flex items-center justify-end gap-4 pt-4">
                     <button
                         type="button"

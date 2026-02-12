@@ -3,7 +3,9 @@ from django.db.models import Q
 from rest_framework import serializers
 from apps.databaseModels.models import HorariosAprobacion,HorariosDetalle,HorariosHorario 
 
+
 class HorariosDetalleReadSerializer(serializers.ModelSerializer):
+    grupo = serializers.StringRelatedField()
     class Meta:
         model = HorariosDetalle
         fields = '__all__'
@@ -16,14 +18,22 @@ class HorariosAprobacionReadSerializer(serializers.ModelSerializer):
 class ReadSerializerHorariosHorario(serializers.ModelSerializer):
     detalles = HorariosDetalleReadSerializer(many=True, read_only=True, source='horarios_detalle_set')
     aprobaciones = HorariosAprobacionReadSerializer(many=True, read_only=True, source='horarios_aprobacion_set')
-    docente = serializers.StringRelatedField()
+    docente_info = serializers.SerializerMethodField()
     class Meta:
         model = HorariosHorario
         fields = [
-            'id', 'nombre', 'grupo', 'docente', 'tipo_horario', 
+            'id', 'nombre', 'grupo', 'docente_info', 'tipo_horario', 
             'version', 'estado', 'fecha_vigencia_inicio', 
             'fecha_vigencia_fin', 'notas', 'detalles', 'aprobaciones'
         ]
+    def get_docente_info(self, obj):
+        if obj.docente:
+            persona = getattr(obj.docente, 'persona', None)
+            return {
+                "id": obj.docente.id,
+                "nombre": f"{persona.nombre} {persona.primer_apellido}" if persona else obj.docente.username
+            }
+        return None
 
 class HorariosDetalleWriteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -36,8 +46,8 @@ class HorariosAprobacionWriteSerializer(serializers.ModelSerializer):
         fields = ['aprobador', 'nivel_aprobacion', 'estado_aprobacion', 'fecha_revision', 'comentarios']
 
 class WriteSerializerHorariosHorario(serializers.ModelSerializer):
-    detalles = HorariosDetalleWriteSerializer(many=True,required=False, default=[])
-    aprobaciones = HorariosAprobacionWriteSerializer(many=True,required=False, default=[])
+    detalles = HorariosDetalleWriteSerializer(many=True, required=False, default=[])
+    aprobaciones = HorariosAprobacionWriteSerializer(many=True, required=False, default=[])
 
     class Meta:
         model = HorariosHorario
@@ -98,21 +108,20 @@ class WriteSerializerHorariosHorario(serializers.ModelSerializer):
         instance.save()
 
         if detalles_data is not None:
-            instance.horarios_detalle_set.all().delete()
+            HorariosDetalle.objects.filter(horario=instance).delete()
             self._process_detalles_bulk(instance, detalles_data)
 
         if aprobaciones_data is not None:
-            instance.horarios_aprobacion_set.all().delete()
+            HorariosAprobacion.objects.filter(horario=instance).delete()
             self._process_aprobaciones_bulk(instance, aprobaciones_data)
 
         return instance
+    def _process_detalles_bulk(self, horario, detalles_data):
+        HorariosDetalle.objects.bulk_create([
+            HorariosDetalle(horario=horario, **d) for d in detalles_data
+        ])
 
-    def _bulk_create_hijos(self, horario, detalles, aprobaciones):
-        if detalles:
-            HorariosDetalle.objects.bulk_create([
-                HorariosDetalle(horario=horario, **d) for d in detalles
-            ])
-        if aprobaciones:
-            HorariosAprobacion.objects.bulk_create([
-                HorariosAprobacion(horario=horario, **a) for a in aprobaciones
-            ])
+    def _process_aprobaciones_bulk(self, horario, aprobaciones_data):
+        HorariosAprobacion.objects.bulk_create([
+            HorariosAprobacion(horario=horario, **a) for a in aprobaciones_data
+        ])

@@ -12,6 +12,12 @@ export default function CircularesList() {
   const [modal, setModal] = useState(false);
   const [information, setInformation] = useState("");
   const [idToDelete, setIdToDelete] = useState(null);
+  const [archivar, setArchivar] = useState("")
+
+  const [filtros, setFiltros] = useState({
+    nombre: "",
+    estado: ""
+  });
 
   useEffect(() => {
     cargarCirculares();
@@ -27,22 +33,42 @@ export default function CircularesList() {
     setForm(!form);
   }
 
-  const openDeleteModal = (id) => {
-    setIdToDelete(id);
+  const openDeleteModal = (circular) => {
+    const estado = circular.estado != "Inactivo" ? "archivar" : "desarchivar"
+    setArchivar(estado)
+    setIdToDelete(circular.id);
     setModal(true);
   };
 
   const confirmDelete = async () => {
     try {
       await eliminarCircular(idToDelete);
-      setInformation("Se eliminó con éxito");
+      setInformation("Se logro con éxito");
     } catch (err) {
-      setInformation("Fallo al eliminar");
+      setInformation("Hubo un fallo");
     } finally {
       setModal(false);
       setIdToDelete(null);
     }
   };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFiltros({ ...filtros, [name]: value });
+  };
+
+  const circularesFiltradas = circularesExistentes.filter((circular) => {
+    const coincideNombre = circular.titulo
+      .toLowerCase()
+      .includes(filtros.nombre.toLowerCase());
+
+    const coincideEstado = filtros.estado
+      ? circular.estado === filtros.estado
+      : true;
+
+    return coincideNombre && coincideEstado;
+  });
+
 
   if (loading) return <div className="p-10 text-center">Cargando circulares...</div>;
   if (error) return <div className="p-10 text-center text-red-500">Error al cargar datos.</div>;
@@ -53,12 +79,9 @@ export default function CircularesList() {
         <div className="p-6 text-center bg-white rounded-lg">
 
           <h3 className="text-lg font-bold text-gray-900 mb-2">
-            Confirmar eliminación
+            ¿Estás seguro de que deseas {archivar} esta circular?
           </h3>
 
-          <p className="text-sm text-gray-500 mb-6">
-            ¿Estás seguro de que deseas eliminar esta circular? Esta acción marcará el registro como inactivo y no aparecerá en la lista principal.
-          </p>
           <div className="flex justify-center gap-3">
             <button
               onClick={() => setModal(false)}
@@ -70,7 +93,7 @@ export default function CircularesList() {
               onClick={confirmDelete}
               className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-md"
             >
-              Sí, eliminar
+              Sí, {archivar}
             </button>
           </div>
         </div>
@@ -109,7 +132,8 @@ export default function CircularesList() {
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {circularesExistentes.length === 0 ? (
+        {circularesFiltradas.length === 0 ? (
+
           <div className="flex flex-col items-center py-16">
             <div className="text-gray-300 mb-4 text-6xl">📄</div>
             <h2 className="text-xl font-medium text-gray-500">No hay circulares registradas</h2>
@@ -117,6 +141,27 @@ export default function CircularesList() {
           </div>
         ) : (
           <div className="overflow-x-auto">
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+              <input
+                type="text"
+                placeholder="Filtrar por nombre..."
+                name="nombre"
+                value={filtros.nombre}
+                onChange={handleChange}
+                className="border border-gray-300 rounded-md p-2 text-sm"
+              />
+              <select
+                name="estado"
+                value={filtros.estado}
+                onChange={handleChange}
+                className="border border-gray-300 rounded-md p-2 text-sm"
+              >
+                <option value="">Todos los resultados</option>
+                <option value="Publicado">Publicado</option>
+                <option value="Borrador">Borrador</option>
+                <option value="Inactivo">Inactivo</option>
+              </select>
+            </div>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -127,46 +172,54 @@ export default function CircularesList() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {circularesExistentes.map((circular) => (
-                  circular.estado != "Inactivo" && (
-                    <tr key={circular.id} className="hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">{circular.titulo}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
+                {circularesFiltradas.map((circular) => (
+                  <tr key={circular.id} className="hover:bg-indigo-50/30 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-gray-900">{circular.titulo}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full 
                         ${circular.estado === 'Publicado' ? 'bg-green-100 text-green-700' :
-                            circular.estado === 'Borrador' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-gray-100 text-gray-600'}`}>
-                          {circular.estado}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {circular.fecha_vigencia_inicio || 'Inmediata'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                        <button
-                          className={`px-2 py-1 rounded transition-colors ${form
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50"
-                            }`}
-                          onClick={() => {
-                            if (form) {
-                              setInformation("Debes cerrar el formulario de edición antes de elegir otra circular");
-                              return;
-                            }
-                            handleEdit(circular);
-                          }}
-                        >
-                          Editar
-                        </button>
-                        <button className="text-red-600 hover:text-red-900 px-2 py-1 rounded hover:bg-red-50"
-                          onClick={() => openDeleteModal(circular.id)}
-                        >Borrar</button>
-                      </td>
-                    </tr>
-                  )
-                ))}
+                          circular.estado === 'Borrador' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-600'}`}>
+                        {circular.estado}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {circular.fecha_vigencia_inicio || 'Inmediata'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+
+                      {
+                        circular.estado == "Inactivo" ?
+                          <button className="text-green-600 hover:text-green-900 px-2 py-1 rounded hover:bg-green-50"
+                            onClick={() => openDeleteModal(circular)}
+                          >Activar</button>
+                          :
+                          <>
+                            <button
+                              className={`px-2 py-1 rounded transition-colors ${form
+                                ? "text-gray-400 cursor-not-allowed"
+                                : "text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50"
+                                }`}
+                              onClick={() => {
+                                if (form) {
+                                  setInformation("Debes cerrar el formulario de edición antes de elegir otra circular");
+                                  return;
+                                }
+                                handleEdit(circular);
+                              }}
+                            >
+                              Editar
+                            </button>
+                            <button className="text-red-600 hover:text-red-900 px-2 py-1 rounded hover:bg-red-50"
+                              onClick={() => openDeleteModal(circular)}
+                            >Desactivar</button></>
+                      }
+                    </td>
+                  </tr>
+                )
+                )}
               </tbody>
             </table>
           </div>
