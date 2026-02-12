@@ -1,5 +1,8 @@
 export const RenderVer = ({ horario }) => {
+    
     const primerDetalle = horario.detalles?.[0];
+    const segundoDetalle = horario.aprobaciones?.[0];
+
 
     return (
         <div className="space-y-6 p-4">
@@ -17,7 +20,7 @@ export const RenderVer = ({ horario }) => {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 <div className="space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Docente Responsable</p>
-                    <p className="text-sm font-semibold text-gray-700">{horario.docente}</p>
+                    <p className="text-sm font-semibold text-gray-700">{horario.docente_info.nombre}</p>
                 </div>
                 <div className="space-y-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Modalidad</p>
@@ -46,7 +49,7 @@ export const RenderVer = ({ horario }) => {
 
             <div className="pt-4 border-t border-gray-100">
                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Registro de Aprobaciones</p>
-                {horario.aprobaciones.length > 0 ? (
+                {segundoDetalle ? (
                     <div className="mt-6 pt-6 border-t border-dashed border-gray-200">
                         <div className="bg-gray-50 rounded-xl p-4 grid grid-cols-2 gap-4 text-sm">
                             <div className="text-gray-500">Versión: <span className="text-gray-800 font-semibold">{horario.version}</span></div>

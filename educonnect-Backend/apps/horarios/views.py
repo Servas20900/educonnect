@@ -1,9 +1,18 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions,response,status
 from apps.databaseModels.models import HorariosHorario
 from .serializers import ReadSerializerHorariosHorario, WriteSerializerHorariosHorario
+from django.db.models import Case, Value, When, IntegerField
 
 class ViewHorariosHorario(viewsets.ModelViewSet):
-    queryset = HorariosHorario.objects.all().order_by('id')
+    queryset = HorariosHorario.objects.annotate(
+    prioridad_estado=Case(
+        When(estado="Publicado", then=Value(1)),
+        When(estado="Borrador", then=Value(2)),
+        When(estado="Inactivo", then=Value(3)),
+        default=Value(4),
+        output_field=IntegerField(),
+    )
+).order_by('prioridad_estado', '-fecha_creacion')
     permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):

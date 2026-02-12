@@ -18,6 +18,8 @@ urlpatterns = [
     path('api/v1/permisos/', include('apps.permisos.urls')),
     path('api/v1/reportes/', include('apps.auditoria.urls')),
     path('api/v1/comites/', include('apps.comites.urls')),
+    path('api/v1/grupo/', include('apps.grupo.urls')),
+    path('api/v1/asignatura/', include('apps.asignatura.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

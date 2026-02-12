@@ -1,5 +1,8 @@
 import { fetchHorario, createHorario, updateHorario, deleteHorario } from "../../../../api/horario";
 import { useState, useCallback } from 'react';
+import {fetchUsuarios} from "../../../../api/permisosService"
+import {fetchGrupos} from "../../../../api/grupos"
+import {fetchAsignatura} from "../../../../api/asignatura"
 
 export function useHorarios() {
     const [loading, setLoading] = useState(false);
@@ -7,6 +10,56 @@ export function useHorarios() {
     const [HorarioExistentes, setData] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [errorUploading, setErrorUploading] = useState(null);
+
+    const [loadingUsers,setLoadingUsers]=useState()
+    const [errorUsers, setErrorUsers] = useState(null);
+    const [usuarios, setUsuarios] = useState(null);
+
+    const cargarUsuario = useCallback(async () => {
+        setLoadingUsers(true);
+        setErrorUsers(null);
+        try {
+            const receivedData = await fetchUsuarios();
+            setUsuarios(Array.isArray(receivedData) ? receivedData : []);
+        } catch (err) {
+            setErrorUsers(err);
+        } finally {
+            setLoadingUsers(false);
+        }
+    }, []);
+
+    const [loadingGrupos,setLoadingGrupos]=useState()
+    const [errorGrupos, setErrorGrupos] = useState(null);
+    const [grupos, setGrupos] = useState(null);
+
+    const cargarGrupos = useCallback(async () => {
+        setLoadingGrupos(true);
+        setErrorGrupos(null);
+        try {
+            const receivedData = await fetchGrupos();
+            setGrupos(Array.isArray(receivedData) ? receivedData : []);
+        } catch (err) {
+            setErrorGrupos(err);
+        } finally {
+            setLoadingGrupos(false);
+        }
+    }, []);
+    const [loadingAsignaturas,setLoadingAsignaturas]=useState()
+    const [errorAsignaturas, setErrorAsignaturas] = useState(null);
+    const [asignaturas, setAsignaturas] = useState(null);
+
+    const cargarAsignaturas = useCallback(async () => {
+        setLoadingAsignaturas(true);
+        setErrorAsignaturas(null);
+        try {
+            const receivedData = await fetchAsignatura();
+            setAsignaturas(Array.isArray(receivedData) ? receivedData : []);
+        } catch (err) {
+            setErrorAsignaturas(err);
+        } finally {
+            setLoadingAsignaturas(false);
+        }
+    }, []);
 
     const cargarHorario = useCallback(async () => {
         setLoading(true);
@@ -74,6 +127,18 @@ export function useHorarios() {
         errorUploading,
         crearHorario,
         actualizarHorario,
-        eliminarHorario
+        eliminarHorario,
+        cargarUsuario,
+        loadingUsers,
+        errorUsers,
+        usuarios,
+        cargarGrupos,
+        loadingGrupos,
+        errorGrupos,
+        grupos,
+        cargarAsignaturas,
+        loadingAsignaturas,
+        errorAsignaturas,
+        asignaturas
     };
 }

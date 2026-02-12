@@ -53,7 +53,7 @@ class AcademicoDocenteGrupo(models.Model):
         managed = True
         db_table = 'academico_docente_grupo'
         unique_together = (('docente', 'grupo', 'asignatura'),)
-
+    
 
 class AcademicoGrado(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -86,7 +86,8 @@ class AcademicoGrupo(models.Model):
         managed = True
         db_table = 'academico_grupo'
         unique_together = (('periodo', 'grado', 'seccion'),)
-
+    def __str__(self):
+        return f"{self.seccion}"
 
 class AcademicoMatricula(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -638,7 +639,7 @@ class HorariosDetalle(models.Model):
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
     asignatura = models.ForeignKey(AcademicoAsignatura, models.SET_NULL , blank=True, null=True)
-    docente = models.ForeignKey('PersonasDocente', models.SET_NULL , blank=True, null=True)
+    docente = models.ForeignKey(AuthUsuario, models.SET_NULL , blank=True, null=True,related_name='detalles_horario_docente')
     aula = models.CharField(max_length=50)
     notas = models.TextField(blank=True, null=True)
 
@@ -650,7 +651,7 @@ class HorariosDetalle(models.Model):
 class HorariosHorario(models.Model):
     id = models.BigAutoField(primary_key=True)
     grupo = models.ForeignKey(AcademicoGrupo, models.SET_NULL , blank=True, null=True)
-    docente = models.ForeignKey('PersonasDocente', models.SET_NULL , blank=True, null=True)
+    docente = models.ForeignKey(AuthUsuario, models.SET_NULL , blank=True, null=True,related_name='cabeceras_horario_docentec')
     nombre = models.CharField(max_length=200)
     tipo_horario = models.CharField(max_length=20, blank=True, null=True)
     version = models.IntegerField()
@@ -659,7 +660,7 @@ class HorariosHorario(models.Model):
     fecha_vigencia_inicio = models.DateField(blank=True, null=True)
     fecha_vigencia_fin = models.DateField(blank=True, null=True)
     notas = models.TextField(blank=True, null=True)
-    creado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
+    creado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True,related_name='horarios_creados')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
 

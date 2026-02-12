@@ -6,12 +6,20 @@ from rest_framework.views import APIView
 from django.db.models import Q, Count, Max
 from rest_framework.decorators import action
 from datetime import datetime, timedelta
-
+from django.db.models import Case, Value, When, IntegerField
 from rest_framework.parsers import MultiPartParser, FormParser 
 # Create your views here.
 
 class ViewComunicacionesCircular(viewsets.ModelViewSet):
-    queryset = ComunicacionesCircular.objects.all().order_by('id')
+    queryset = ComunicacionesCircular.objects.annotate(
+    prioridad_estado=Case(
+        When(estado="Publicado", then=Value(1)),
+        When(estado="Borrador", then=Value(2)),
+        When(estado="Inactivo", then=Value(3)),
+        default=Value(4),
+        output_field=IntegerField(),
+    )
+).order_by('prioridad_estado', '-fecha_creacion')
     parser_classes = (MultiPartParser, FormParser)
     permission_classes = [permissions.IsAuthenticated]
     def get_serializer_class(self):
@@ -22,7 +30,11 @@ class ViewComunicacionesCircular(viewsets.ModelViewSet):
         serializer.save(creada_por=self.request.user)
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.estado = 'Inactivo' 
+        if instance.estado !='Inactivo':
+            instance.estado = 'Borrador'
+        else :
+            instance.estado = 'Inactivo'
+            
         instance.save()
         return response.Response(
             {"message": f"Circular '{instance.titulo}' marcada como inactiva."}, 
