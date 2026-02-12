@@ -20,7 +20,7 @@ export const RenderAprobar = ({ nombre, onConfirm, onCancel }) => (
                 No, cancelar
             </button>
             <button 
-                onClick={onConfirm}
+                onClick={()=>onConfirm()}
                 className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
             >
                 Sí, aprobar

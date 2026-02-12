@@ -18,7 +18,7 @@ export const RenderDelete = ({ nombre, onCancel, onDelete }) => (
         <div>
             <h3 className="text-xl font-bold text-gray-800">Confirmar Aprobación</h3>
             <p className="text-gray-500 mt-2">
-                ¿Estás seguro de querer eliminar el horario <span className="font-semibold text-red-600">{nombre}</span>?
+                ¿Estás seguro de querer archivar el horario <span className="font-semibold text-red-600">{nombre}</span>?
                 Esta acción notificará a los docentes involucrados.
             </p>
         </div>
@@ -33,7 +33,7 @@ export const RenderDelete = ({ nombre, onCancel, onDelete }) => (
                 onClick={onDelete}
                 className="flex-1 px-4 py-2.5 bg-red-600 text-white font-semibold rounded-xl shadow-lg shadow-red-200 hover:bg-red-700 transition-all"
             >
-                Sí, Borrar
+                Sí, Archivar
             </button>
         </div>
     </div>

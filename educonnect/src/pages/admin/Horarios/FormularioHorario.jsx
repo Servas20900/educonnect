@@ -14,13 +14,13 @@ const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModa
             estado: object.estado || "Borrador",
             notas: object.notas || "",
             grupo: object.grupo || "",
-            docente: object.docente || "",
+            docente: object.docente_info.id || "",
             version: object.version || 1,
             dia_semana: "Lunes",
-            hora_inicio: "",
-            hora_fin: "",
-            aula: "",
-            asignatura: object.asignatura || "",
+            hora_inicio: object.detalles.hora_inicio||"" ,
+            hora_fin: object.detalles.hora_fin||"",
+            aula: object.detalles.aula || "",
+            asignatura: object.detalles.asignatura || "",
             docente_detalle: ""
         }
     });

@@ -16,8 +16,8 @@ class HorariosAprobacionReadSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ReadSerializerHorariosHorario(serializers.ModelSerializer):
-    detalles = HorariosDetalleReadSerializer(many=True, read_only=True, source='horarios_detalle_set')
-    aprobaciones = HorariosAprobacionReadSerializer(many=True, read_only=True, source='horarios_aprobacion_set')
+    detalles = HorariosDetalleReadSerializer(many=True, read_only=True, source='horariosdetalle_set')
+    aprobaciones = HorariosAprobacionReadSerializer(many=True, read_only=True, source='horariosaprobacion_set')
     docente_info = serializers.SerializerMethodField()
     class Meta:
         model = HorariosHorario

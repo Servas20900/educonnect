@@ -68,9 +68,6 @@ export default function Horarios() {
         <h2 className="text-xl font-semibold text-gray-700 mb-4">
           Horarios Pendientes de Aprobación
         </h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Revisión de horarios propuestos por docentes.
-        </p>
 
         {HorarioExistentes.length > 0 ? (
           <RevisionHorarios
