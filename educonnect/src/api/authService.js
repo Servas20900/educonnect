@@ -3,41 +3,41 @@ import axios from 'axios';
 export const api = axios.create({
     baseURL: 'http://localhost:8000/',
     withCredentials: true,
-    headers: {
-        'Content-Type': 'application/json',
-    },
 });
 
-// Interceptor para agregar el token JWT a todas las solicitudes
-api.interceptors.request.use(
-    (config) => {
-        // Obtener el token del localStorage
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('access_token');
+    
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
-);
 
-// Interceptor para manejar respuestas con error 401 (token expirado)
+    if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+    } else {
+        config.headers['Content-Type'] = 'application/json';
+    }
+
+    return config;
+});
+
+// Interceptor de respuestas
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            // Token expirado, limpiar localStorage
+            // Limpieza total de sesión
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
-            // Redirigir a login
-            window.location.href = '/login';
+            
+            // Evitar redirección infinita si ya estamos en login
+            if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
 );
-
 export const registrarUsuario = async (userData) => {
     try {
         const response = await api.post('api/v1/auth/register/', userData);
@@ -50,14 +50,11 @@ export const registrarUsuario = async (userData) => {
 export const loginUsuario = async (credentials) => {
     try {
         const response = await api.post('api/auth/login/', credentials);
-        // Guardar los tokens en localStorage
+        
         if (response.data) {
-            if (response.data.access) {
-                localStorage.setItem('access_token', response.data.access);
-            }
-            if (response.data.refresh) {
-                localStorage.setItem('refresh_token', response.data.refresh);
-            }
+            const { access, refresh } = response.data;
+            if (access) localStorage.setItem('access_token', access);
+            if (refresh) localStorage.setItem('refresh_token', refresh);
         }
         return response.data;
     } catch (error) {
@@ -75,16 +72,17 @@ export const getSessionStatus = async () => {
 };
 
 export const logoutUsuario = async () => {
+    const limpiarYRedirigir = () => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+    };
+
     try {
         await api.post('api/auth/logout/');
-        // Limpiar tokens del localStorage
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
+        limpiarYRedirigir();
         return true;
     } catch (error) {
-        // Limpiar tokens aunque haya error
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
+        limpiarYRedirigir();
         return true;
     }
 };
