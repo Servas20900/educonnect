@@ -8,6 +8,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from apps.databaseModels.validators import validar_extension_archivo
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 class AcademicoAsignatura(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -485,9 +487,14 @@ class DocumentosDocumento(models.Model):
     fecha_carga = models.DateTimeField()
     fecha_modificacion = models.DateTimeField()
     cargado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
-
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
     class Meta:
         managed = True
+        indexes = [
+            models.Index(fields=["content_type", "object_id"]),
+        ]
         db_table = 'documentos_documento'
 
 
@@ -512,14 +519,12 @@ class DocumentosRepositorio(models.Model):
     id = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField()
-    padre = models.ForeignKey('self', models.SET_NULL , blank=True, null=True)
-    tipo_contenido = models.CharField(max_length=50)
-    permisos_lectura = models.JSONField()
-    permisos_escritura = models.JSONField()
-    es_publico = models.BooleanField()
-    activo = models.BooleanField()
-    fecha_creacion = models.DateTimeField()
-    creado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
+    cloudinary_path = models.CharField(max_length=500, unique=True)
+    rol_acceso = models.CharField(max_length=50, default='Administrador') 
+    puede_escribir = models.BooleanField(default=False)
+    
+    creado_por = models.ForeignKey(AuthUsuario, on_delete=models.SET_NULL, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = True

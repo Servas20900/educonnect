@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'apps.auditoria',
     'apps.comites',
     'apps.asignatura',
+    'apps.carpetas',
     'apps.grupo'
 ]
 
