@@ -6,7 +6,7 @@ import { RenderDelete } from "./RenderDelete";
 import { RenderReactivar } from "./RenderReactivar";
 import { useRevisionHorarios } from "./hooks/useRevisionHorarios";
 import { useState } from "react";
-
+import Paginador from '../../../components/ui/Paginador'
 const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }) => {
     const {
         modal,
@@ -94,7 +94,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                 </div>
             </PopUp>
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center">
-                <div className="relative flex-1 min-w-[200px]">
+                <div className="relative z-0flex-1 min-w-[200px]">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
                     <input
                         type="text"
@@ -128,65 +128,73 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                     <option value="Inactivo">Inactivo</option>
                 </select>
             </div>
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50/50 text-gray-500 text-xs font-bold uppercase tracking-widest">
-                    <tr>
-                        <th className="px-6 py-4 text-left">Horario</th>
-                        <th className="px-6 py-4 text-left">Docente</th>
-                        <th className="px-6 py-4 text-left">Estado</th>
-                        <th className="px-6 py-4 text-center">Gestión</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                    {horariosFiltrados.map((horario) => (
-                        <tr key={horario.id} className="hover:bg-indigo-50/30 transition-colors">
-                            <td className="px-6 py-4">
-                                <div className="text-sm font-semibold text-gray-800">{horario.nombre}</div>
-                            </td>
-                            <td className="px-6 py-4">
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <div className="h-7 w-7 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-                                        {horario.docente_info?.nombre?.charAt(0)}
-                                    </div>
-                                    {horario.docente_info?.nombre}
-                                </div>
-                            </td>
-                            <td className="px-6 py-4">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ring-1 ring-inset ${getStatusStyles(horario.estado)}`}>
-                                    {horario.estado}
-                                </span>
-                            </td>
-                            <td className="px-6 py-4">
-                                <div className="flex items-center justify-center gap-4 min-w-[200px]">
-                                    <button onClick={() => handleOption("Ver", horario)} className="text-xs font-bold text-blue-600 hover:text-blue-800">
-                                        VER
-                                    </button>
-                                    <div className="h-4 w-[1px] bg-gray-200" />
-                                    {horario.estado !== "Inactivo" ? (
-                                        <div className="flex gap-3">
-                                            {horario.estado !== "Publicado" ? (
-                                                <>
-                                                    <button onClick={() => handleOption("Aprobar", horario)} className="text-xs font-bold text-emerald-600">APROBAR</button>
-                                                    <button onClick={() => handleOption("Rechazar", horario)} className="text-xs font-bold text-rose-500">RECHAZAR</button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button onClick={() => onEdit(horario)} className="text-xs font-bold text-indigo-600">EDITAR</button>
-                                                    <button onClick={() => handleOption("Eliminar", horario)} className="text-xs font-bold text-slate-500">ARCHIVAR</button>
-                                                </>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <button onClick={() => handleOption("Reactivar", horario)} className="text-xs font-bold text-emerald-600">REACTIVAR</button>
-                                    )}
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            <div className="overflow-hidden rounded-3xl border border-gray-100 shadow-sm bg-white">
+                <Paginador items={horariosFiltrados} itemsPorPagina={6}>
+                    {(itemsPaginados) => (
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-100">
+                                <thead className="bg-gray-50/50 text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                                    <tr>
+                                        <th className="px-8 py-5 text-left">Horario</th>
+                                        <th className="px-8 py-5 text-left">Docente Responsable</th>
+                                        <th className="px-8 py-5 text-left">Estado</th>
+                                        <th className="px-8 py-5 text-center">Gestión</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 bg-white">
+                                    {itemsPaginados.map((horario) => (
+                                        <tr key={horario.id} className="hover:bg-indigo-50/30 transition-colors duration-200">
+                                            <td className="px-8 py-5">
+                                                <div className="text-sm font-bold text-gray-800">{horario.nombre}</div>
+                                                <div className="text-[10px] font-black text-gray-400 uppercase mt-0.5">Ref: #{horario.id}</div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-black text-[10px]">
+                                                        {horario.docente_info?.nombre?.charAt(0)}
+                                                    </div>
+                                                    <span className="text-sm font-semibold text-gray-600">{horario.docente_info?.nombre}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <span className={`px-3 py-1 inline-flex text-[11px] font-black rounded-full ring-1 ring-inset ${getStatusStyles(horario.estado)}`}>
+                                                    {horario.estado.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center justify-center gap-4 min-w-[200px]">
+                                                    <button onClick={() => handleOption("Ver", horario)} className="text-[11px] font-black text-blue-600 hover:text-blue-800">
+                                                        VER
+                                                    </button>
+                                                    <div className="h-4 w-[1px] bg-gray-200" />
+                                                    {horario.estado !== "Inactivo" ? (
+                                                        <div className="flex gap-3">
+                                                            {horario.estado !== "Publicado" ? (
+                                                                <>
+                                                                    <button onClick={() => handleOption("Aprobar", horario)} className="text-[11px] font-black text-emerald-600">APROBAR</button>
+                                                                    <button onClick={() => handleOption("Rechazar", horario)} className="text-[11px] font-black text-rose-500">RECHAZAR</button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <button onClick={() => onEdit(horario)} className="text-[11px] font-black text-indigo-600">EDITAR</button>
+                                                                    <button onClick={() => handleOption("Eliminar", horario)} className="text-[11px] font-black text-slate-500">ARCHIVAR</button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <button onClick={() => handleOption("Reactivar", horario)} className="text-[11px] font-black text-emerald-600">REACTIVAR</button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Paginador>
+            </div>
         </div>
     );
 };
-
 export default RevisionHorarios;

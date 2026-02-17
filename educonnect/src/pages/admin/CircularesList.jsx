@@ -3,6 +3,7 @@ import { useCirculares } from "./Circulares/hooks/useCirculares";
 import FormularioCircular from './Circulares/FormularioCircular';
 import Toast from '../../../components/Toast';
 import PopUp from '../../../components/PopUp';
+import Paginador from '../../components/ui/Paginador';
 
 
 export default function CircularesList() {
@@ -13,7 +14,6 @@ export default function CircularesList() {
   const [information, setInformation] = useState("");
   const [idToDelete, setIdToDelete] = useState(null);
   const [archivar, setArchivar] = useState("")
-
   const [filtros, setFiltros] = useState({
     nombre: "",
     estado: ""
@@ -177,78 +177,81 @@ export default function CircularesList() {
               <span className="text-5xl">📂</span>
             </div>
             <h2 className="text-2xl font-bold text-gray-800">No hay resultados</h2>
-            <p className="text-gray-400 mt-2 font-medium text-center max-w-xs">Prueba ajustando los filtros o crea una nueva circular.</p>
+            <p className="text-gray-400 mt-2 text-center max-w-xs">Prueba ajustando los filtros o crea una nueva circular.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-100">
-                  <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Contenido</th>
-                  <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Estado</th>
-                  <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Programación</th>
-                  <th className="px-8 py-5 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {circularesFiltradas.map((circular) => (
-                  <tr key={circular.id} className="hover:bg-indigo-50/40 transition-colors duration-200">
-                    <td className="px-8 py-5">
-                      <div className="text-sm font-bold text-gray-800 hover:text-indigo-600 transition-colors cursor-default">
-                        {circular.titulo}
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={`px-3 py-1 inline-flex text-[11px] font-black rounded-full ring-1 ring-inset ${getStatusStyles(circular.estado)}`}>
-                        {circular.estado.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-                        <span className="text-lg">📅</span>
-                        {circular.fecha_vigencia_inicio || 'Inmediata'}
-                      </div>
-                    </td>
-                    <td className="px-8 py-5 text-right font-bold text-xs">
-                      <div className="flex justify-end gap-3">
-                        {circular.estado === "Inactivo" ? (
-                          <button
-                            className="px-4 py-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm"
-                            onClick={() => openDeleteModal(circular)}
-                          >
-                            ACTIVAR
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              disabled={form}
-                              className={`px-4 py-2 rounded-xl transition-all shadow-sm ${form
-                                ? "bg-gray-50 text-gray-300 cursor-not-allowed"
-                                : "bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white"
-                                }`}
-                              onClick={() => !form && handleEdit(circular)}
-                            >
-                              EDITAR
-                            </button>
-                            <button
-                              className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"
-                              onClick={() => openDeleteModal(circular)}
-                            >
-                              DESACTIVAR
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Paginador items={circularesFiltradas} itemsPorPagina={6}>
+            {(itemsPaginados) => (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-gray-50/80 border-b border-gray-100">
+                      <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest text-nowrap">Contenido</th>
+                      <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest text-nowrap">Estado</th>
+                      <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest text-nowrap">Programación</th>
+                      <th className="px-8 py-5 text-right text-xs font-black text-gray-400 uppercase tracking-widest text-nowrap">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {itemsPaginados.map((circular) => (
+                      <tr key={circular.id} className="hover:bg-indigo-50/40 transition-colors duration-200">
+                        <td className="px-8 py-5">
+                          <div className="text-sm font-bold text-gray-800 hover:text-indigo-600 transition-colors cursor-default">
+                            {circular.titulo}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5">
+                          <span className={`px-3 py-1 inline-flex text-[11px] font-black rounded-full ring-1 ring-inset ${getStatusStyles(circular.estado)}`}>
+                            {circular.estado.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-8 py-5">
+                          <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+                            <span className="text-lg">📅</span>
+                            {circular.fecha_vigencia_inicio || 'Inmediata'}
+                          </div>
+                        </td>
+                        <td className="px-8 py-5 text-right font-bold text-xs">
+                          <div className="flex justify-end gap-3">
+                            {circular.estado === "Inactivo" ? (
+                              <button
+                                className="px-4 py-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm"
+                                onClick={() => openDeleteModal(circular)}
+                              >
+                                ACTIVAR
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  disabled={form}
+                                  className={`px-4 py-2 rounded-xl transition-all shadow-sm ${form
+                                    ? "bg-gray-50 text-gray-300 cursor-not-allowed"
+                                    : "bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white"
+                                    }`}
+                                  onClick={() => !form && handleEdit(circular)}
+                                >
+                                  EDITAR
+                                </button>
+                                <button
+                                  className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                  onClick={() => openDeleteModal(circular)}
+                                >
+                                  DESACTIVAR
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Paginador>
         )}
       </div>
-
       {information && <Toast information={information} setInformation={setInformation} />}
-    </div>
+    </div >
   );
 }
