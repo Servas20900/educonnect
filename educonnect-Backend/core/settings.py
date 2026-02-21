@@ -56,6 +56,9 @@ INSTALLED_APPS = [
     'apps.permisos',
     'apps.auditoria',
     'apps.comites',
+    'apps.asignatura',
+    'apps.carpetas',
+    'apps.grupo'
 ]
 
 MIDDLEWARE = [

@@ -8,6 +8,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from apps.databaseModels.validators import validar_extension_archivo
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 class AcademicoAsignatura(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -53,7 +55,7 @@ class AcademicoDocenteGrupo(models.Model):
         managed = True
         db_table = 'academico_docente_grupo'
         unique_together = (('docente', 'grupo', 'asignatura'),)
-
+    
 
 class AcademicoGrado(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -86,7 +88,8 @@ class AcademicoGrupo(models.Model):
         managed = True
         db_table = 'academico_grupo'
         unique_together = (('periodo', 'grado', 'seccion'),)
-
+    def __str__(self):
+        return f"{self.seccion}"
 
 class AcademicoMatricula(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -484,9 +487,14 @@ class DocumentosDocumento(models.Model):
     fecha_carga = models.DateTimeField()
     fecha_modificacion = models.DateTimeField()
     cargado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
-
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
     class Meta:
         managed = True
+        indexes = [
+            models.Index(fields=["content_type", "object_id"]),
+        ]
         db_table = 'documentos_documento'
 
 
@@ -511,14 +519,12 @@ class DocumentosRepositorio(models.Model):
     id = models.BigAutoField(primary_key=True)
     nombre = models.CharField(max_length=200)
     descripcion = models.TextField()
-    padre = models.ForeignKey('self', models.SET_NULL , blank=True, null=True)
-    tipo_contenido = models.CharField(max_length=50)
-    permisos_lectura = models.JSONField()
-    permisos_escritura = models.JSONField()
-    es_publico = models.BooleanField()
-    activo = models.BooleanField()
-    fecha_creacion = models.DateTimeField()
-    creado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
+    cloudinary_path = models.CharField(max_length=500, unique=True)
+    rol_acceso = models.CharField(max_length=50, default='Administrador') 
+    puede_escribir = models.BooleanField(default=False)
+    
+    creado_por = models.ForeignKey(AuthUsuario, on_delete=models.SET_NULL, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         managed = True
@@ -638,7 +644,7 @@ class HorariosDetalle(models.Model):
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
     asignatura = models.ForeignKey(AcademicoAsignatura, models.SET_NULL , blank=True, null=True)
-    docente = models.ForeignKey('PersonasDocente', models.SET_NULL , blank=True, null=True)
+    docente = models.ForeignKey(AuthUsuario, models.SET_NULL , blank=True, null=True,related_name='detalles_horario_docente')
     aula = models.CharField(max_length=50)
     notas = models.TextField(blank=True, null=True)
 
@@ -650,7 +656,7 @@ class HorariosDetalle(models.Model):
 class HorariosHorario(models.Model):
     id = models.BigAutoField(primary_key=True)
     grupo = models.ForeignKey(AcademicoGrupo, models.SET_NULL , blank=True, null=True)
-    docente = models.ForeignKey('PersonasDocente', models.SET_NULL , blank=True, null=True)
+    docente = models.ForeignKey(AuthUsuario, models.SET_NULL , blank=True, null=True,related_name='cabeceras_horario_docentec')
     nombre = models.CharField(max_length=200)
     tipo_horario = models.CharField(max_length=20, blank=True, null=True)
     version = models.IntegerField()
@@ -659,7 +665,7 @@ class HorariosHorario(models.Model):
     fecha_vigencia_inicio = models.DateField(blank=True, null=True)
     fecha_vigencia_fin = models.DateField(blank=True, null=True)
     notas = models.TextField(blank=True, null=True)
-    creado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
+    creado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True,related_name='horarios_creados')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(blank=True, null=True)
 

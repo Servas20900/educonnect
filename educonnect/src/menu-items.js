@@ -17,9 +17,7 @@ const menuItems = {
           children: [
             { id: 'dashboard', title: 'Dashboard', type: 'item', url: '/dashboard' },
             { id: 'circulares', title: 'Circulares', type: 'item', url: '/circulares' },
-            { id: 'programacion-circulares', title: 'Programación', type: 'item', url: '/circulares/programacion' },
             { id: 'horarios', title: 'Horarios', type: 'item', url: '/horarios' },
-            { id: 'aprobaciones-horarios', title: 'Aprobaciones', type: 'item', url: '/horarios/aprobaciones' },
             { id: 'reportes', title: 'Reportes', type: 'item', url: '/reportes' },
             { id: 'permisos', title: 'Usuarios y Permisos', type: 'item', url: '/permisos' },
             { id: 'incapacidades', title: 'Incapacidades', type: 'item', url: '/incapacidades'},

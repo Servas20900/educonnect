@@ -22,6 +22,12 @@ class WriteSerializerComunicacionesCircular(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'fecha_creacion', 'creada_por']
 
+    def validate_estado(self,value):
+        if value =="Inactivo" :
+            return serializers.ValidationError(
+            {"error": "Este registro está inactivo y no se puede editar."}
+        )
+        return value
     def validate_fecha_vigencia_fin(self, value):
         if value == "" or value is None:
             return None

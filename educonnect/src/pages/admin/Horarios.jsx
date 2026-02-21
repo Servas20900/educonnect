@@ -7,14 +7,18 @@ import Toast from '../../../components/Toast';
 
 
 export default function Horarios() {
-  const { cargarHorario, HorarioExistentes, loading, error, uploading, errorUploading, crearHorario, actualizarHorario, eliminarHorario } = useHorarios();
+  const { cargarHorario, HorarioExistentes, loading, error, uploading, errorUploading, crearHorario, actualizarHorario, eliminarHorario,cargarUsuario,loadingUsers,errorUsers,usuarios,cargarGrupos,loadingGrupos,errorGrupos,grupos,cargarAsignaturas,loadingAsignaturas,errorAsignaturas,asignaturas
+    } = useHorarios();
   const [form, setForm] = useState(false);
   const [object, setObject] = useState({});
   const [information, setInformation] = useState("");
 
   useEffect(() => {
     cargarHorario();
-  }, [cargarHorario]);
+    cargarUsuario();
+    cargarGrupos();
+    cargarAsignaturas();
+  }, [cargarHorario,cargarUsuario,cargarAsignaturas,cargarGrupos]);
 
   const handleModalForm = () => {
     setForm(!form);
@@ -53,6 +57,9 @@ export default function Horarios() {
             object={object}
             actualizarHorario={actualizarHorario}
             setInformation={setInformation}
+            usuarios ={usuarios}
+            grupos ={grupos}
+            asignaturas ={asignaturas}
           />
         </section>
       )}
@@ -61,9 +68,6 @@ export default function Horarios() {
         <h2 className="text-xl font-semibold text-gray-700 mb-4">
           Horarios Pendientes de Aprobación
         </h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Revisión de horarios propuestos por docentes.
-        </p>
 
         {HorarioExistentes.length > 0 ? (
           <RevisionHorarios
