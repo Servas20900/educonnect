@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from apps.databaseModels.models import ComitesComite, ComitesMiembro, PersonasPersona
+from apps.databaseModels.models import (
+    ComitesComite,
+    ComitesMiembro,
+    ComitesActa,
+    ComitesInformeOrgano,
+    PersonasPersona,
+)
 from django.utils import timezone
 
 
@@ -143,3 +149,66 @@ class ComitesComiteCreateSerializer(serializers.ModelSerializer):
             )
         
         return comite
+
+
+class ComitesActaSerializer(serializers.ModelSerializer):
+    elaborada_por_username = serializers.ReadOnlyField(source='elaborada_por.username')
+
+    class Meta:
+        model = ComitesActa
+        fields = [
+            'id',
+            'reunion',
+            'numero_acta',
+            'contenido',
+            'acuerdos',
+            'seguimientos',
+            'estado',
+            'elaborada_por',
+            'elaborada_por_username',
+            'aprobada_por',
+            'fecha_elaboracion',
+            'fecha_aprobacion',
+        ]
+        read_only_fields = ['id', 'elaborada_por', 'fecha_elaboracion', 'aprobada_por', 'fecha_aprobacion']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        validated_data.setdefault('estado', 'borrador')
+        validated_data['fecha_elaboracion'] = timezone.now()
+        if request and request.user.is_authenticated:
+            validated_data['elaborada_por'] = request.user
+        return super().create(validated_data)
+
+
+class ComitesInformeOrganoSerializer(serializers.ModelSerializer):
+    elaborado_por_username = serializers.ReadOnlyField(source='elaborado_por.username')
+
+    class Meta:
+        model = ComitesInformeOrgano
+        fields = [
+            'id',
+            'organo',
+            'periodo',
+            'tipo_informe',
+            'titulo',
+            'contenido',
+            'conclusiones',
+            'recomendaciones',
+            'archivo_adjunto',
+            'elaborado_por',
+            'elaborado_por_username',
+            'fecha_elaboracion',
+            'fecha_presentacion',
+            'estado',
+        ]
+        read_only_fields = ['id', 'elaborado_por', 'fecha_elaboracion']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        validated_data.setdefault('estado', 'borrador')
+        validated_data.setdefault('tipo_informe', 'reporte_comite')
+        validated_data['fecha_elaboracion'] = timezone.now().date()
+        if request and request.user.is_authenticated:
+            validated_data['elaborado_por'] = request.user
+        return super().create(validated_data)

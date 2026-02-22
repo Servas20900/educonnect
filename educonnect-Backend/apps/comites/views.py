@@ -3,12 +3,20 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count, Q
-from apps.databaseModels.models import ComitesComite, ComitesMiembro, PersonasPersona
+from apps.databaseModels.models import (
+    ComitesComite,
+    ComitesMiembro,
+    ComitesActa,
+    ComitesInformeOrgano,
+    PersonasPersona,
+)
 from .serializers import (
     ComitesComiteSerializer,
     ComitesComiteCreateSerializer,
     ComitesMiembroSerializer,
-    PersonaSimpleSerializer
+    PersonaSimpleSerializer,
+    ComitesActaSerializer,
+    ComitesInformeOrganoSerializer,
 )
 
 
@@ -204,3 +212,23 @@ class PersonasDisponiblesViewSet(viewsets.ReadOnlyModelViewSet):
         
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
+
+class ComitesActaViewSet(viewsets.ModelViewSet):
+    queryset = ComitesActa.objects.all().select_related('reunion', 'elaborada_por', 'aprobada_por')
+    serializer_class = ComitesActaSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['numero_acta', 'contenido', 'acuerdos', 'seguimientos']
+    ordering_fields = ['fecha_elaboracion', 'numero_acta', 'estado']
+    ordering = ['-fecha_elaboracion']
+
+
+class ComitesInformeOrganoViewSet(viewsets.ModelViewSet):
+    queryset = ComitesInformeOrgano.objects.all().select_related('organo', 'periodo', 'elaborado_por')
+    serializer_class = ComitesInformeOrganoSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['tipo_informe', 'titulo', 'contenido', 'conclusiones', 'recomendaciones']
+    ordering_fields = ['fecha_elaboracion', 'fecha_presentacion', 'titulo', 'estado']
+    ordering = ['-fecha_elaboracion']

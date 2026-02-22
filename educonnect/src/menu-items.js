@@ -58,7 +58,7 @@ const menuItems = {
       id: 'comites',
       title: 'Comites',
       type: 'group',
-      allowedRoles: [ROLES.ADMIN, ROLES.DOCENTE],
+      allowedRoles: [ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE],
       children: [
         {
           id: 'comites-collapse',
