@@ -19,6 +19,7 @@ const Horarios = Loadable(lazy(() => import('../pages/admin/Horarios')));
 const Reportes = Loadable(lazy(() => import('../pages/admin/Reportes')));
 const GestionPermisosModulos = Loadable(lazy(() => import('../pages/admin/GestionPermisosModulos')));
 const Incapacidades = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
+const EstudiantesAdmin = Loadable(lazy(() => import('../pages/admin/Estudiantes')));
 const Comites = Loadable(lazy(() => import('../pages/admin/Comites')));
 const OficiosPlantillas = Loadable(lazy(() => import('../pages/admin/OficiosPlantillas')));
 const Repositorios = Loadable(lazy(() => import('../pages/admin/Repositorios')));
@@ -44,6 +45,7 @@ const HomeComite = Loadable(lazy(() => import('../pages/comite/Home')));
 const CrearActa = Loadable(lazy(() => import('../pages/comite/CrearActa')));
 const AgendarReunion = Loadable(lazy(() => import('../pages/comite/AgendarReunion')));
 const RolesComite = Loadable(lazy(() => import('../pages/comite/RolesComite')));
+const DocumentosComite = Loadable(lazy(() => import('../pages/comite/DocumentosComite')));
 
 const InformesEconomicos = Loadable(lazy(() => import('../pages/auxiliares/InformesEconomicos')));
 const Reglamentos = Loadable(lazy(() => import('../pages/auxiliares/Reglamentos')));
@@ -129,6 +131,14 @@ const AppRoutes = {
       element: (
         <RequireAuth allowedRoles={[ROLES.ADMIN]}>
           <Incapacidades />
+        </RequireAuth>
+      )
+    },
+    {
+      path: 'estudiantes',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <EstudiantesAdmin />
         </RequireAuth>
       )
     },
@@ -290,6 +300,14 @@ const AppRoutes = {
           element: (
             <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}>
               <RolesComite />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'documentos',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}>
+              <DocumentosComite />
             </RequireAuth>
           )
         }

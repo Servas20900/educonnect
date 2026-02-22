@@ -172,3 +172,69 @@ class RegistroSerializer(serializers.ModelSerializer):
                 pass
 
             return usuario
+
+
+class EstudiantePersonaSerializer(serializers.ModelSerializer):
+    nombre_completo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PersonasPersona
+        fields = [
+            'id',
+            'identificacion',
+            'nombre',
+            'primer_apellido',
+            'segundo_apellido',
+            'nombre_completo',
+            'email_personal',
+            'email_institucional'
+        ]
+
+    def get_nombre_completo(self, obj):
+        return f"{obj.nombre} {obj.primer_apellido} {obj.segundo_apellido or ''}".strip()
+
+
+class EstudianteListadoSerializer(serializers.ModelSerializer):
+    persona_info = EstudiantePersonaSerializer(source='usuario.persona', read_only=True)
+    persona_id = serializers.IntegerField(source='usuario.persona.id', read_only=True)
+    usuario_id = serializers.IntegerField(source='usuario.id', read_only=True)
+    username = serializers.CharField(source='usuario.username', read_only=True)
+    email = serializers.CharField(source='usuario.email', read_only=True)
+    codigo_estudiante = serializers.SerializerMethodField()
+    estado_estudiante = serializers.SerializerMethodField()
+    tipo_estudiante = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AuthUsuarioRol
+        fields = [
+            'usuario_id',
+            'username',
+            'email',
+            'persona_id',
+            'persona_info',
+            'codigo_estudiante',
+            'estado_estudiante',
+            'tipo_estudiante'
+        ]
+
+    def _get_persona_id(self, obj):
+        persona = getattr(obj.usuario, 'persona', None)
+        return persona.id if persona else None
+
+    def _get_estudiante_record(self, obj):
+        persona_id = self._get_persona_id(obj)
+        if not persona_id:
+            return None
+        return PersonasEstudiante.objects.filter(persona_id=persona_id).first()
+
+    def get_codigo_estudiante(self, obj):
+        estudiante = self._get_estudiante_record(obj)
+        return estudiante.codigo_estudiante if estudiante else None
+
+    def get_estado_estudiante(self, obj):
+        estudiante = self._get_estudiante_record(obj)
+        return estudiante.estado_estudiante if estudiante else None
+
+    def get_tipo_estudiante(self, obj):
+        estudiante = self._get_estudiante_record(obj)
+        return estudiante.tipo_estudiante if estudiante else None

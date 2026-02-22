@@ -156,6 +156,62 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
             'disueltos': disueltos,
             'por_tipo': list(por_tipo)
         })
+    
+    @action(detail=True, methods=['get'])
+    def miembros_con_roles(self, request, pk=None):
+        """
+        Listar miembros del comité con sus roles asignados.
+        """
+        comite = self.get_object()
+        miembros = ComitesMiembro.objects.filter(
+            comite=comite,
+            activo=True
+        ).select_related('persona').order_by('fecha_nombramiento')
+        
+        serializer = ComitesMiembroSerializer(miembros, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def asignar_rol(self, request, pk=None):
+        """
+        Asignar o actualizar rol de un miembro en el comité.
+        Esperado: {miembro_id, cargo}
+        """
+        comite = self.get_object()
+        miembro_id = request.data.get('miembro_id')
+        nuevo_cargo = request.data.get('cargo')
+        
+        if not miembro_id or not nuevo_cargo:
+            return Response(
+                {'error': 'Se requiere miembro_id y cargo'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            miembro = ComitesMiembro.objects.get(id=miembro_id, comite=comite)
+            
+            # Usar el serializer para validar el nuevo cargo
+            serializer = ComitesMiembroSerializer(
+                miembro,
+                data={'cargo': nuevo_cargo},
+                partial=True,
+                context={'comite': comite}
+            )
+            
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    'message': f'Rol {nuevo_cargo} asignado exitosamente',
+                    'data': serializer.data
+                })
+            
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        except ComitesMiembro.DoesNotExist:
+            return Response(
+                {'error': 'Miembro no encontrado en este comité'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
 class ComitesMiembroViewSet(viewsets.ModelViewSet):
@@ -222,6 +278,16 @@ class ComitesActaViewSet(viewsets.ModelViewSet):
     search_fields = ['numero_acta', 'contenido', 'acuerdos', 'seguimientos']
     ordering_fields = ['fecha_elaboracion', 'numero_acta', 'estado']
     ordering = ['-fecha_elaboracion']
+    
+    def get_queryset(self):
+        """Filtrar actas por comité si se especifica"""
+        queryset = super().get_queryset()
+        comite_id = self.request.query_params.get('comite_id', None)
+        
+        if comite_id:
+            queryset = queryset.filter(reunion__comite_id=comite_id)
+            
+        return queryset
 
 
 class ComitesInformeOrganoViewSet(viewsets.ModelViewSet):

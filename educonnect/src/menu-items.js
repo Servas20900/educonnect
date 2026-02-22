@@ -21,6 +21,7 @@ const menuItems = {
             { id: 'reportes', title: 'Reportes', type: 'item', url: '/reportes' },
             { id: 'permisos', title: 'Usuarios y Permisos', type: 'item', url: '/permisos' },
             { id: 'incapacidades', title: 'Incapacidades', type: 'item', url: '/incapacidades'},
+            { id: 'estudiantes-admin', title: 'Estudiantes', type: 'item', url: '/estudiantes' },
             { id: 'comite', title: 'Comites', type: 'item', url: '/comites'},
             { id: 'oficios', title: 'Oficios/Plantillas', type: 'item', url: '/oficios'},
             { id: 'repositorios', title: 'Repositorios', type: 'item', url: '/repositorios'},
@@ -68,7 +69,8 @@ const menuItems = {
             { id: 'comite-home', title: 'Home', type: 'item', url: '/comite/home' },
             { id: 'crear-acta', title: 'Crear Actas', type: 'item', url: '/comite/crear-acta' },
             { id: 'agendar-reunion', title: 'Agendar Reunion', type: 'item', url: '/comite/reunion' },
-            { id: 'roles-comite', title: 'Roles', type: 'item', url: '/comite/roles' }
+            { id: 'roles-comite', title: 'Roles', type: 'item', url: '/comite/roles' },
+            { id: 'documentos-comite', title: 'Documentos', type: 'item', url: '/comite/documentos' }
           ]
         }
       ]
