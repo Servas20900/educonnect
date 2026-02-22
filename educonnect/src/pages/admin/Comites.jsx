@@ -39,6 +39,7 @@ export default function Comites() {
     const [editingId, setEditingId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [expandedComite, setExpandedComite] = useState(null);
 
     const personasOptions = useMemo(() => {
         return personas.map((p) => ({
@@ -227,8 +228,11 @@ export default function Comites() {
 
                     <div>
                         <label htmlFor="miembros" className="block text-sm font-medium text-gray-700 mb-1">
-                            {editingId ? 'Agregar Miembros al Comité' : 'Agregar Miembros'}
+                            {editingId ? 'Agregar Miembros al Comité' : 'Seleccionar Miembros'}
                         </label>
+                        <p className="text-xs text-gray-500 mb-2">
+                            Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar varios miembros
+                        </p>
                         <select
                             id="miembros"
                             multiple
@@ -238,7 +242,7 @@ export default function Comites() {
                                     Array.from(e.target.selectedOptions, (option) => Number(option.value))
                                 )
                             }
-                            className="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md shadow-sm h-28"
+                            className="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md shadow-sm h-32 border"
                         >
                             {personasOptions.map((persona) => (
                                 <option key={persona.id} value={persona.id}>
@@ -246,6 +250,11 @@ export default function Comites() {
                                 </option>
                             ))}
                         </select>
+                        {selectedPersonas.length > 0 && (
+                            <p className="mt-2 text-sm text-teal-600">
+                                {selectedPersonas.length} {selectedPersonas.length === 1 ? 'miembro seleccionado' : 'miembros seleccionados'}
+                            </p>
+                        )}
                     </div>
 
                     <div className="flex justify-end gap-3 pt-2">
@@ -296,34 +305,77 @@ export default function Comites() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {comites.map((comite) => (
-                                <tr key={comite.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {comite.nombre}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {comite.tipo_comite}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {comite.total_miembros ?? comite.total_miembros_activos ?? 0}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {comite.estado}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm space-x-3">
-                                        <button
-                                            onClick={() => handleEdit(comite)}
-                                            className="text-teal-600 hover:text-teal-900"
-                                        >
-                                            Editar
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(comite.id)}
-                                            className="text-red-600 hover:text-red-900"
-                                        >
-                                            Eliminar
-                                        </button>
-                                    </td>
-                                </tr>
+                                <>
+                                    <tr key={comite.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            {comite.nombre}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {comite.tipo_comite}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <button
+                                                onClick={() => setExpandedComite(expandedComite === comite.id ? null : comite.id)}
+                                                className="text-teal-600 hover:text-teal-900 font-medium"
+                                            >
+                                                {comite.total_miembros ?? comite.total_miembros_activos ?? 0} miembros
+                                                <span className="ml-1">{expandedComite === comite.id ? '▼' : '▶'}</span>
+                                            </button>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                                comite.estado === 'activo' ? 'bg-green-100 text-green-800' :
+                                                comite.estado === 'inactivo' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }`}>
+                                                {comite.estado}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm space-x-3">
+                                            <button
+                                                onClick={() => handleEdit(comite)}
+                                                className="text-teal-600 hover:text-teal-900"
+                                            >
+                                                Editar
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(comite.id)}
+                                                className="text-red-600 hover:text-red-900"
+                                            >
+                                                Eliminar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {expandedComite === comite.id && comite.miembros && comite.miembros.length > 0 && (
+                                        <tr key={`${comite.id}-miembros`}>
+                                            <td colSpan="5" className="px-6 py-4 bg-gray-50">
+                                                <div className="space-y-2">
+                                                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Integrantes del Comité:</h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                        {comite.miembros.map((miembro) => (
+                                                            <div key={miembro.id} className="flex items-center space-x-2 bg-white p-3 rounded-md border border-gray-200">
+                                                                <div className="flex-1">
+                                                                    <p className="text-sm font-medium text-gray-900">
+                                                                        {miembro.persona_info?.nombre_completo || 'N/A'}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-500">
+                                                                        {miembro.cargo || 'Miembro'}
+                                                                    </p>
+                                                                    <p className="text-xs text-gray-400">
+                                                                        {miembro.persona_info?.email_institucional || miembro.persona_info?.email_personal}
+                                                                    </p>
+                                                                </div>
+                                                                {miembro.activo && (
+                                                                    <span className="text-green-500 text-xs">●</span>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </>
                             ))}
                             {comites.length === 0 && !loading && (
                                 <tr>

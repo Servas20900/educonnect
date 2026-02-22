@@ -68,7 +68,8 @@ const menuItems = {
             { id: 'comite-home', title: 'Home', type: 'item', url: '/comite/home' },
             { id: 'crear-acta', title: 'Crear Actas', type: 'item', url: '/comite/crear-acta' },
             { id: 'agendar-reunion', title: 'Agendar Reunion', type: 'item', url: '/comite/reunion' },
-            { id: 'roles-comite', title: 'Roles', type: 'item', url: '/comite/roles' }
+            { id: 'roles-comite', title: 'Roles', type: 'item', url: '/comite/roles' },
+            { id: 'documentos-comite', title: 'Documentos', type: 'item', url: '/comite/documentos' }
           ]
         }
       ]

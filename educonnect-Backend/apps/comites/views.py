@@ -278,6 +278,16 @@ class ComitesActaViewSet(viewsets.ModelViewSet):
     search_fields = ['numero_acta', 'contenido', 'acuerdos', 'seguimientos']
     ordering_fields = ['fecha_elaboracion', 'numero_acta', 'estado']
     ordering = ['-fecha_elaboracion']
+    
+    def get_queryset(self):
+        """Filtrar actas por comité si se especifica"""
+        queryset = super().get_queryset()
+        comite_id = self.request.query_params.get('comite_id', None)
+        
+        if comite_id:
+            queryset = queryset.filter(reunion__comite_id=comite_id)
+            
+        return queryset
 
 
 class ComitesInformeOrganoViewSet(viewsets.ModelViewSet):

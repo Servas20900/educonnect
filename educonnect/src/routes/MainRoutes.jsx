@@ -44,6 +44,7 @@ const HomeComite = Loadable(lazy(() => import('../pages/comite/Home')));
 const CrearActa = Loadable(lazy(() => import('../pages/comite/CrearActa')));
 const AgendarReunion = Loadable(lazy(() => import('../pages/comite/AgendarReunion')));
 const RolesComite = Loadable(lazy(() => import('../pages/comite/RolesComite')));
+const DocumentosComite = Loadable(lazy(() => import('../pages/comite/DocumentosComite')));
 
 const InformesEconomicos = Loadable(lazy(() => import('../pages/auxiliares/InformesEconomicos')));
 const Reglamentos = Loadable(lazy(() => import('../pages/auxiliares/Reglamentos')));
@@ -290,6 +291,14 @@ const AppRoutes = {
           element: (
             <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}>
               <RolesComite />
+            </RequireAuth>
+          )
+        },
+        {
+          path: 'documentos',
+          element: (
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}>
+              <DocumentosComite />
             </RequireAuth>
           )
         }
