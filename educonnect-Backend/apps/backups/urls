@@ -1,0 +1,7 @@
+from django.urls import path
+from .views import BackupCreateView, BackupListView
+
+urlpatterns = [
+    path("create/", BackupCreateView.as_view()),
+    path("list/", BackupListView.as_view()),
+]

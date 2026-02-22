@@ -20,6 +20,7 @@ urlpatterns = [
     path('api/v1/comites/', include('apps.comites.urls')),
     path('api/v1/grupo/', include('apps.grupo.urls')),
     path('api/v1/documentos/', include('apps.carpetas.urls')),
+    path("api/backups/", include("apps.backups.urls")),
     path('api/v1/asignatura/', include('apps.asignatura.urls')),
 ]
 
