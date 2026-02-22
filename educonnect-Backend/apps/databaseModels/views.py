@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from datetime import datetime, timedelta
 from django.db.models import Case, Value, When, IntegerField
 from rest_framework.parsers import MultiPartParser, FormParser 
+from rest_framework.exceptions import PermissionDenied
 # Create your views here.
 
 class ViewComunicacionesCircular(viewsets.ModelViewSet):
@@ -38,6 +39,76 @@ class ViewComunicacionesCircular(viewsets.ModelViewSet):
         instance.save()
         return response.Response(
             {"message": f"Circular '{instance.titulo}' marcada como inactiva."}, 
+            status=status.HTTP_200_OK
+        )
+
+
+class ViewComunicacionesComunicado(viewsets.ModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return WriteSerializerComunicacionesComunicado
+        return ReadSerializerComunicacionesComunicado
+
+    def _obtener_rol(self):
+        if self.request.user.is_superuser:
+            return 'administrador'
+
+        usuario_rol = AuthUsuarioRol.objects.filter(usuario=self.request.user).select_related('rol').first()
+        if usuario_rol and usuario_rol.rol:
+            return usuario_rol.rol.nombre.lower()
+        return 'usuario'
+
+    def _puede_emitir(self):
+        return self._obtener_rol() in {'docente', 'administrador'}
+
+    def get_queryset(self):
+        queryset = ComunicacionesComunicado.objects.select_related('publicado_por').order_by('-fecha_publicacion')
+        rol = self._obtener_rol()
+
+        if rol == 'administrador':
+            return queryset
+
+        if rol == 'docente':
+            return queryset.filter(publicado_por=self.request.user)
+
+        if rol == 'estudiante':
+            return queryset.filter(visible=True, destinatarios__contains=['estudiantes'])
+
+        if rol == 'encargado':
+            return queryset.filter(visible=True, destinatarios__contains=['encargados'])
+
+        return queryset.filter(visible=True)
+
+    def perform_create(self, serializer):
+        if not self._puede_emitir():
+            raise PermissionDenied('Solo docentes o administradores pueden emitir comunicados.')
+        serializer.save(publicado_por=self.request.user)
+
+    def perform_update(self, serializer):
+        if not self._puede_emitir():
+            raise PermissionDenied('Solo docentes o administradores pueden editar comunicados.')
+
+        instance = self.get_object()
+        if self._obtener_rol() != 'administrador' and instance.publicado_por_id != self.request.user.id:
+            raise PermissionDenied('Solo puedes editar tus propios comunicados.')
+
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        if not self._puede_emitir():
+            raise PermissionDenied('Solo docentes o administradores pueden ocultar comunicados.')
+
+        instance = self.get_object()
+        if self._obtener_rol() != 'administrador' and instance.publicado_por_id != request.user.id:
+            raise PermissionDenied('Solo puedes ocultar tus propios comunicados.')
+
+        instance.visible = False
+        instance.save(update_fields=['visible'])
+
+        return response.Response(
+            {"message": f"Comunicado '{instance.titulo}' ocultado correctamente."},
             status=status.HTTP_200_OK
         )
 

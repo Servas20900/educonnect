@@ -628,7 +628,7 @@ CREATE TABLE comunicaciones_comunicado (
     fecha_vigencia TIMESTAMP WITH TIME ZONE,
     visible BOOLEAN DEFAULT TRUE NOT NULL,
     publicado_por_id BIGINT NOT NULL REFERENCES auth_usuario(id) ON DELETE RESTRICT,
-    CONSTRAINT tipo_comunicado_valido CHECK (tipo_comunicado IN ('informativo', 'urgente', 'evento', 'aviso', 'felicitacion'))
+    CONSTRAINT tipo_comunicado_valido CHECK (tipo_comunicado IN ('informativo', 'urgente', 'evento', 'aviso', 'felicitacion', 'tarea', 'cambio'))
 );
 
 CREATE INDEX idx_circular_activa ON comunicaciones_circular(activa);

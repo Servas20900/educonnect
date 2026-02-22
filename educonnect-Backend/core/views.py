@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from apps.databaseModels.models import AuthUsuarioRol
+from .serializers import CustomTokenObtainPairSerializer
 
 def obtener_rol_usuario(user):
     """
@@ -39,6 +40,8 @@ def obtener_rol_usuario(user):
     return 'usuario'
 
 class ObtencionTokens(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
+
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         
