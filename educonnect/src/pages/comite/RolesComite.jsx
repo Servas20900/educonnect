@@ -34,12 +34,15 @@ export default function RolesComite() {
   const loadComites = async () => {
     try {
       setLoading(true);
-      const data = await fetchComites({ estado: 'activo' });
+      const data = await fetchComites({ estado: 'activo', mis_comites: true });
       setComites(data.results || data);
       
       // Seleccionar automáticamente el primer comité si hay uno
-      if ((data.results || data).length > 0) {
-        setSelectedComite((data.results || data)[0].id);
+      const list = data.results || data;
+      if (list.length > 0) {
+        setSelectedComite(list[0].id);
+      } else {
+        setSelectedComite('');
       }
     } catch (err) {
       setError(parseError(err));
@@ -228,6 +231,14 @@ export default function RolesComite() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {!selectedComite && !loading && (
+        <div className="rounded-md bg-yellow-50 p-4">
+          <p className="text-sm text-yellow-800">
+            No tienes comités asignados para gestionar roles.
+          </p>
         </div>
       )}
 
