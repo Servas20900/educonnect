@@ -10,6 +10,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from apps.databaseModels.validators import validar_extension_archivo
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 class AcademicoAsignatura(models.Model):
     id = models.BigAutoField(primary_key=True)
@@ -406,15 +407,26 @@ class ComunicacionesCircular(models.Model):
 
 
 class ComunicacionesComunicado(models.Model):
+    TIPO_COMUNICADO_CHOICES = [
+        ('informativo', 'Informativo'),
+        ('urgente', 'Urgente'),
+        ('evento', 'Evento'),
+        ('aviso', 'Aviso'),
+        ('felicitacion', 'Felicitación'),
+        ('tarea', 'Tarea'),
+        ('cambio', 'Cambio'),
+    ]
+
     id = models.BigAutoField(primary_key=True)
     titulo = models.CharField(max_length=200)
     contenido = models.TextField()
-    tipo_comunicado = models.CharField(max_length=50)
-    destinatarios = models.JSONField()
-    fecha_publicacion = models.DateTimeField()
+    tipo_comunicado = models.CharField(max_length=50, choices=TIPO_COMUNICADO_CHOICES, default='informativo')
+    destinatarios = models.JSONField(default=list)
+    fecha_publicacion = models.DateTimeField(default=timezone.now)
     fecha_vigencia = models.DateTimeField(blank=True, null=True)
-    visible = models.BooleanField()
+    visible = models.BooleanField(default=True)
     publicado_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
+
     class Meta:
         managed = True
         db_table = 'comunicaciones_comunicado'

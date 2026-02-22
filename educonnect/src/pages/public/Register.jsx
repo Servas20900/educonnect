@@ -34,7 +34,20 @@ export default function Register() {
   return (
     <div className="max-w-md mx-auto p-4">
       <h2 className="text-2xl font-bold">Crear cuenta</h2>
-      {error && <p className="text-red-500 mt-2 text-sm">{JSON.stringify(error)}</p>}
+      {error && (
+        <div className="text-red-500 mt-2 text-sm bg-red-50 p-2 rounded space-y-1">
+          <p>{error.message || 'No fue posible registrar el usuario'}</p>
+          {error.details && typeof error.details === 'object' && (
+            <ul className="list-disc ml-5">
+              {Object.entries(error.details).map(([field, value]) => (
+                <li key={field}>
+                  {field}: {Array.isArray(value) ? value.join(', ') : String(value)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <form className="mt-6 space-y-4" onSubmit={onSubmit}>
         <div className="grid grid-cols-2 gap-4">

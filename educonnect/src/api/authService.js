@@ -5,6 +5,82 @@ export const api = axios.create({
     withCredentials: true,
 });
 
+const parseApiError = (error, fallbackMessage) => {
+    const payload = error?.response?.data;
+
+    if (!payload) {
+        return {
+            message: fallbackMessage,
+            details: null
+        };
+    }
+
+    if (typeof payload === 'string') {
+        return {
+            message: payload,
+            details: null
+        };
+    }
+
+    if (payload.detail) {
+        const detailText = String(payload.detail || '').toLowerCase();
+        if (detailText.includes('no active account found') || detailText.includes('credentials')) {
+            return {
+                message: 'Usuario o contraseña incorrectos',
+                details: payload
+            };
+        }
+
+        return {
+            message: payload.detail,
+            details: payload
+        };
+    }
+
+    if (payload.mensaje) {
+        return {
+            message: payload.mensaje,
+            details: payload
+        };
+    }
+
+    const translatedPayload = { ...payload };
+
+    if (translatedPayload.username && Array.isArray(translatedPayload.username)) {
+        translatedPayload.username = translatedPayload.username.map((message) => {
+            const text = String(message || '').toLowerCase();
+            if (text.includes('already exists')) return 'Este usuario ya existe';
+            return message;
+        });
+    }
+
+    if (translatedPayload.email && Array.isArray(translatedPayload.email)) {
+        translatedPayload.email = translatedPayload.email.map((message) => {
+            const text = String(message || '').toLowerCase();
+            if (text.includes('already exists')) return 'Este correo ya está registrado';
+            return message;
+        });
+    }
+
+    const fieldErrors = Object.entries(translatedPayload)
+        .map(([field, value]) => {
+            const text = Array.isArray(value) ? value.join(', ') : String(value);
+            return `${field}: ${text}`;
+        });
+
+    if (fieldErrors.length > 0) {
+        return {
+            message: fieldErrors.join(' | '),
+            details: translatedPayload
+        };
+    }
+
+    return {
+        message: fallbackMessage,
+        details: payload
+    };
+};
+
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('access_token');
     
@@ -25,7 +101,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
+        const status = error?.response?.status;
+        const requestUrl = error?.config?.url || '';
+        const isAuthAttempt = requestUrl.includes('api/auth/login/') || requestUrl.includes('api/v1/auth/register/');
+
+        if (status === 401 && !isAuthAttempt) {
             // Limpieza total de sesión
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
@@ -43,7 +123,10 @@ export const registrarUsuario = async (userData) => {
         const response = await api.post('api/v1/auth/register/', userData);
         return response.data;
     } catch (error) {
-        throw error.response ? error.response.data : new Error('Error de conexión');
+        const parsed = parseApiError(error, 'Error de conexión al registrar usuario');
+        const normalizedError = new Error(parsed.message);
+        normalizedError.details = parsed.details;
+        throw normalizedError;
     }
 };
 
@@ -58,7 +141,10 @@ export const loginUsuario = async (credentials) => {
         }
         return response.data;
     } catch (error) {
-        throw error.response ? error.response.data : new Error('Error en el inicio de sesión');
+        const parsed = parseApiError(error, 'Error en el inicio de sesión');
+        const normalizedError = new Error(parsed.message);
+        normalizedError.details = parsed.details;
+        throw normalizedError;
     }
 };
 

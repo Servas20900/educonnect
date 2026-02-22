@@ -68,7 +68,7 @@ export default function Login() {
 
       {error && (
         <p className="text-red-500 mt-2 text-sm bg-red-50 p-2 rounded">
-          Usuario o contraseña incorrectos
+          {error.message || 'Usuario o contraseña incorrectos'}
         </p>
       )}
 

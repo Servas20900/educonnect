@@ -5,6 +5,7 @@ from .views import  *
 router = routers.DefaultRouter()
 
 router.register(r'ComunicacionesCircular', ViewComunicacionesCircular)
+router.register(r'ComunicacionesComunicado', ViewComunicacionesComunicado, basename='comunicaciones-comunicado')
 
 
 urlpatterns = [

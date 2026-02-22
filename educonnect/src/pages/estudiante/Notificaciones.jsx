@@ -1,9 +1,42 @@
+import { useEffect, useState } from 'react';
+import { fetchComunicados } from '../../api/comunicadosService';
+
+const formatFecha = (fecha) => {
+  if (!fecha) return '—';
+  const date = new Date(fecha);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString('es-CR');
+};
+
 export default function Notificaciones(){
-const notificacionesSimuladas = [
-    { id: 1, tipo: 'Comunicado Profesor', mensaje: 'Nueva tarea asignada por Docente Pérez.', fecha: '2025-12-11' },
-    { id: 2, tipo: 'Asistencia', mensaje: 'Su hijo(a) estuvo ausente el día 2025-12-09.', fecha: '2025-12-09' },
-    { id: 3, tipo: 'General', mensaje: 'Circular de cierre de período disponible.', fecha: '2025-12-05' },
-  ];
+  const [notificaciones, setNotificaciones] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const cargarNotificaciones = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const comunicados = await fetchComunicados();
+        const notificacionesMapeadas = (comunicados || []).map((comunicado) => ({
+          id: comunicado.id,
+          tipo: comunicado.tipo_comunicado === 'tarea' ? 'Tarea' : 'Comunicado',
+          mensaje: comunicado.titulo,
+          detalle: comunicado.contenido,
+          fecha: comunicado.fecha_publicacion
+        }));
+
+        setNotificaciones(notificacionesMapeadas);
+      } catch {
+        setError('No se pudieron cargar las notificaciones.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarNotificaciones();
+  }, []);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -17,26 +50,38 @@ const notificacionesSimuladas = [
         </h2>
         
         <div className="space-y-4">
-          {notificacionesSimuladas.map(notif => (
+          {loading && (
+            <div className="p-4 bg-gray-100 text-gray-600 rounded-md text-center">
+              Cargando notificaciones...
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="p-4 bg-red-50 text-red-700 rounded-md text-center border border-red-200">
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && notificaciones.map(notif => (
             <div key={notif.id} className="p-4 border rounded-lg hover:bg-yellow-50 transition duration-150 flex justify-between items-center">
               <div>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${notif.tipo === 'Comunicado Profesor' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}`}>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${notif.tipo === 'Tarea' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-800'}`}>
                   {notif.tipo}
                 </span>
                 <p className="text-gray-900 font-medium mt-1">
                   {notif.mensaje}
                 </p>
+                <p className="text-sm text-gray-600 mt-0.5">
+                  {notif.detalle}
+                </p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Recibido: {notif.fecha}
+                  Recibido: {formatFecha(notif.fecha)}
                 </p>
               </div>
-              <button className="text-sm text-blue-600 hover:text-blue-800">
-                Ver detalle
-              </button>
             </div>
           ))}
 
-          {notificacionesSimuladas.length === 0 && (
+          {!loading && !error && notificaciones.length === 0 && (
             <div className="p-4 bg-gray-100 text-gray-600 rounded-md text-center">
               No hay notificaciones pendientes.
             </div>
