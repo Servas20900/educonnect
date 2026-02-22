@@ -68,6 +68,26 @@ class ComitesMiembroSerializer(serializers.ModelSerializer):
                 "Esta persona ya tiene el mismo cargo en este comité"
             )
         
+        # Validar que solo haya un presidente o secretario activo por comité
+        if cargo and cargo.lower() in ['presidente', 'secretario']:
+            activo = data.get('activo', True if not instance else instance.activo)
+            
+            if activo:
+                # Buscar si ya existe otro miembro con ese cargo activo
+                existing = ComitesMiembro.objects.filter(
+                    comite=comite,
+                    cargo__iexact=cargo,
+                    activo=True
+                )
+                
+                if instance:
+                    existing = existing.exclude(pk=instance.pk)
+                
+                if existing.exists():
+                    raise serializers.ValidationError(
+                        f"Ya existe un {cargo.lower()} activo en este comité. Debe cesar al actual antes de asignar uno nuevo."
+                    )
+        
         return data
 
 

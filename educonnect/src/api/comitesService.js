@@ -71,6 +71,27 @@ export const removeMiembro = async (comiteId, miembroId) => {
     }
 };
 
+export const fetchMiembrosConRoles = async (comiteId) => {
+    try {
+        const response = await api.get(`api/v1/comites/comites/${comiteId}/miembros_con_roles/`);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al obtener miembros');
+    }
+};
+
+export const asignarRol = async (comiteId, miembroId, cargo) => {
+    try {
+        const response = await api.post(`api/v1/comites/comites/${comiteId}/asignar_rol/`, {
+            miembro_id: miembroId,
+            cargo: cargo
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al asignar rol');
+    }
+};
+
 // ==================== PERSONAS DISPONIBLES ====================
 
 export const fetchPersonasDisponibles = async (params = {}) => {
