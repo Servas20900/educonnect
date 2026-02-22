@@ -6,6 +6,7 @@ router = routers.DefaultRouter()
 
 router.register(r'ComunicacionesCircular', ViewComunicacionesCircular)
 router.register(r'ComunicacionesComunicado', ViewComunicacionesComunicado, basename='comunicaciones-comunicado')
+router.register(r'estudiantes', ViewEstudiantes, basename='estudiantes')
 
 
 urlpatterns = [

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchEstudiantes } from '../../api/estudiantesService';
 
-export default function RegistroEstudiantes() {
+export default function Estudiantes() {
   const [estudiantes, setEstudiantes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,15 +38,15 @@ export default function RegistroEstudiantes() {
   }, [estudiantes, search]);
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 bg-gray-50 min-h-screen space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Registro de Estudiantes</h2>
-          <p className="text-sm text-gray-500">Listado de estudiantes registrados en el sistema.</p>
+          <h1 className="text-3xl font-bold text-gray-700">Listado de Estudiantes</h1>
+          <p className="text-sm text-gray-500">Estudiantes registrados en el sistema.</p>
         </div>
         <button
           onClick={loadEstudiantes}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
         >
           Recargar
         </button>
@@ -63,8 +63,8 @@ export default function RegistroEstudiantes() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm md:w-1/3"
-            placeholder="Buscar estudiante"
+            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm md:w-1/2"
+            placeholder="Buscar por nombre, identificacion o codigo"
           />
         </div>
 
@@ -73,38 +73,44 @@ export default function RegistroEstudiantes() {
             <thead>
               <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
                 <th className="px-3 py-2">Nombre</th>
+                <th className="px-3 py-2">Identificacion</th>
                 <th className="px-3 py-2">Codigo</th>
                 <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Tipo</th>
                 <th className="px-3 py-2">Email</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading && (
                 <tr>
-                  <td colSpan="4" className="px-3 py-6 text-center text-sm text-gray-500">
+                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
                     Cargando estudiantes...
                   </td>
                 </tr>
               )}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="px-3 py-6 text-center text-sm text-gray-500">
+                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
                     No hay estudiantes registrados.
                   </td>
                 </tr>
               )}
-              {!loading && filtered.map((e) => {
-                const persona = e.persona_info || {};
+              {!loading && filtered.map((est) => {
+                const persona = est.persona_info || {};
                 const nombre = `${persona.nombre || ''} ${persona.primer_apellido || ''} ${persona.segundo_apellido || ''}`.trim();
                 return (
-                  <tr key={e.usuario_id || e.persona_id} className="hover:bg-gray-50">
+                  <tr key={est.usuario_id || est.persona_id} className="hover:bg-gray-50">
                     <td className="px-3 py-2 font-medium text-gray-900">{nombre || 'N/A'}</td>
-                    <td className="px-3 py-2 text-gray-700">{e.codigo_estudiante || 'N/A'}</td>
+                    <td className="px-3 py-2 text-gray-700">{persona.identificacion || 'N/A'}</td>
+                    <td className="px-3 py-2 text-gray-700">{est.codigo_estudiante || 'N/A'}</td>
                     <td className="px-3 py-2">
-                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${e.estado_estudiante === 'activo' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                        {e.estado_estudiante || 'N/A'}
+                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                        est.estado_estudiante === 'activo' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
+                      }`}>
+                        {est.estado_estudiante || 'N/A'}
                       </span>
                     </td>
+                    <td className="px-3 py-2 text-gray-700">{est.tipo_estudiante || 'N/A'}</td>
                     <td className="px-3 py-2 text-gray-700">
                       {persona.email_institucional || persona.email_personal || 'N/A'}
                     </td>

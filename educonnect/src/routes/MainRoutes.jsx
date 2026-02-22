@@ -19,6 +19,7 @@ const Horarios = Loadable(lazy(() => import('../pages/admin/Horarios')));
 const Reportes = Loadable(lazy(() => import('../pages/admin/Reportes')));
 const GestionPermisosModulos = Loadable(lazy(() => import('../pages/admin/GestionPermisosModulos')));
 const Incapacidades = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
+const EstudiantesAdmin = Loadable(lazy(() => import('../pages/admin/Estudiantes')));
 const Comites = Loadable(lazy(() => import('../pages/admin/Comites')));
 const OficiosPlantillas = Loadable(lazy(() => import('../pages/admin/OficiosPlantillas')));
 const Repositorios = Loadable(lazy(() => import('../pages/admin/Repositorios')));
@@ -130,6 +131,14 @@ const AppRoutes = {
       element: (
         <RequireAuth allowedRoles={[ROLES.ADMIN]}>
           <Incapacidades />
+        </RequireAuth>
+      )
+    },
+    {
+      path: 'estudiantes',
+      element: (
+        <RequireAuth allowedRoles={[ROLES.ADMIN]}>
+          <EstudiantesAdmin />
         </RequireAuth>
       )
     },

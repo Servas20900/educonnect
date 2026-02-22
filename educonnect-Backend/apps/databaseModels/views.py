@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from .serializers import *
-from rest_framework import viewsets, permissions,status,response
+from rest_framework import viewsets, permissions, status, response, filters
 from .models import * 
 from rest_framework.views import APIView
 from django.db.models import Q, Count, Max
@@ -124,3 +124,42 @@ class RegistroUsuarioView(APIView):
                 status=status.HTTP_201_CREATED
             )
         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ViewEstudiantes(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = EstudianteListadoSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = [
+        'persona__nombre',
+        'persona__primer_apellido',
+        'persona__segundo_apellido',
+        'persona__identificacion',
+        'codigo_estudiante'
+    ]
+    ordering_fields = ['codigo_estudiante', 'fecha_ingreso', 'estado_estudiante']
+    ordering = ['persona__primer_apellido', 'persona__nombre']
+
+    def _get_role_name(self):
+        if self.request.user and self.request.user.is_superuser:
+            return 'administrador'
+
+        usuario_rol = AuthUsuarioRol.objects.filter(usuario=self.request.user).select_related('rol').first()
+        if usuario_rol and usuario_rol.rol:
+            return (usuario_rol.rol.nombre or '').strip().lower()
+
+        return ''
+
+    def get_queryset(self):
+        rol = self._get_role_name()
+        if rol not in {'administrador', 'docente'}:
+            raise PermissionDenied('No tienes permisos para consultar estudiantes.')
+
+        return AuthUsuarioRol.objects.select_related(
+            'usuario',
+            'usuario__persona',
+            'rol'
+        ).filter(
+            rol__nombre__iexact='estudiante',
+            usuario__is_active=True
+        )

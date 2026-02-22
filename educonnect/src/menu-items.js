@@ -21,6 +21,7 @@ const menuItems = {
             { id: 'reportes', title: 'Reportes', type: 'item', url: '/reportes' },
             { id: 'permisos', title: 'Usuarios y Permisos', type: 'item', url: '/permisos' },
             { id: 'incapacidades', title: 'Incapacidades', type: 'item', url: '/incapacidades'},
+            { id: 'estudiantes-admin', title: 'Estudiantes', type: 'item', url: '/estudiantes' },
             { id: 'comite', title: 'Comites', type: 'item', url: '/comites'},
             { id: 'oficios', title: 'Oficios/Plantillas', type: 'item', url: '/oficios'},
             { id: 'repositorios', title: 'Repositorios', type: 'item', url: '/repositorios'},
