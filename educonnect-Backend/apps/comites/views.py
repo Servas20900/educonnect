@@ -31,6 +31,18 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
     search_fields = ['nombre', 'tipo_comite', 'descripcion']
     ordering_fields = ['nombre', 'fecha_creacion', 'estado']
     ordering = ['-fecha_creacion']
+
+    def _is_privileged(self, request):
+        return bool(request.user and (request.user.is_staff or request.user.is_superuser))
+
+    def _get_user_comite_ids(self, request):
+        persona = getattr(request.user, 'persona', None)
+        if not persona:
+            return []
+        return list(
+            ComitesMiembro.objects.filter(persona=persona, activo=True)
+            .values_list('comite_id', flat=True)
+        )
     
     def get_serializer_class(self):
         """Usar serializer específico para creación"""
@@ -43,11 +55,16 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         estado = self.request.query_params.get('estado', None)
         tipo = self.request.query_params.get('tipo_comite', None)
+        mis_comites = self.request.query_params.get('mis_comites', None)
         
         if estado:
             queryset = queryset.filter(estado=estado)
         if tipo:
             queryset = queryset.filter(tipo_comite=tipo)
+
+        if mis_comites and not self._is_privileged(self.request):
+            comite_ids = self._get_user_comite_ids(self.request)
+            queryset = queryset.filter(id__in=comite_ids)
             
         return queryset.annotate(
             total_miembros_activos=Count('comitesmiembro', filter=Q(comitesmiembro__activo=True))
@@ -163,6 +180,10 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         Listar miembros del comité con sus roles asignados.
         """
         comite = self.get_object()
+        if not self._is_privileged(request):
+            comite_ids = self._get_user_comite_ids(request)
+            if comite.id not in comite_ids:
+                return Response({'error': 'No tienes acceso a este comité'}, status=status.HTTP_403_FORBIDDEN)
         miembros = ComitesMiembro.objects.filter(
             comite=comite,
             activo=True
@@ -178,6 +199,10 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         Esperado: {miembro_id, cargo}
         """
         comite = self.get_object()
+        if not self._is_privileged(request):
+            comite_ids = self._get_user_comite_ids(request)
+            if comite.id not in comite_ids:
+                return Response({'error': 'No tienes acceso a este comité'}, status=status.HTTP_403_FORBIDDEN)
         miembro_id = request.data.get('miembro_id')
         nuevo_cargo = request.data.get('cargo')
         
@@ -282,10 +307,13 @@ class ComitesActaViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtrar actas por comité si se especifica"""
         queryset = super().get_queryset()
-        comite_id = self.request.query_params.get('comite_id', None)
+        persona = getattr(self.request.user, 'persona', None)
+        is_privileged = bool(self.request.user and (self.request.user.is_staff or self.request.user.is_superuser))
         
-        if comite_id:
-            queryset = queryset.filter(reunion__comite_id=comite_id)
+        if not is_privileged:
+            if not persona:
+                return queryset.none()
+            queryset = queryset.filter(elaborada_por=self.request.user)
             
         return queryset
 
@@ -298,3 +326,16 @@ class ComitesInformeOrganoViewSet(viewsets.ModelViewSet):
     search_fields = ['tipo_informe', 'titulo', 'contenido', 'conclusiones', 'recomendaciones']
     ordering_fields = ['fecha_elaboracion', 'fecha_presentacion', 'titulo', 'estado']
     ordering = ['-fecha_elaboracion']
+
+    def get_queryset(self):
+        """Filtrar reportes por comité si se especifica"""
+        queryset = super().get_queryset().filter(tipo_informe='reporte_comite')
+        persona = getattr(self.request.user, 'persona', None)
+        is_privileged = bool(self.request.user and (self.request.user.is_staff or self.request.user.is_superuser))
+
+        if not is_privileged:
+            if not persona:
+                return queryset.none()
+            queryset = queryset.filter(elaborado_por=self.request.user)
+
+        return queryset

@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
     createActa,
-    createReporteComite,
-    fetchActas,
-    fetchReportesComite
+    createReporteComite
 } from '../../api/comitesService';
 
 const initialForm = {
@@ -29,32 +28,9 @@ function parseError(error) {
 
 export default function CrearActa() {
     const [form, setForm] = useState(initialForm);
-    const [loading, setLoading] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [actas, setActas] = useState([]);
-    const [reportes, setReportes] = useState([]);
-
-    const cargarDocumentos = async () => {
-        setLoading(true);
-        try {
-            const [actasData, reportesData] = await Promise.all([
-                fetchActas(),
-                fetchReportesComite()
-            ]);
-            setActas(Array.isArray(actasData) ? actasData : []);
-            setReportes(Array.isArray(reportesData) ? reportesData : []);
-        } catch {
-            setError('No se pudieron cargar actas y reportes.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        cargarDocumentos();
-    }, []);
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -99,7 +75,6 @@ export default function CrearActa() {
             }
 
             setForm(initialForm);
-            await cargarDocumentos();
         } catch (submitError) {
             setError(parseError(submitError));
         } finally {
@@ -213,39 +188,14 @@ export default function CrearActa() {
                 </div>
             </form>
 
-            <section className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-700">Documentos recientes</h3>
-                {loading ? (
-                    <div className="text-sm text-gray-500">Cargando documentos...</div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="rounded-md border border-gray-200 p-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Actas</h4>
-                            {actas.length === 0 ? (
-                                <p className="text-xs text-gray-500">No hay actas registradas.</p>
-                            ) : (
-                                <ul className="space-y-1 text-sm text-gray-700">
-                                    {actas.slice(0, 5).map((acta) => (
-                                        <li key={acta.id}>• {acta.numero_acta}</li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                        <div className="rounded-md border border-gray-200 p-4">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Reportes</h4>
-                            {reportes.length === 0 ? (
-                                <p className="text-xs text-gray-500">No hay reportes registrados.</p>
-                            ) : (
-                                <ul className="space-y-1 text-sm text-gray-700">
-                                    {reportes.slice(0, 5).map((reporte) => (
-                                        <li key={reporte.id}>• {reporte.titulo}</li>
-                                    ))}
-                                </ul>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </section>
+            <div className="rounded-md bg-blue-50 p-4">
+                <p className="text-sm text-blue-800">
+                    Los documentos se listan en{' '}
+                    <Link to="/comite/documentos" className="font-medium underline">
+                        Documentos del Comité
+                    </Link>.
+                </p>
+            </div>
         </div>
     );
 }
