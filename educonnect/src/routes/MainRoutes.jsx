@@ -79,7 +79,7 @@ const MainRoutes = {
 const AppRoutes = {
   path: '/',
   element: (
-    <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.ESTUDIANTE]}>
+    <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.ESTUDIANTE, ROLES.COMITE]}>
       <MainLayout />
     </RequireAuth>
   ),
@@ -264,7 +264,7 @@ const AppRoutes = {
         {
           path: 'home',
           element: (
-            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}>
               <HomeComite />
             </RequireAuth>
           )
@@ -272,7 +272,7 @@ const AppRoutes = {
         {
           path: 'crear-acta',
           element: (
-            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}>
               <CrearActa />
             </RequireAuth>
           )
@@ -280,7 +280,7 @@ const AppRoutes = {
         {
           path: 'reunion',
           element: (
-            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}>
               <AgendarReunion />
             </RequireAuth>
           )
@@ -288,7 +288,7 @@ const AppRoutes = {
         {
           path: 'roles',
           element: (
-            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE]}>
+            <RequireAuth allowedRoles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}>
               <RolesComite />
             </RequireAuth>
           )

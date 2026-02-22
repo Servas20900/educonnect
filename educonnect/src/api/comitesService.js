@@ -83,3 +83,47 @@ export const fetchPersonasDisponibles = async (params = {}) => {
         throw error.response ? error.response.data : new Error('Error al obtener personas');
     }
 };
+
+// ==================== ACTAS ====================
+
+export const fetchActas = async (params = {}) => {
+    try {
+        const query = new URLSearchParams(params).toString();
+        const url = query ? `api/v1/comites/actas/?${query}` : 'api/v1/comites/actas/';
+        const response = await api.get(url);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al obtener actas');
+    }
+};
+
+export const createActa = async (data) => {
+    try {
+        const response = await api.post('api/v1/comites/actas/', data);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al crear acta');
+    }
+};
+
+// ==================== REPORTES ====================
+
+export const fetchReportesComite = async (params = {}) => {
+    try {
+        const query = new URLSearchParams(params).toString();
+        const url = query ? `api/v1/comites/reportes/?${query}` : 'api/v1/comites/reportes/';
+        const response = await api.get(url);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al obtener reportes');
+    }
+};
+
+export const createReporteComite = async (data) => {
+    try {
+        const response = await api.post('api/v1/comites/reportes/', data);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al crear reporte');
+    }
+};
