@@ -58,6 +58,8 @@ INSTALLED_APPS = [
     'apps.comites',
     'apps.asignatura',
     'apps.carpetas',
+    'apps.oficiosPlantillas',
+    'apps.planeamientos',
     'apps.grupo'
 ]
 
@@ -107,7 +109,12 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.RawMediaCloudinaryStorage'
+
+# Archivos en local en DEBUG
+if DEBUG:
+    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+else:
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.RawMediaCloudinaryStorage"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
