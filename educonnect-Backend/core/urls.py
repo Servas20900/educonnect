@@ -21,6 +21,11 @@ urlpatterns = [
     path('api/v1/grupo/', include('apps.grupo.urls')),
     path('api/v1/documentos/', include('apps.carpetas.urls')),
     path('api/v1/asignatura/', include('apps.asignatura.urls')),
+    path('api/v1/oficiosPlantillas/', include('apps.oficiosPlantillas.urls')),
+    path('api/v1/oficiosPlantillas/OficiosPlantilla/', include('apps.oficiosPlantillas.urls')),
+    path('api/v1/planeamientos/', include('apps.planeamientos.urls')),
+
+
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
