@@ -365,23 +365,21 @@ class ComitesOrganoAuxiliar(models.Model):
 
 class ComitesReunion(models.Model):
     id = models.BigAutoField(primary_key=True)
-    comite = models.ForeignKey(ComitesComite, models.SET_NULL , null=True )
-    numero_reunion = models.IntegerField()
     fecha = models.DateField()
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField(blank=True, null=True)
-    lugar = models.CharField(max_length=200)
-    modalidad = models.CharField(max_length=20)
     tema = models.TextField()
-    convocada_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
     asistentes = models.JSONField()
+    convocada_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
     estado = models.CharField(max_length=20)
-    fecha_convocatoria = models.DateTimeField()
+    fecha_convocatoria = models.DateTimeField(auto_now_add=True)
+    lugar = models.CharField(max_length=200)
+    # comite = models.ForeignKey(ComitesComite, models.SET_NULL , null=True )
 
     class Meta:
         managed = True
         db_table = 'comites_reunion'
-        unique_together = (('comite', 'numero_reunion'),)
+        # unique_together = (('comite', 'numero_reunion'),)
 
 
 class ComunicacionesCircular(models.Model):

@@ -60,7 +60,8 @@ INSTALLED_APPS = [
     'apps.carpetas',
     'apps.oficiosPlantillas',
     'apps.planeamientos',
-    'apps.grupo'
+    'apps.grupo',
+    'apps.reuniones'
 ]
 
 MIDDLEWARE = [
