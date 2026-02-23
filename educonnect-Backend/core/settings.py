@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'apps.carpetas',
     'apps.oficiosPlantillas',
     'apps.planeamientos',
+    'apps.exportaciones',
     'apps.grupo'
 ]
 
