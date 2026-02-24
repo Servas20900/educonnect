@@ -61,9 +61,8 @@ INSTALLED_APPS = [
     'apps.oficiosPlantillas',
     'apps.planeamientos',
     'apps.grupo',
-    'apps.reuniones'
-    'apps.exportaciones',
-    'apps.grupo'
+    'apps.reuniones',
+    'apps.exportaciones'
 ]
 
 MIDDLEWARE = [
