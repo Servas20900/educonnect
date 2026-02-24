@@ -131,35 +131,69 @@ class ViewEstudiantes(viewsets.ReadOnlyModelViewSet):
     serializer_class = EstudianteListadoSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
-        'persona__nombre',
-        'persona__primer_apellido',
-        'persona__segundo_apellido',
-        'persona__identificacion',
-        'codigo_estudiante'
+        'usuario__persona__nombre',
+        'usuario__persona__primer_apellido',
+        'usuario__persona__segundo_apellido',
+        'usuario__persona__identificacion',
+        'usuario__persona__personasestudiante__codigo_estudiante',
+        'usuario__persona__personasestudiante__academicomatricula__grupo__nombre',
+        'usuario__persona__personasestudiante__academicomatricula__grupo__codigo_grupo'
     ]
-    ordering_fields = ['codigo_estudiante', 'fecha_ingreso', 'estado_estudiante']
-    ordering = ['persona__primer_apellido', 'persona__nombre']
+    ordering_fields = [
+        'usuario__persona__primer_apellido',
+        'usuario__persona__nombre',
+        'usuario__persona__personasestudiante__codigo_estudiante'
+    ]
+    ordering = ['usuario__persona__primer_apellido', 'usuario__persona__nombre']
 
-    def _get_role_name(self):
+    def _get_role_names(self):
         if self.request.user and self.request.user.is_superuser:
-            return 'administrador'
+            return {'administrador'}
 
-        usuario_rol = AuthUsuarioRol.objects.filter(usuario=self.request.user).select_related('rol').first()
-        if usuario_rol and usuario_rol.rol:
-            return (usuario_rol.rol.nombre or '').strip().lower()
+        role_values = AuthUsuarioRol.objects.filter(usuario=self.request.user).values_list('rol__nombre', flat=True)
+        return {str(role or '').strip().lower() for role in role_values}
 
-        return ''
+    def _has_allowed_role(self):
+        roles = self._get_role_names()
+        return bool({'administrador', 'admin', 'docente'} & roles)
 
     def get_queryset(self):
-        rol = self._get_role_name()
-        if rol not in {'administrador', 'docente'}:
+        if not self._has_allowed_role():
             raise PermissionDenied('No tienes permisos para consultar estudiantes.')
 
-        return AuthUsuarioRol.objects.select_related(
+        roles = self._get_role_names()
+        is_admin = bool({'administrador', 'admin'} & roles)
+        is_docente = 'docente' in roles and not is_admin
+
+        queryset = AuthUsuarioRol.objects.select_related(
             'usuario',
             'usuario__persona',
             'rol'
         ).filter(
-            rol__nombre__iexact='estudiante',
+            rol__nombre__icontains='estudiante',
             usuario__is_active=True
         )
+
+        if is_docente:
+            persona = getattr(self.request.user, 'persona', None)
+            if not persona:
+                return queryset.none()
+
+            queryset = queryset.filter(
+                usuario__persona__personasestudiante__academicomatricula__grupo__academicodocentegrupo__docente_id=persona.id
+            )
+
+        grupo_id = self.request.query_params.get('grupo_id')
+        grupo_codigo = self.request.query_params.get('grupo_codigo')
+
+        if grupo_id:
+            queryset = queryset.filter(
+                usuario__persona__personasestudiante__academicomatricula__grupo_id=grupo_id
+            )
+
+        if grupo_codigo:
+            queryset = queryset.filter(
+                usuario__persona__personasestudiante__academicomatricula__grupo__codigo_grupo__iexact=grupo_codigo
+            )
+
+        return queryset.distinct()

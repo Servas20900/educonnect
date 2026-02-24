@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
     addMiembro,
     createComite,
     deleteComite,
     fetchComites,
     fetchPersonasDisponibles,
-    updateComite
+    removeMiembro,
+    updateComite,
+    updateMiembro
 } from '../../api/comitesService';
 
 const tiposComite = [
@@ -40,6 +42,9 @@ export default function Comites() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [expandedComite, setExpandedComite] = useState(null);
+    const [editingMiembroId, setEditingMiembroId] = useState(null);
+    const [miembroDraft, setMiembroDraft] = useState({ cargo: 'Miembro', activo: true });
+    const [savingMiembroId, setSavingMiembroId] = useState(null);
 
     const personasOptions = useMemo(() => {
         return personas.map((p) => ({
@@ -77,6 +82,14 @@ export default function Comites() {
         setForm(defaultForm);
         setSelectedPersonas([]);
         setEditingId(null);
+    };
+
+    const toggleSelectedPersona = (personaId) => {
+        setSelectedPersonas((prev) => (
+            prev.includes(personaId)
+                ? prev.filter((id) => id !== personaId)
+                : [...prev, personaId]
+        ));
     };
 
     const handleSubmit = async (e) => {
@@ -145,6 +158,54 @@ export default function Comites() {
             setError('No se pudo eliminar el comité.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleEditMiembro = (miembro) => {
+        setEditingMiembroId(miembro.id);
+        setMiembroDraft({
+            cargo: miembro.cargo || 'Miembro',
+            activo: !!miembro.activo
+        });
+    };
+
+    const handleCancelMiembro = () => {
+        setEditingMiembroId(null);
+        setMiembroDraft({ cargo: 'Miembro', activo: true });
+    };
+
+    const handleSaveMiembro = async (comiteId, miembroId) => {
+        setSavingMiembroId(miembroId);
+        setError('');
+        try {
+            await updateMiembro(comiteId, {
+                miembro_id: miembroId,
+                cargo: miembroDraft.cargo,
+                activo: miembroDraft.activo
+            });
+            await loadData();
+            handleCancelMiembro();
+        } catch (err) {
+            setError('No se pudo actualizar el miembro del comité.');
+        } finally {
+            setSavingMiembroId(null);
+        }
+    };
+
+    const handleRemoveMiembro = async (comiteId, miembroId) => {
+        if (!window.confirm('¿Seguro que deseas remover este integrante del comité?')) return;
+        setSavingMiembroId(miembroId);
+        setError('');
+        try {
+            await removeMiembro(comiteId, miembroId);
+            await loadData();
+            if (editingMiembroId === miembroId) {
+                handleCancelMiembro();
+            }
+        } catch (err) {
+            setError('No se pudo remover el miembro del comité.');
+        } finally {
+            setSavingMiembroId(null);
         }
     };
 
@@ -230,26 +291,25 @@ export default function Comites() {
                         <label htmlFor="miembros" className="block text-sm font-medium text-gray-700 mb-1">
                             {editingId ? 'Agregar Miembros al Comité' : 'Seleccionar Miembros'}
                         </label>
-                        <p className="text-xs text-gray-500 mb-2">
-                            Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar varios miembros
-                        </p>
-                        <select
-                            id="miembros"
-                            multiple
-                            value={selectedPersonas}
-                            onChange={(e) =>
-                                setSelectedPersonas(
-                                    Array.from(e.target.selectedOptions, (option) => Number(option.value))
-                                )
-                            }
-                            className="mt-1 block w-full pl-3 pr-10 py-2 border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md shadow-sm h-32 border"
-                        >
-                            {personasOptions.map((persona) => (
-                                <option key={persona.id} value={persona.id}>
-                                    {persona.label}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="mt-1 max-h-44 overflow-y-auto rounded-md border border-gray-200 p-2">
+                            {personasOptions.map((persona) => {
+                                const checked = selectedPersonas.includes(persona.id);
+                                return (
+                                    <label key={persona.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-50 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={() => toggleSelectedPersona(persona.id)}
+                                            className="h-4 w-4 text-teal-600 border-gray-300 rounded"
+                                        />
+                                        <span>{persona.label}</span>
+                                    </label>
+                                );
+                            })}
+                            {personasOptions.length === 0 && (
+                                <p className="text-sm text-gray-500 px-2 py-1">No hay personas disponibles.</p>
+                            )}
+                        </div>
                         {selectedPersonas.length > 0 && (
                             <p className="mt-2 text-sm text-teal-600">
                                 {selectedPersonas.length} {selectedPersonas.length === 1 ? 'miembro seleccionado' : 'miembros seleccionados'}
@@ -305,7 +365,7 @@ export default function Comites() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {comites.map((comite) => (
-                                <>
+                                <Fragment key={comite.id}>
                                     <tr key={comite.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                             {comite.nombre}
@@ -358,16 +418,73 @@ export default function Comites() {
                                                                     <p className="text-sm font-medium text-gray-900">
                                                                         {miembro.persona_info?.nombre_completo || 'N/A'}
                                                                     </p>
-                                                                    <p className="text-xs text-gray-500">
-                                                                        {miembro.cargo || 'Miembro'}
-                                                                    </p>
+                                                                    {editingMiembroId === miembro.id ? (
+                                                                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={miembroDraft.cargo}
+                                                                                onChange={(e) => setMiembroDraft((prev) => ({ ...prev, cargo: e.target.value }))}
+                                                                                className="border border-gray-300 rounded px-2 py-1 text-xs"
+                                                                            />
+                                                                            <label className="flex items-center gap-1 text-xs text-gray-600">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={miembroDraft.activo}
+                                                                                    onChange={(e) => setMiembroDraft((prev) => ({ ...prev, activo: e.target.checked }))}
+                                                                                    className="h-3 w-3"
+                                                                                />
+                                                                                Activo
+                                                                            </label>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="text-xs text-gray-500">{miembro.cargo || 'Miembro'}</p>
+                                                                    )}
                                                                     <p className="text-xs text-gray-400">
                                                                         {miembro.persona_info?.email_institucional || miembro.persona_info?.email_personal}
                                                                     </p>
                                                                 </div>
-                                                                {miembro.activo && (
-                                                                    <span className="text-green-500 text-xs">●</span>
-                                                                )}
+                                                                <div className="flex flex-col items-end gap-1">
+                                                                    {miembro.activo && (
+                                                                        <span className="text-green-500 text-xs">●</span>
+                                                                    )}
+                                                                    {editingMiembroId === miembro.id ? (
+                                                                        <div className="flex gap-1">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSaveMiembro(comite.id, miembro.id)}
+                                                                                disabled={savingMiembroId === miembro.id}
+                                                                                className="text-xs text-teal-600 hover:text-teal-800"
+                                                                            >
+                                                                                Guardar
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={handleCancelMiembro}
+                                                                                className="text-xs text-gray-600 hover:text-gray-800"
+                                                                            >
+                                                                                Cancelar
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex gap-1">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleEditMiembro(miembro)}
+                                                                                className="text-xs text-teal-600 hover:text-teal-800"
+                                                                            >
+                                                                                Editar
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleRemoveMiembro(comite.id, miembro.id)}
+                                                                                disabled={savingMiembroId === miembro.id}
+                                                                                className="text-xs text-red-600 hover:text-red-800"
+                                                                            >
+                                                                                Remover
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -375,7 +492,7 @@ export default function Comites() {
                                             </td>
                                         </tr>
                                     )}
-                                </>
+                                </Fragment>
                             ))}
                             {comites.length === 0 && !loading && (
                                 <tr>
