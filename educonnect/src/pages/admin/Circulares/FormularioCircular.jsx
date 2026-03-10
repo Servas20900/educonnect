@@ -34,14 +34,13 @@ const FormularioCircular = ({ uploading, errorUploading, crearCircular, handleMo
         var response;
         var objetivo;
 
-        if (!object.id) {
+        if (!object) {
             response = await crearCircular(dataFinal, archivoParaSubir);
             objetivo = "Creado";
         } else {
             response = await actualizarCircular(dataFinal, object.id, archivoParaSubir);
             objetivo = "Actualizado";
         }
-        console.log(response)
         if (response.success) {
             setInformation(objetivo + " con éxito");
             handleModalForm();
