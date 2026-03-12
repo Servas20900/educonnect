@@ -71,7 +71,7 @@ const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModa
             aprobaciones: []
         };
         if (object.id) {
-            actualizarHorario(object.id, dataFinal);
+            actualizarHorario( dataFinal,object.id);
         } else {
             crearHorario(dataFinal);
         }

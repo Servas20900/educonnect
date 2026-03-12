@@ -147,7 +147,6 @@ export default function CircularesList() {
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-wrap gap-4 items-center">
         <div className="relative flex-1 min-w-[250px]">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
           <input
             type="text"
             placeholder="Buscar por título..."

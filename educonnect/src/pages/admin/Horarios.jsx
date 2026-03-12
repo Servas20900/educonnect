@@ -61,6 +61,7 @@ export default function Horarios() {
             grupos ={grupos}
             asignaturas ={asignaturas}
           />
+          
         </section>
       )}
 
