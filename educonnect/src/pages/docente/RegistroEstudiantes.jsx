@@ -6,6 +6,7 @@ export default function RegistroEstudiantes() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [grupo, setGrupo] = useState('');
 
   const loadEstudiantes = async () => {
     setLoading(true);
@@ -25,17 +26,35 @@ export default function RegistroEstudiantes() {
     loadEstudiantes();
   }, []);
 
+  const gruposDisponibles = useMemo(() => {
+    const map = new Map();
+    estudiantes.forEach((item) => {
+      (item.grupos || []).forEach((g) => {
+        if (!g?.id) return;
+        if (!map.has(g.id)) {
+          map.set(g.id, { id: g.id, label: g.label || g.codigo_grupo || g.nombre || `Grupo ${g.id}` });
+        }
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [estudiantes]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return estudiantes;
     const term = search.trim().toLowerCase();
     return estudiantes.filter((item) => {
+      if (grupo && !(item.grupos || []).some((g) => String(g.id) === String(grupo))) {
+        return false;
+      }
+
+      if (!term) return true;
+
       const persona = item.persona_info || {};
       const nombre = `${persona.nombre || ''} ${persona.primer_apellido || ''} ${persona.segundo_apellido || ''}`.toLowerCase();
       const codigo = (item.codigo_estudiante || '').toLowerCase();
       const identificacion = (persona.identificacion || '').toLowerCase();
       return nombre.includes(term) || codigo.includes(term) || identificacion.includes(term);
     });
-  }, [estudiantes, search]);
+  }, [estudiantes, search, grupo]);
 
   return (
     <div className="space-y-6">
@@ -66,6 +85,17 @@ export default function RegistroEstudiantes() {
             className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm md:w-1/3"
             placeholder="Buscar estudiante"
           />
+
+          <select
+            value={grupo}
+            onChange={(e) => setGrupo(e.target.value)}
+            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm md:w-1/3"
+          >
+            <option value="">Todos los grupos</option>
+            {gruposDisponibles.map((g) => (
+              <option key={g.id} value={g.id}>{g.label}</option>
+            ))}
+          </select>
         </div>
 
         <div className="mt-4 overflow-x-auto">
@@ -74,6 +104,7 @@ export default function RegistroEstudiantes() {
               <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
                 <th className="px-3 py-2">Nombre</th>
                 <th className="px-3 py-2">Codigo</th>
+                <th className="px-3 py-2">Grupo(s)</th>
                 <th className="px-3 py-2">Estado</th>
                 <th className="px-3 py-2">Email</th>
               </tr>
@@ -81,14 +112,14 @@ export default function RegistroEstudiantes() {
             <tbody className="divide-y divide-gray-100">
               {loading && (
                 <tr>
-                  <td colSpan="4" className="px-3 py-6 text-center text-sm text-gray-500">
+                  <td colSpan="5" className="px-3 py-6 text-center text-sm text-gray-500">
                     Cargando estudiantes...
                   </td>
                 </tr>
               )}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="px-3 py-6 text-center text-sm text-gray-500">
+                  <td colSpan="5" className="px-3 py-6 text-center text-sm text-gray-500">
                     No hay estudiantes registrados.
                   </td>
                 </tr>
@@ -96,10 +127,12 @@ export default function RegistroEstudiantes() {
               {!loading && filtered.map((e) => {
                 const persona = e.persona_info || {};
                 const nombre = `${persona.nombre || ''} ${persona.primer_apellido || ''} ${persona.segundo_apellido || ''}`.trim();
+                const grupos = (e.grupos || []).map((g) => g.label || g.codigo_grupo || g.nombre).filter(Boolean);
                 return (
                   <tr key={e.usuario_id || e.persona_id} className="hover:bg-gray-50">
                     <td className="px-3 py-2 font-medium text-gray-900">{nombre || 'N/A'}</td>
                     <td className="px-3 py-2 text-gray-700">{e.codigo_estudiante || 'N/A'}</td>
+                    <td className="px-3 py-2 text-gray-700">{grupos.length ? grupos.join(', ') : 'Sin grupo'}</td>
                     <td className="px-3 py-2">
                       <span className={`rounded-full px-2 py-1 text-xs font-semibold ${e.estado_estudiante === 'activo' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
                         {e.estado_estudiante || 'N/A'}

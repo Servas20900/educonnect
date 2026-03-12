@@ -203,6 +203,7 @@ class EstudianteListadoSerializer(serializers.ModelSerializer):
     codigo_estudiante = serializers.SerializerMethodField()
     estado_estudiante = serializers.SerializerMethodField()
     tipo_estudiante = serializers.SerializerMethodField()
+    grupos = serializers.SerializerMethodField()
 
     class Meta:
         model = AuthUsuarioRol
@@ -214,7 +215,8 @@ class EstudianteListadoSerializer(serializers.ModelSerializer):
             'persona_info',
             'codigo_estudiante',
             'estado_estudiante',
-            'tipo_estudiante'
+            'tipo_estudiante',
+            'grupos'
         ]
 
     def _get_persona_id(self, obj):
@@ -225,7 +227,14 @@ class EstudianteListadoSerializer(serializers.ModelSerializer):
         persona_id = self._get_persona_id(obj)
         if not persona_id:
             return None
-        return PersonasEstudiante.objects.filter(persona_id=persona_id).first()
+        if not hasattr(self, '_estudiante_cache'):
+            self._estudiante_cache = {}
+        if persona_id in self._estudiante_cache:
+            return self._estudiante_cache[persona_id]
+
+        estudiante = PersonasEstudiante.objects.filter(persona_id=persona_id).first()
+        self._estudiante_cache[persona_id] = estudiante
+        return estudiante
 
     def get_codigo_estudiante(self, obj):
         estudiante = self._get_estudiante_record(obj)
@@ -238,3 +247,31 @@ class EstudianteListadoSerializer(serializers.ModelSerializer):
     def get_tipo_estudiante(self, obj):
         estudiante = self._get_estudiante_record(obj)
         return estudiante.tipo_estudiante if estudiante else None
+
+    def get_grupos(self, obj):
+        estudiante = self._get_estudiante_record(obj)
+        if not estudiante:
+            return []
+
+        matriculas = AcademicoMatricula.objects.select_related('grupo', 'grupo__seccion').filter(estudiante=estudiante)
+        grupos = []
+        vistos = set()
+
+        for matricula in matriculas:
+            grupo = getattr(matricula, 'grupo', None)
+            if not grupo or grupo.id in vistos:
+                continue
+            vistos.add(grupo.id)
+
+            seccion = getattr(getattr(grupo, 'seccion', None), 'nombre', None)
+            nombre = grupo.nombre or grupo.codigo_grupo or f'Grupo {grupo.id}'
+
+            grupos.append({
+                'id': grupo.id,
+                'nombre': nombre,
+                'codigo_grupo': grupo.codigo_grupo,
+                'seccion': seccion,
+                'label': nombre
+            })
+
+        return grupos

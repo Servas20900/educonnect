@@ -9,15 +9,15 @@ import { useRepositorios } from './Repositorios/useRepositorios';
 const MODELO_REPOSITORIO = "documentosrepositorio";
 
 export default function Repositorios() {
-  const { 
-    repositorios, 
-    documentos, 
-    loading, 
-    uploading, 
-    cargarRepositorios, 
-    cargarDocumentos, 
-    subirArchivo, 
-    nuevoRepositorio, 
+  const {
+    repositorios,
+    documentos,
+    loading,
+    uploading,
+    cargarRepositorios,
+    cargarDocumentos,
+    subirArchivo,
+    nuevoRepositorio,
     editarRepositorio,
     cargarRoles,
     roles
@@ -108,23 +108,35 @@ export default function Repositorios() {
           </p>
         </div>
         <div className="flex gap-3">
-          {repoSeleccionado && (
+          {!repoSeleccionado ? (
             <button
-              onClick={() => setRepoSeleccionado(null)}
-              className="px-4 py-2 border border-gray-200 text-gray-500 font-black rounded-xl hover:bg-white transition-all text-[10px] uppercase tracking-widest"
+              onClick={() => {
+                setAccion("NUEVA_CARPETA");
+                setIsModalOpen(true);
+              }}
+              className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-black text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all transform hover:-translate-y-1"
             >
-              ← Volver
+              NUEVA CARPETA
             </button>
-          )}
-          <button
-            onClick={() => {
-              setAccion("NUEVA_CARPETA");
-              setIsModalOpen(true);
-            }}
-            className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-black text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all transform hover:-translate-y-1"
-          >
-            NUEVA CARPETA
-          </button>
+          ) : (
+            <>
+              <button
+                onClick={() => handleSubir(repoSeleccionado)}
+                className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-black text-white shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all transform hover:-translate-y-1"
+              >
+                SUBIR ARCHIVO AQUÍ
+              </button>
+
+              <button
+                onClick={() => setRepoSeleccionado(null)}
+                className="px-4 py-2 border border-gray-200 text-gray-500 font-black rounded-xl hover:bg-white transition-all text-[10px] uppercase tracking-widest"
+              >
+                ← Volver
+              </button>
+            </>
+          )
+          }
+
         </div>
       </div>
 
@@ -159,14 +171,14 @@ export default function Repositorios() {
                 <button
                   onClick={() => handleAbrirRepo(c)}
                   className="text-xs font-black text-indigo-600 hover:tracking-widest transition-all uppercase"
-                  
+
                 >
                   Abrir Carpeta
                 </button>
                 <div className="flex gap-4 items-center">
                   <button onClick={() => handleSubir(c)} title="Subir archivo" className="text-xl hover:scale-110 transition-transform">📤</button>
-                  <button 
-                    title="Configurar Permisos" 
+                  <button
+                    title="Configurar Permisos"
                     className="text-xl hover:scale-110 transition-transform"
                     onClick={() => {
                       setAccion("EDITAR");

@@ -6,7 +6,16 @@ import { RenderDelete } from "./RenderDelete";
 import { RenderReactivar } from "./RenderReactivar";
 import { useRevisionHorarios } from "./hooks/useRevisionHorarios";
 import { useState } from "react";
-import Paginador from '../../../components/ui/Paginador'
+import Paginador from '../../../components/ui/Paginador';  
+import { 
+    BtnVer, 
+    BtnEditar, 
+    BtnAprobar, 
+    BtnRechazar, 
+    BtnArchivar, 
+    BtnReactivar 
+} from "../../../components/ui/ActionButtons";
+
 const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }) => {
     const {
         modal,
@@ -27,11 +36,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
         return styles[estado] || 'bg-gray-100 text-gray-600 ring-gray-600/10';
     };
 
-    const [filtros, setFiltros] = useState({
-        nombre: "",
-        docente: "",
-        estado: ""
-    });
+    const [filtros, setFiltros] = useState({ nombre: "", docente: "", estado: "" });
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -39,88 +44,49 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
     };
 
     const horariosFiltrados = horarios.filter((horario) => {
-        const coincideNombre = horario.nombre
-            .toLowerCase()
-            .includes(filtros.nombre.toLowerCase());
-
-        const coincideDocente = horario.docente_info.nombre
-            .toLowerCase()
-            .includes(filtros.docente.toLowerCase());
-
-
-        const coincideEstado = filtros.estado
-            ? horario.estado === filtros.estado
-            : true;
-
+        const coincideNombre = horario.nombre.toLowerCase().includes(filtros.nombre.toLowerCase());
+        const coincideDocente = horario.docente_info.nombre.toLowerCase().includes(filtros.docente.toLowerCase());
+        const coincideEstado = filtros.estado ? horario.estado === filtros.estado : true;
         return coincideNombre && coincideDocente && coincideEstado;
     });
 
-
-
     return (
-        <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm bg-white">
+        <div className="p-8 bg-gray-50 min-h-screen font-sans">
             <PopUp isModalOpen={modal} closeModal={closeModal}>
-                <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
-                    <div className="p-1">
-                        {accion === "Aprobar" && (
-                            <RenderAprobar
-                                nombre={horarioSeleccionado?.nombre}
-                                onConfirm={handleConfirm}
-                                onCancel={closeModal}
-                            />
-                        )}
-                        {accion === "Ver" && <RenderVer horario={horarioSeleccionado} />}
-                        {accion === "Rechazar" && (
-                            <RenderRechazo
-                                onConfirm={handleConfirm}
-                                onCancel={closeModal}
-                            />
-                        )}
-                        {accion === "Eliminar" && (
-                            <RenderDelete
-                                nombre={horarioSeleccionado?.nombre}
-                                onDelete={handleDelete}
-                                onCancel={closeModal}
-                            />
-                        )}
-                        {accion === "Reactivar" && (
-                            <RenderReactivar
-                                nombre={horarioSeleccionado?.nombre}
-                                onConfirm={handleConfirm}
-                                onCancel={closeModal}
-                            />
-                        )}
-                    </div>
+                <div className="bg-white rounded-2xl overflow-hidden shadow-2xl p-1">
+                    {accion === "Aprobar" && <RenderAprobar nombre={horarioSeleccionado?.nombre} onConfirm={handleConfirm} onCancel={closeModal} />}
+                    {accion === "Ver" && <RenderVer horario={horarioSeleccionado} />}
+                    {accion === "Rechazar" && <RenderRechazo onConfirm={handleConfirm} onCancel={closeModal} />}
+                    {accion === "Eliminar" && <RenderDelete nombre={horarioSeleccionado?.nombre} onDelete={handleDelete} onCancel={closeModal} />}
+                    {accion === "Reactivar" && <RenderReactivar nombre={horarioSeleccionado?.nombre} onConfirm={handleConfirm} onCancel={closeModal} />}
                 </div>
             </PopUp>
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center">
-                <div className="relative z-0flex-1 min-w-[200px]">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center mb-6">
+                <div className="relative flex-1 min-w-[200px]">
                     <input
                         type="text"
                         name="nombre"
                         placeholder="Buscar horario..."
                         value={filtros.nombre}
                         onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-medium transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-medium transition-all"
                     />
                 </div>
                 <div className="relative flex-1 min-w-[200px]">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">👤</span>
                     <input
                         type="text"
                         name="docente"
                         placeholder="Buscar docente..."
                         value={filtros.docente}
                         onChange={handleChange}
-                        className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-medium transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-medium transition-all"
                     />
                 </div>
                 <select
                     name="estado"
                     value={filtros.estado}
                     onChange={handleChange}
-                    className="py-2 px-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-gray-600 cursor-pointer"
+                    className="py-2.5 px-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-gray-600 cursor-pointer"
                 >
                     <option value="">Todos los estados</option>
                     <option value="Publicado">Publicado</option>
@@ -128,26 +94,24 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                     <option value="Inactivo">Inactivo</option>
                 </select>
             </div>
-            <div className="overflow-hidden rounded-3xl border border-gray-100 shadow-sm bg-white">
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <Paginador items={horariosFiltrados} itemsPorPagina={6}>
                     {(itemsPaginados) => (
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-100">
-                                <thead className="bg-gray-50/50 text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                                <thead className="bg-gray-50/80">
                                     <tr>
-                                        <th className="px-8 py-5 text-left">Horario</th>
-                                        <th className="px-8 py-5 text-left">Docente Responsable</th>
-                                        <th className="px-8 py-5 text-left">Estado</th>
-                                        <th className="px-8 py-5 text-center">Gestión</th>
+                                        <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Horario</th>
+                                        <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Docente</th>
+                                        <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Estado</th>
+                                        <th className="px-8 py-5 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50 bg-white">
+                                <tbody className="divide-y divide-gray-50">
                                     {itemsPaginados.map((horario) => (
-                                        <tr key={horario.id} className="hover:bg-indigo-50/30 transition-colors duration-200">
-                                            <td className="px-8 py-5">
-                                                <div className="text-sm font-bold text-gray-800">{horario.nombre}</div>
-                                                <div className="text-[10px] font-black text-gray-400 uppercase mt-0.5">Ref: #{horario.id}</div>
-                                            </td>
+                                        <tr key={horario.id} className="hover:bg-indigo-50/40 transition-colors duration-200">
+                                            <td className="px-8 py-5 font-bold text-gray-800 text-sm">{horario.nombre}</td>
                                             <td className="px-8 py-5">
                                                 <div className="flex items-center gap-3">
                                                     <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-black text-[10px]">
@@ -162,27 +126,24 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                                                 </span>
                                             </td>
                                             <td className="px-8 py-5">
-                                                <div className="flex items-center justify-center gap-4 min-w-[200px]">
-                                                    <button onClick={() => handleOption("Ver", horario)} className="text-[11px] font-black text-blue-600 hover:text-blue-800">
-                                                        VER
-                                                    </button>
-                                                    <div className="h-4 w-[1px] bg-gray-200" />
-                                                    {horario.estado !== "Inactivo" ? (
-                                                        <div className="flex gap-3">
-                                                            {horario.estado !== "Publicado" ? (
-                                                                <>
-                                                                    <button onClick={() => handleOption("Aprobar", horario)} className="text-[11px] font-black text-emerald-600">APROBAR</button>
-                                                                    <button onClick={() => handleOption("Rechazar", horario)} className="text-[11px] font-black text-rose-500">RECHAZAR</button>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <button onClick={() => onEdit(horario)} className="text-[11px] font-black text-indigo-600">EDITAR</button>
-                                                                    <button onClick={() => handleOption("Eliminar", horario)} className="text-[11px] font-black text-slate-500">ARCHIVAR</button>
-                                                                </>
-                                                            )}
-                                                        </div>
+                                                <div className="flex justify-center gap-3">
+                                                    <BtnVer onClick={() => handleOption("Ver", horario)} />
+                                                    
+                                                    {horario.estado === "Inactivo" ? (
+                                                        <>
+                                                            <BtnEditar onClick={() => onEdit(horario)} />
+                                                            <BtnReactivar onClick={() => handleOption("Reactivar", horario)} />
+                                                        </>
+                                                    ) : horario.estado === "Publicado" ? (
+                                                        <>
+                                                            <BtnEditar onClick={() => onEdit(horario)} />
+                                                            <BtnArchivar onClick={() => handleOption("Eliminar", horario)} />
+                                                        </>
                                                     ) : (
-                                                        <button onClick={() => handleOption("Reactivar", horario)} className="text-[11px] font-black text-emerald-600">REACTIVAR</button>
+                                                        <>
+                                                            <BtnAprobar onClick={() => handleOption("Aprobar", horario)} />
+                                                            <BtnRechazar onClick={() => handleOption("Rechazar", horario)} />
+                                                        </>
                                                     )}
                                                 </div>
                                             </td>
@@ -197,4 +158,5 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
         </div>
     );
 };
+
 export default RevisionHorarios;
