@@ -1,4 +1,4 @@
-import ConsultaHorarios from './HelperComponents/ConsultaHorarios';
+import ConsultaHorarios from './circularesHorarios/ConsultaHorarios';
 import { useEffect, useState } from 'react';
 import { fetchComunicados } from '../../api/comunicadosService';
 

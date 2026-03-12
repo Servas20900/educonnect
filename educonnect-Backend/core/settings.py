@@ -62,7 +62,7 @@ INSTALLED_APPS = [
     'apps.planeamientos',
     'apps.grupo',
     'apps.reuniones',
-    'apps.exportaciones'
+    'apps.exportaciones',
 ]
 
 MIDDLEWARE = [
@@ -207,3 +207,15 @@ cloudinary.config(
     api_secret = CLOUDINARY_STORAGE['API_SECRET'],
     secure = True
 )
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.getenv('EMAIL_HOST')
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+
+DEFAULT_FROM_EMAIL = 'EduConnect <no-reply@educonnect.com>'
