@@ -20,7 +20,6 @@ export default function RenderSubirArchivo({ repositorio, subirArchivo, uploadin
             setErrorLocal("Por favor, selecciona un archivo.");
             return;
         }
-        console.log(file)
         const result = await subirArchivo(file, descripcion);
 
         if (result.success) {
