@@ -22,6 +22,7 @@ class DocumentoReadSerializer(serializers.ModelSerializer):
         partes = obj.ruta_archivo.split('/upload/')
         if len(partes) == 2:
             return f"{partes[0]}/upload/fl_attachment/{partes[1]}"
+        
         return obj.ruta_archivo
 
     def get_nombre_cargado_por(self, obj):

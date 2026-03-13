@@ -5,6 +5,7 @@ import RenderSubirArchivo from "./Repositorios/RenderSubirArchivo";
 import RenderNuevaCarpeta from "./Repositorios/RenderNuevaCarpeta";
 import RenderEditarPermisos from "./Repositorios/RenderEditarPermisos";
 import { useRepositorios } from './Repositorios/useRepositorios';
+import { BtnDescargar } from "../../components/ui/ActionButtons";
 
 const MODELO_REPOSITORIO = "documentosrepositorio";
 
@@ -234,14 +235,23 @@ export default function Repositorios() {
                             {new Date(doc.fecha_carga).toLocaleDateString()}
                           </td>
                           <td className="px-8 py-5 text-right">
-                            <a
-                              href={doc.url_descarga}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[10px] font-black bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 inline-block"
-                            >
-                              Descargar
-                            </a>
+
+                            <BtnDescargar
+                              onClick={() => {
+                                const url = doc.url_descarga;
+                                
+                                const link = document.createElement('a');
+                                link.href = url;
+
+                                link.target = "_blank";
+                                link.rel = "noopener noreferrer";
+
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                              title="Descargar Documento"
+                            />
                           </td>
                         </tr>
                       ))

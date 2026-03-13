@@ -15,6 +15,12 @@ export const BtnVer = ({ onClick }) => (
     </BaseButton>
 );
 
+export const BtnDescargar = ({ onClick }) => (
+    <BaseButton onClick={onClick} className="bg-blue-50 text-indigo-600 hover:bg-indigo-600 hover:text-white">
+        Descargar
+    </BaseButton>
+);
+
 export const BtnEditar = ({ onClick, disabled }) => (
     <BaseButton 
         onClick={onClick} 
