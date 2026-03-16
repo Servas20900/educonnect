@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'apps.planeamientos',
     'apps.grupo',
     'apps.reuniones',
+    'apps.asistencia',
     'apps.exportaciones',
     'apps.informesEconomicos'
 ]
