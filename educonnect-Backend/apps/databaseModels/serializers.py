@@ -86,13 +86,56 @@ class WriteSerializerComunicacionesComunicado(serializers.ModelSerializer):
             raise serializers.ValidationError('Debe seleccionar al menos un destinatario.')
 
         normalizados = []
-        for item in value:
-            destino = str(item).strip().lower()
-            if destino not in self.DESTINATARIOS_VALIDOS:
-                raise serializers.ValidationError('Destinatario inválido. Use estudiantes o encargados.')
-            normalizados.append(destino)
 
-        return sorted(list(set(normalizados)))
+        for item in value:
+            # Caso clásico: "estudiantes" / "encargados"
+            if isinstance(item, str):
+                destino = item.strip().lower()
+                if destino not in self.DESTINATARIOS_VALIDOS:
+                    raise serializers.ValidationError(
+                        'Destinatario inválido. Use estudiantes, encargados o profesor_hogar.'
+                    )
+                normalizados.append(destino)
+                continue
+
+            # Caso nuevo: {"tipo": "profesor_hogar", "grupo_id": 1}
+            if isinstance(item, dict):
+                tipo = str(item.get('tipo', '')).strip().lower()
+                grupo_id = item.get('grupo_id')
+
+                if tipo != 'profesor_hogar':
+                    raise serializers.ValidationError(
+                        "El objeto destinatario solo permite tipo='profesor_hogar'."
+                    )
+
+                if grupo_id in [None, '', 0]:
+                    raise serializers.ValidationError(
+                        "Para profesor_hogar debe indicar grupo_id."
+                    )
+
+                try:
+                    grupo_id = int(grupo_id)
+                except (TypeError, ValueError):
+                    raise serializers.ValidationError(
+                        "grupo_id debe ser numérico."
+                    )
+
+                if grupo_id <= 0:
+                    raise serializers.ValidationError(
+                        "grupo_id debe ser mayor que 0."
+                    )
+
+                normalizados.append({
+                    'tipo': 'profesor_hogar',
+                    'grupo_id': grupo_id
+                })
+                continue
+
+            raise serializers.ValidationError(
+                'Formato inválido en destinatarios.'
+            )
+
+        return normalizados
 
     def validate_fecha_vigencia(self, value):
         if value and value < timezone.now():

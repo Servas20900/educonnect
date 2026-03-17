@@ -13,6 +13,7 @@ from django.utils.timezone import now
 from rest_framework.response import Response
 from django.db import IntegrityError
 from apps.databaseModels.models import AcademicoGrupo
+from apps.notificaciones.services import crear_notificaciones_profesor_hogar
 
 class ViewComunicacionesCircular(viewsets.ModelViewSet):
     queryset = ComunicacionesCircular.objects.annotate(
@@ -87,7 +88,9 @@ class ViewComunicacionesComunicado(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if not self._puede_emitir():
             raise PermissionDenied('Solo docentes o administradores pueden emitir comunicados.')
-        serializer.save(publicado_por=self.request.user)
+        
+        comunicado = serializer.save(publicado_por=self.request.user)
+        crear_notificaciones_profesor_hogar(comunicado)
 
     def perform_update(self, serializer):
         if not self._puede_emitir():
