@@ -1,6 +1,8 @@
 const defaultConfig = {
   fontFamily: `'Roboto', sans-serif`,
-  borderRadius: 8
+  borderRadius: 8,
+  miniDrawer: false,
+  mode: 'light'
 };
 
 // routes

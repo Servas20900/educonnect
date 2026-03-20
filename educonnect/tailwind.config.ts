@@ -5,6 +5,9 @@ export default {
     "./index.html",
     "./src/**/*.{ts,tsx,jsx,js}",
   ],
+  corePlugins: {
+    preflight: false,
+  },
   theme: {
     extend: {},
   },
