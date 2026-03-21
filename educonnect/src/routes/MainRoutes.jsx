@@ -9,6 +9,7 @@ import { ROLES } from '../constants/roles';
 const PublicHome  = Loadable(lazy(() => import('../pages/public/Home')));
 const Login       = Loadable(lazy(() => import('../pages/public/Login')));
 const Register    = Loadable(lazy(() => import('../pages/public/Register')));
+const NoAutorizado = Loadable(lazy(() => import('../pages/public/NoAutorizado')));
 
 // Transversal
 const Dashboard   = Loadable(lazy(() => import('../pages/admin/Dashboard')));
@@ -59,6 +60,7 @@ const PublicRoutes = {
     { index: true, element: <PublicHome /> },
     { path: 'login',    element: <Login /> },
     { path: 'register', element: <Register /> },
+    { path: 'no-autorizado', element: <NoAutorizado /> },
   ],
 };
 
