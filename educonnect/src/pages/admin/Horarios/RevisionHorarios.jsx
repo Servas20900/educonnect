@@ -1,9 +1,5 @@
 import PopUp from "../../../../components/PopUp";
-import { RenderAprobar } from "./RenderAprobar";
 import { RenderVer } from "./RenderVer";
-import { RenderRechazo } from "./RenderRechazo";
-import { RenderDelete } from "./RenderDelete";
-import { RenderReactivar } from "./RenderReactivar";
 import { useRevisionHorarios } from "./hooks/useRevisionHorarios";
 import { useState } from "react";
 import Paginador from '../../../components/ui/Paginador'
@@ -55,6 +51,35 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
         return coincideNombre && coincideDocente && coincideEstado;
     });
 
+    const confirmModalConfig = {
+        Aprobar: {
+            title: "Aprobar horario",
+            message: `Se aprobara el horario \"${horarioSeleccionado?.nombre || ""}\".`,
+            confirmText: "Aprobar",
+            onConfirm: () => handleConfirm()
+        },
+        Rechazar: {
+            title: "Rechazar horario",
+            message: `Se rechazara el horario \"${horarioSeleccionado?.nombre || ""}\" y volvera a borrador.`,
+            confirmText: "Rechazar",
+            onConfirm: () => handleConfirm("Rechazado por administracion")
+        },
+        Eliminar: {
+            title: "Archivar horario",
+            message: `Se archivara el horario \"${horarioSeleccionado?.nombre || ""}\".`,
+            confirmText: "Archivar",
+            onConfirm: handleDelete
+        },
+        Reactivar: {
+            title: "Reactivar horario",
+            message: `Se reactivara el horario \"${horarioSeleccionado?.nombre || ""}\".`,
+            confirmText: "Reactivar",
+            onConfirm: () => handleConfirm("Reactivado por administracion")
+        }
+    };
+
+    const activeConfirmConfig = confirmModalConfig[accion];
+
 
 
     return (
@@ -63,32 +88,53 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                 <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
                     <div className="p-1">
                         {accion === "Aprobar" && (
-                            <RenderAprobar
-                                nombre={horarioSeleccionado?.nombre}
-                                onConfirm={handleConfirm}
-                                onCancel={closeModal}
-                            />
+                            <div className="p-6">
+                                <h2 className="text-lg font-bold text-gray-800 mb-2">{activeConfirmConfig?.title}</h2>
+                                <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig?.message}</p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
+                                    <button onClick={activeConfirmConfig?.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700">
+                                        {activeConfirmConfig?.confirmText}
+                                    </button>
+                                </div>
+                            </div>
                         )}
                         {accion === "Ver" && <RenderVer horario={horarioSeleccionado} />}
-                        {accion === "Rechazar" && (
-                            <RenderRechazo
-                                onConfirm={handleConfirm}
-                                onCancel={closeModal}
-                            />
+                        {accion === "Rechazar" && activeConfirmConfig && (
+                            <div className="p-6">
+                                <h2 className="text-lg font-bold text-gray-800 mb-2">{activeConfirmConfig.title}</h2>
+                                <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig.message}</p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
+                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-rose-600 hover:bg-rose-700">
+                                        {activeConfirmConfig.confirmText}
+                                    </button>
+                                </div>
+                            </div>
                         )}
-                        {accion === "Eliminar" && (
-                            <RenderDelete
-                                nombre={horarioSeleccionado?.nombre}
-                                onDelete={handleDelete}
-                                onCancel={closeModal}
-                            />
+                        {accion === "Eliminar" && activeConfirmConfig && (
+                            <div className="p-6">
+                                <h2 className="text-lg font-bold text-gray-800 mb-2">{activeConfirmConfig.title}</h2>
+                                <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig.message}</p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
+                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-slate-600 hover:bg-slate-700">
+                                        {activeConfirmConfig.confirmText}
+                                    </button>
+                                </div>
+                            </div>
                         )}
-                        {accion === "Reactivar" && (
-                            <RenderReactivar
-                                nombre={horarioSeleccionado?.nombre}
-                                onConfirm={handleConfirm}
-                                onCancel={closeModal}
-                            />
+                        {accion === "Reactivar" && activeConfirmConfig && (
+                            <div className="p-6">
+                                <h2 className="text-lg font-bold text-gray-800 mb-2">{activeConfirmConfig.title}</h2>
+                                <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig.message}</p>
+                                <div className="flex justify-end gap-3">
+                                    <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
+                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-emerald-600 hover:bg-emerald-700">
+                                        {activeConfirmConfig.confirmText}
+                                    </button>
+                                </div>
+                            </div>
                         )}
                     </div>
                 </div>

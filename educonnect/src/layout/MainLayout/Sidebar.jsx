@@ -19,23 +19,15 @@ import { ROLES } from '../../constants/roles';
 
 const ICON_MAP = {
   dashboard:              IconLayoutDashboard,
-  'docente-dashboard':    IconLayoutDashboard,
   circulares:             IconFileText,
   horarios:               IconCalendar,
   documentos:             IconFolder,
-  repositorios:           IconFolder,
-  oficios:                IconFileStack,
   usuarios:               IconUsers,
-  permisos:               IconShieldCheck,
   incapacidades:          IconHeartHandshake,
-  comite:                 IconUsersGroup,
   comites:                IconUsersGroup,
   reportes:               IconChartBar,
   backups:                IconDatabase,
-  retencion:              IconShieldCheck,
-  evaluaciones:           IconClipboardList,
-  calificaciones:         IconNotes,
-  promedios:              IconChartBar,
+  academico:              IconClipboardList,
   planeamientos:          IconFileCheck,
   comunicados:            IconMessageCircle,
   asistencia:             IconCalendar,
@@ -44,17 +36,12 @@ const ICON_MAP = {
   'crear-acta':           IconFileText,
   'agendar-reunion':      IconCalendar,
   'roles-comite':         IconUsers,
-  'documentos-comite':    IconFolder,
-  'comite-home':          IconUsersGroup,
   'informes-economicos':  IconReportAnalytics,
   reglamentos:            IconFileText,
-  'informes-pat':         IconReportAnalytics,
   'reportes-cumplimiento':IconChartBar,
-  'estudiante-home':      IconLayoutDashboard,
-  notificaciones:         IconMessageCircle,
-  'circulares-horarios':  IconCalendar,
+  'estudiante-comunicados': IconMessageCircle,
   'docente-estudiantes':  IconUsers,
-  'estudiantes-admin':    IconUsers,
+  perfil:                 IconUser,
 };
 
 const SIDEBAR_W_OPEN = 240;
@@ -125,12 +112,6 @@ function SidebarContent({ drawerOpen }) {
     if (!group.allowedRoles) return true;
     return role ? group.allowedRoles.includes(role) : false;
   });
-
-  const allItems = filteredGroups.flatMap((group) =>
-    (group.children || []).flatMap((collapse) =>
-      (collapse.children || []).map((item) => ({ ...item, groupTitle: group.title }))
-    )
-  );
 
   const grouped = filteredGroups.map((group) => ({
     title: group.title,

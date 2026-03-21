@@ -22,7 +22,6 @@ urlpatterns = [
     path('api/v1/documentos/', include('apps.carpetas.urls')),
     path('api/v1/asignatura/', include('apps.asignatura.urls')),
     path('api/v1/oficiosPlantillas/', include('apps.oficiosPlantillas.urls')),
-    path('api/v1/oficiosPlantillas/OficiosPlantilla/', include('apps.oficiosPlantillas.urls')),
     path('api/v1/planeamientos/', include('apps.planeamientos.urls')),
     path('api/v1/reuniones/', include('apps.reuniones.urls')),
     path("api/v1/exportaciones/", include("apps.exportaciones.urls")),
