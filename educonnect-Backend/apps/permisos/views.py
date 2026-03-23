@@ -37,27 +37,68 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def assign_role(self, request, pk=None):
-        """Asigna un rol a un usuario"""
+        """Asigna uno o múltiples roles a un usuario"""
         usuario = self.get_object()
-        rol_id = request.data.get('rol_id')
-        
-        if not rol_id:
-            return Response({'error': 'rol_id es requerido'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            rol = AuthRol.objects.get(id=rol_id, activo=True)
-        except AuthRol.DoesNotExist:
-            return Response({'error': 'Rol no encontrado o inactivo'}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Eliminar roles anteriores y asignar el nuevo
+        roles_payload = request.data.get('rol_ids')
+
+        # Compatibilidad con el payload histórico de un solo rol.
+        if roles_payload is None:
+            rol_id = request.data.get('rol_id')
+            roles_payload = [rol_id] if rol_id is not None else []
+
+        if not isinstance(roles_payload, list) or not roles_payload:
+            return Response(
+                {'error': 'rol_id o rol_ids es requerido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Limpiar ids vacíos y duplicados.
+        unique_role_ids = []
+        seen_ids = set()
+        for role_id in roles_payload:
+            if role_id in (None, ''):
+                continue
+            role_id_str = str(role_id)
+            if role_id_str in seen_ids:
+                continue
+            seen_ids.add(role_id_str)
+            unique_role_ids.append(role_id)
+
+        if not unique_role_ids:
+            return Response(
+                {'error': 'No se recibieron IDs de rol válidos'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        roles = list(AuthRol.objects.filter(id__in=unique_role_ids, activo=True))
+        found_ids = {str(rol.id) for rol in roles}
+        missing_ids = [rid for rid in unique_role_ids if str(rid) not in found_ids]
+
+        if missing_ids:
+            return Response(
+                {
+                    'error': 'Uno o más roles no existen o están inactivos',
+                    'roles_invalidos': missing_ids,
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Reemplazar las asignaciones actuales por el nuevo conjunto de roles.
         AuthUsuarioRol.objects.filter(usuario=usuario).delete()
-        AuthUsuarioRol.objects.create(
-            usuario=usuario,
-            rol=rol,
-            fecha_asignacion=timezone.now()
-        )
-        
-        return Response({'message': f'Rol {rol.nombre} asignado exitosamente'})
+        asignaciones = [
+            AuthUsuarioRol(
+                usuario=usuario,
+                rol=rol,
+                fecha_asignacion=timezone.now()
+            )
+            for rol in roles
+        ]
+        AuthUsuarioRol.objects.bulk_create(asignaciones)
+
+        return Response({
+            'message': 'Roles asignados exitosamente',
+            'roles_asignados': [{'id': rol.id, 'nombre': rol.nombre} for rol in roles]
+        })
 
 
 class RolViewSet(viewsets.ModelViewSet):

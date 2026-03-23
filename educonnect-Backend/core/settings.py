@@ -160,6 +160,12 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Dominios permitidos para el registro de usuarios.
+AUTH_ALLOWED_EMAIL_DOMAINS = [
+    'test.com',
+    'educonnect.ac.cr',
+]
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

@@ -1,0 +1,36 @@
+/**
+ * @typedef {Object} PageHeaderAction
+ * @property {string} label
+ * @property {() => void} onClick
+ * @property {import('react').ReactNode} [icon]
+ */
+
+/**
+ * @param {Object} props
+ * @param {string} props.title
+ * @param {string} [props.subtitle]
+ * @param {PageHeaderAction} [props.action]
+ */
+export default function PageHeader({ title, subtitle, action }) {
+  return (
+    <header className="mb-6 border-b border-slate-200 pb-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[#0b2545] sm:text-3xl">{title}</h1>
+          {subtitle ? <p className="mt-1 text-sm text-slate-600">{subtitle}</p> : null}
+        </div>
+
+        {action ? (
+          <button
+            type="button"
+            onClick={action.onClick}
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-[#0b2545] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#185fa5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#378add] focus-visible:ring-offset-2"
+          >
+            {action.icon ? <span className="shrink-0">{action.icon}</span> : null}
+            <span>{action.label}</span>
+          </button>
+        ) : null}
+      </div>
+    </header>
+  )
+}

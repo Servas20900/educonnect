@@ -1,25 +1,24 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.contenttypes.models import ContentType
 from rest_framework.generics import get_object_or_404
 from apps.databaseModels.models import DocumentosRepositorio, DocumentosDocumento
+from core.views import obtener_rol_usuario
 from .services import DocumentService
 from .serializers import DocumentoReadSerializer, RepositorioSerializer
 
 class RepositorioListView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
         repositorios = DocumentosRepositorio.objects.all().order_by('-fecha_creacion')
         serializer = RepositorioSerializer(repositorios, many=True)
         return Response(serializer.data)
 
-    def post(self, request, model_name, object_id):
-        print("--- DEBUG SUBIDA ---")
-        print(f"Archivos recibidos: {request.FILES}")
-        print(f"Datos recibidos: {request.data}")
-
-        archivo = request.FILES.get('file')
+    def post(self, request):
         serializer = RepositorioSerializer(data=request.data)
         
         if serializer.is_valid():
@@ -74,10 +73,19 @@ class GenericDocumentUploadView(APIView):
 
 
 class DocumentosPorObjetoView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, model_name, object_id):
-        repositorio = get_object_or_404(DocumentosRepositorio, id=object_id)
-        if request.user.rol.nombre != 'Administrador' and repositorio.rol_acceso != request.user.rol.nombre:
-            return Response({"error": "No tienes permiso para ver esta carpeta"}, status=403)
+        rol = obtener_rol_usuario(request.user)
+        if rol != 'administrador':
+            repositorio = get_object_or_404(
+                DocumentosRepositorio, id=object_id
+            )
+            if repositorio.rol_acceso and rol not in repositorio.rol_acceso:
+                return Response(
+                    {"error": "No tenés permiso para ver esta carpeta"},
+                    status=403
+                )
         try:
             ct = ContentType.objects.get(model=model_name.lower())
             documentos = DocumentosDocumento.objects.filter(

@@ -3,6 +3,7 @@ from .models import *
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.utils import timezone
+from django.conf import settings
 
 class ReadSerializerComunicacionesCircular (serializers.ModelSerializer):
     publicado_por = serializers.ReadOnlyField(source='publicado_por.username')
@@ -101,6 +102,7 @@ class WriteSerializerComunicacionesComunicado(serializers.ModelSerializer):
 
 #Necesario para registrarse
 class RegistroSerializer(serializers.ModelSerializer):
+    DEFAULT_ALLOWED_EMAIL_DOMAINS = ['test.com', 'educonnect.ac.cr']
     nombre = serializers.CharField(write_only=True)
     primer_apellido = serializers.CharField(write_only=True)
     segundo_apellido = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
@@ -117,6 +119,32 @@ class RegistroSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': True}
         }
+
+    def validate_email(self, value):
+        email = str(value or '').strip().lower()
+        if '@' not in email:
+            raise serializers.ValidationError('Correo electrónico inválido.')
+
+        allowed_domains = getattr(
+            settings,
+            'AUTH_ALLOWED_EMAIL_DOMAINS',
+            self.DEFAULT_ALLOWED_EMAIL_DOMAINS,
+        )
+        normalized_domains = {
+            str(domain).strip().lower().lstrip('@')
+            for domain in (allowed_domains or [])
+            if str(domain).strip()
+        }
+
+        if normalized_domains:
+            email_domain = email.split('@', 1)[1]
+            if email_domain not in normalized_domains:
+                domains_text = ', '.join(sorted(f'@{domain}' for domain in normalized_domains))
+                raise serializers.ValidationError(
+                    f'Dominio no permitido. Use un correo institucional: {domains_text}.'
+                )
+
+        return email
 
     def create(self, validated_data):
         nombre = validated_data.pop('nombre')
