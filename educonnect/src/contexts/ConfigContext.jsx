@@ -13,8 +13,6 @@ const initialState = {
   onReset: () => {}
 };
 
-// ==============================|| CONFIG CONTEXT & PROVIDER ||============================== //
-
 const ConfigContext = createContext(initialState);
 
 function ConfigProvider({ children }) {

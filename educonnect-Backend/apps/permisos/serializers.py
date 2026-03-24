@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso, PersonasPersona
 from datetime import datetime
+from django.utils import timezone
 
 class PersonaSimpleSerializer(serializers.ModelSerializer):
     """Serializer simplificado para datos de persona"""
@@ -70,13 +71,15 @@ class UsuarioUpdateSerializer(serializers.ModelSerializer):
         
         # Actualizar rol si se proporciona
         if rol_id is not None:
-            AuthUsuarioRol.objects.filter(usuario=instance).delete()
-            rol = AuthRol.objects.get(id=rol_id)
-            AuthUsuarioRol.objects.create(
-                usuario=instance,
-                rol=rol,
-                fecha_asignacion= datetime.now()
-            )
+            try:
+                rol = AuthRol.objects.get(id=rol_id)
+                AuthUsuarioRol.objects.get_or_create(
+                    usuario=instance,
+                    rol=rol,
+                    defaults={'fecha_asignacion': timezone.now()}
+                )
+            except AuthRol.DoesNotExist:
+                pass
         
         return instance
 

@@ -6,3 +6,4 @@ python-dotenv
 djangorestframework-simplejwt
 cloudinary 
 django-cloudinary-storage
+openpyxl

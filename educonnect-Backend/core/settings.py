@@ -213,3 +213,10 @@ cloudinary.config(
     api_secret = CLOUDINARY_STORAGE['API_SECRET'],
     secure = True
 )
+
+# Dominios de correo permitidos para el registro
+AUTH_ALLOWED_EMAIL_DOMAINS = ['mep.go.cr', 'est.mep.go.cr']
+
+# Dominio de estudiantes (asignacion automatica de rol)
+AUTH_STUDENT_EMAIL_DOMAIN = 'est.mep.go.cr'
+AUTH_TEACHER_EMAIL_DOMAIN = 'mep.go.cr'

@@ -9,7 +9,7 @@ export default function Toast({ information, setInformation }) {
                     : "bg-red-100 border-red-500 text-red-700"
             }`}>
                 <span className="mr-2">
-                    {information.includes("xito") ? "✅" : "⚠️"}
+                    {information.includes("xito") ? "" : ""}
                 </span>
                 <p className="font-bold text-sm">
                     {information}

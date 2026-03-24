@@ -185,6 +185,25 @@ class RegistroSerializer(serializers.ModelSerializer):
                 **validated_data
             )
 
+            # Determinar rol segun dominio del correo
+            email = validated_data.get('email', '').lower()
+            email_domain = email.split('@', 1)[1] if '@' in email else ''
+
+            student_domain = getattr(
+                settings, 'AUTH_STUDENT_EMAIL_DOMAIN', 'est.mep.go.cr'
+            ).lower()
+            teacher_domain = getattr(
+                settings, 'AUTH_TEACHER_EMAIL_DOMAIN', 'mep.go.cr'
+            ).lower()
+
+            if email_domain == student_domain:
+                rol_nombre = 'estudiante'
+            elif email_domain == teacher_domain:
+                rol_nombre = 'docente'
+            # Si llego un rol explicito en el payload y no es
+            # ninguno de los dos dominios conocidos, respetarlo.
+            # (Para casos de desarrollo o dominios futuros)
+
             # Asignar rol al usuario
             try:
                 from .models import AuthRol, AuthUsuarioRol

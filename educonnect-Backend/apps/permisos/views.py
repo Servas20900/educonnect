@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser
 from django.utils import timezone
 from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso
 from .serializers import (
@@ -37,68 +38,146 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def assign_role(self, request, pk=None):
-        """Asigna uno o múltiples roles a un usuario"""
+        """Agrega un rol al usuario sin borrar los anteriores"""
         usuario = self.get_object()
-        roles_payload = request.data.get('rol_ids')
+        rol_id = request.data.get('rol_id')
 
-        # Compatibilidad con el payload histórico de un solo rol.
-        if roles_payload is None:
-            rol_id = request.data.get('rol_id')
-            roles_payload = [rol_id] if rol_id is not None else []
-
-        if not isinstance(roles_payload, list) or not roles_payload:
+        if not rol_id:
             return Response(
-                {'error': 'rol_id o rol_ids es requerido'},
+                {'error': 'rol_id es requerido'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Limpiar ids vacíos y duplicados.
-        unique_role_ids = []
-        seen_ids = set()
-        for role_id in roles_payload:
-            if role_id in (None, ''):
-                continue
-            role_id_str = str(role_id)
-            if role_id_str in seen_ids:
-                continue
-            seen_ids.add(role_id_str)
-            unique_role_ids.append(role_id)
-
-        if not unique_role_ids:
+        try:
+            rol = AuthRol.objects.get(id=rol_id, activo=True)
+        except AuthRol.DoesNotExist:
             return Response(
-                {'error': 'No se recibieron IDs de rol válidos'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        roles = list(AuthRol.objects.filter(id__in=unique_role_ids, activo=True))
-        found_ids = {str(rol.id) for rol in roles}
-        missing_ids = [rid for rid in unique_role_ids if str(rid) not in found_ids]
-
-        if missing_ids:
-            return Response(
-                {
-                    'error': 'Uno o más roles no existen o están inactivos',
-                    'roles_invalidos': missing_ids,
-                },
+                {'error': 'Rol no encontrado o inactivo'},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # Reemplazar las asignaciones actuales por el nuevo conjunto de roles.
-        AuthUsuarioRol.objects.filter(usuario=usuario).delete()
-        asignaciones = [
-            AuthUsuarioRol(
-                usuario=usuario,
-                rol=rol,
-                fecha_asignacion=timezone.now()
-            )
-            for rol in roles
-        ]
-        AuthUsuarioRol.objects.bulk_create(asignaciones)
+        _, created = AuthUsuarioRol.objects.get_or_create(
+            usuario=usuario,
+            rol=rol,
+            defaults={'fecha_asignacion': timezone.now()}
+        )
 
-        return Response({
-            'message': 'Roles asignados exitosamente',
-            'roles_asignados': [{'id': rol.id, 'nombre': rol.nombre} for rol in roles]
-        })
+        if not created:
+            return Response(
+                {'message': f'El usuario ya tiene el rol {rol.nombre}'}
+            )
+
+        return Response(
+            {'message': f'Rol {rol.nombre} agregado exitosamente'}
+        )
+
+    @action(detail=True, methods=['post'])
+    def remove_role(self, request, pk=None):
+        """Quita un rol especifico del usuario"""
+        usuario = self.get_object()
+        rol_id = request.data.get('rol_id')
+
+        if not rol_id:
+            return Response(
+                {'error': 'rol_id es requerido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        deleted, _ = AuthUsuarioRol.objects.filter(
+            usuario=usuario,
+            rol_id=rol_id
+        ).delete()
+
+        if deleted == 0:
+            return Response(
+                {'error': 'El usuario no tiene ese rol'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(
+            {'message': 'Rol removido exitosamente'}
+        )
+
+    @action(detail=False, methods=['post'],
+            parser_classes=[MultiPartParser])
+    def import_bulk(self, request):
+        """
+        Importa usuarios desde un archivo CSV o Excel.
+        El archivo debe tener columnas:
+        username, email, nombre, primer_apellido,
+        segundo_apellido (opcional), fecha_nacimiento
+        (YYYY-MM-DD), genero
+        Devuelve { creados: N, errores: [...] }
+        """
+        archivo = request.FILES.get('file')
+        if not archivo:
+            return Response(
+                {'error': 'No se proporciono ningun archivo'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        nombre_archivo = archivo.name.lower()
+        creados = 0
+        errores = []
+
+        try:
+            if nombre_archivo.endswith('.csv'):
+                import csv, io
+                contenido = archivo.read().decode('utf-8-sig')
+                reader = csv.DictReader(io.StringIO(contenido))
+                filas = list(reader)
+            elif nombre_archivo.endswith(('.xlsx', '.xls')):
+                import openpyxl
+                wb = openpyxl.load_workbook(archivo)
+                ws = wb.active
+                headers = [str(cell.value).strip() for cell in ws[1]]
+                filas = []
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    filas.append(dict(zip(headers, row)))
+            else:
+                return Response(
+                    {'error': 'Formato no soportado. Use CSV o XLSX.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            from apps.databaseModels.serializers import RegistroSerializer
+            for i, fila in enumerate(filas, start=2):
+                try:
+                    data = {
+                        'username': str(fila.get('username', '') or '').strip(),
+                        'email': str(fila.get('email', '') or '').strip(),
+                        'password': str(fila.get('username', '') or '').strip(),
+                        'nombre': str(fila.get('nombre', '') or '').strip(),
+                        'primer_apellido': str(fila.get('primer_apellido', '') or '').strip(),
+                        'segundo_apellido': str(fila.get('segundo_apellido', '') or '').strip(),
+                        'fecha_nacimiento': str(fila.get('fecha_nacimiento', '') or '').strip(),
+                        'genero': str(fila.get('genero', '') or 'No especificado').strip(),
+                    }
+                    if not data['username'] or not data['email']:
+                        errores.append(
+                            f'Fila {i}: username y email son requeridos'
+                        )
+                        continue
+
+                    serializer = RegistroSerializer(data=data)
+                    if serializer.is_valid():
+                        serializer.save()
+                        creados += 1
+                    else:
+                        errores.append(
+                            f'Fila {i} ({data["email"]}): '
+                            f'{serializer.errors}'
+                        )
+                except Exception as e:
+                    errores.append(f'Fila {i}: {str(e)}')
+
+        except Exception as e:
+            return Response(
+                {'error': f'Error al procesar el archivo: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response({'creados': creados, 'errores': errores})
 
 
 class RolViewSet(viewsets.ModelViewSet):
