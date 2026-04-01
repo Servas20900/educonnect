@@ -17,6 +17,7 @@ const Perfil      = Loadable(lazy(() => import('../pages/profile/Perfil')));
 
 // Admin
 const Circulares        = Loadable(lazy(() => import('../pages/admin/CircularesList')));
+const CircularesArchivadas = Loadable(lazy(() => import('../pages/admin/CircularesArchivadas')));
 const Horarios          = Loadable(lazy(() => import('../pages/admin/Horarios')));
 const Documentos        = Loadable(lazy(() => import('../pages/admin/OficiosPlantillas')));
 const Incapacidades     = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
@@ -32,6 +33,7 @@ const Asistencia         = Loadable(lazy(() => import('../pages/docente/Registro
 const Riesgo             = Loadable(lazy(() => import('../pages/docente/RiesgoEstudiantes')));
 const Planeamientos      = Loadable(lazy(() => import('../pages/docente/Planeamientos')));
 const Comunicados        = Loadable(lazy(() => import('../pages/docente/Comunicados')));
+const CircularesDocente  = Loadable(lazy(() => import('../pages/docente/CircularesDocente')));
 const Exportaciones      = Loadable(lazy(() => import('../pages/docente/Exportaciones')));
 
 // Comité
@@ -78,6 +80,7 @@ const AppRoutes = {
 
     // Admin
     { path: 'circulares',    element: <Guard roles={[ROLES.ADMIN]}><Circulares /></Guard> },
+    { path: 'circulares-archivadas', element: <Guard roles={[ROLES.ADMIN]}><CircularesArchivadas /></Guard> },
     { path: 'horarios',      element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Horarios /></Guard> },
     { path: 'documentos',    element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}><Documentos /></Guard> },
     { path: 'incapacidades', element: <Guard roles={[ROLES.ADMIN]}><Incapacidades /></Guard> },
@@ -96,6 +99,7 @@ const AppRoutes = {
         { path: 'riesgo',       element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Riesgo /></Guard> },
         { path: 'planeamientos',element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Planeamientos /></Guard> },
         { path: 'comunicados',  element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Comunicados /></Guard> },
+        { path: 'circulares',   element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><CircularesDocente /></Guard> },
         { path: 'exportaciones',element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Exportaciones /></Guard> },
       ],
     },

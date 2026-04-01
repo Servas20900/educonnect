@@ -112,8 +112,9 @@ DATABASES = {
     }
 }
 
-# Archivos en local en DEBUG
-if DEBUG:
+# Archivos: por defecto local en DEBUG, pero se puede forzar Cloudinary con USE_CLOUDINARY=true
+USE_CLOUDINARY = os.getenv('USE_CLOUDINARY', 'false').lower() == 'true'
+if DEBUG and not USE_CLOUDINARY:
     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 else:
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.RawMediaCloudinaryStorage"

@@ -41,6 +41,7 @@ const menuItems = {
             { id: 'riesgo',              title: 'Riesgo académico',     type: 'item', url: '/docente/riesgo' },
             { id: 'planeamientos',       title: 'Planeamientos',       type: 'item', url: '/docente/planeamientos' },
             { id: 'comunicados',         title: 'Comunicados',         type: 'item', url: '/docente/comunicados' },
+            { id: 'circulares',          title: 'Circulares',          type: 'item', url: '/docente/circulares' },
             { id: 'exportaciones',       title: 'Exportaciones',       type: 'item', url: '/docente/exportaciones' },
           ],
         },

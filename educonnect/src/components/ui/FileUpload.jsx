@@ -13,7 +13,7 @@ export default function FileUpload({
   onFile,
   accept = '*',
   label = 'Subir archivo',
-  hint = 'PDF, Excel, Word — máx. 10MB',
+  hint = 'PDF, Excel, Word \u2014 máx. 10MB',
   currentFile,
   disabled = false,
 }) {

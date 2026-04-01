@@ -101,7 +101,8 @@ api.interceptors.response.use(
         const isAuthAttempt =
             requestUrl.includes('api/auth/login/') ||
             requestUrl.includes('api/v1/auth/register/') ||
-            requestUrl.includes('api/auth/refresh/');
+            requestUrl.includes('api/auth/refresh/') ||
+            requestUrl.includes('api/auth/session/');
 
         if (status === 401 && !isAuthAttempt && originalRequest && !originalRequest._retry) {
             originalRequest._retry = true;

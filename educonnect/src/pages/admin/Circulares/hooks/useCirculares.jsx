@@ -30,22 +30,22 @@ export function useCirculares() {
             return { success: true, sendingData };
         } catch (err) {
             setErrorUploading(err);
-            return { success: false, error: err };
+            throw err;
         } finally {
             setUploading(false);
         }
     }
 
-    const actualizarCircular = async (data, archivoSeleccionado,id) => {
+    const actualizarCircular = async (data, id, archivoSeleccionado) => {
         setUploading(true);
         setError(null);
         try {
-            const sendingData = await updateCirculares(data,archivoSeleccionado, id);
+            const sendingData = await updateCirculares(data, id, archivoSeleccionado);
             await cargarCirculares();
             return { success: true, sendingData };
         } catch (err) {
             setErrorUploading(err);
-            return { success: false, error: err };
+            throw err;
         } finally {
             setUploading(false);
         }
@@ -59,7 +59,7 @@ export function useCirculares() {
             return { success: true, sendingData };
         } catch (err) {
             setErrorUploading(err);
-            return { success: false, error: err };
+            throw err;
         } finally {
             setUploading(false);
         }
