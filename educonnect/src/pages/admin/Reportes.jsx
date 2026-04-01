@@ -14,16 +14,13 @@ export default function Reportes() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // Filtros
   const [filtroFecha, setFiltroFecha] = useState('');
   const [filtroUsuario, setFiltroUsuario] = useState('');
   const [filtroModulo, setFiltroModulo] = useState('');
   const [filtroResultado, setFiltroResultado] = useState('');
   
-  // Tab activo
   const [tabActivo, setTabActivo] = useState('auditoria');
 
-  // Cargar logs de auditoría
   const cargarAuditLogs = async () => {
     setLoading(true);
     setError(null);
@@ -41,7 +38,6 @@ export default function Reportes() {
     }
   };
 
-  // Cargar reportes
   const cargarReportes = async () => {
     setLoading(true);
     setError(null);
@@ -62,18 +58,15 @@ export default function Reportes() {
     }
   };
 
-  // Cargar datos al montar componente
   useEffect(() => {
     cargarAuditLogs();
     cargarReportes();
   }, []);
 
-  // Aplicar filtros
   const aplicarFiltros = () => {
     cargarAuditLogs();
   };
 
-  // Filtrar logs localmente por usuario o módulo
   const logsFiltratos = auditLogs.filter(log => {
     const cumpleFiltroUsuario = !filtroUsuario || 
       log.usuario_email?.toLowerCase().includes(filtroUsuario.toLowerCase()) ||
@@ -85,7 +78,6 @@ export default function Reportes() {
     return cumpleFiltroUsuario && cumpleFiltroModulo;
   });
 
-  // Exportar datos a CSV
   const exportarCSV = (datos, nombre) => {
     const headers = Object.keys(datos[0] || {});
     const csv = [
@@ -113,7 +105,6 @@ export default function Reportes() {
         </div>
       )}
 
-      {/* Tabs de navegación */}
       <div className="flex gap-4 mb-6 border-b border-gray-200">
         <button
           onClick={() => setTabActivo('auditoria')}
@@ -137,7 +128,6 @@ export default function Reportes() {
         </button>
       </div>
 
-      {/* TAB: Logs de Auditoría */}
       {tabActivo === 'auditoria' && (
         <section className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold text-gray-700 mb-4">
@@ -254,7 +244,6 @@ export default function Reportes() {
         </section>
       )}
 
-      {/* TAB: Reportes de Uso */}
       {tabActivo === 'reportes' && (
         <div>
           <section className="bg-white p-6 rounded-lg shadow-md mb-8">

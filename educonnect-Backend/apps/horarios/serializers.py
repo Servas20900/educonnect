@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework import serializers
 from apps.databaseModels.models import HorariosAprobacion,HorariosDetalle,HorariosHorario 
-
+from .services import HorarioNotificationService
 
 class HorariosDetalleReadSerializer(serializers.ModelSerializer):
     grupo = serializers.StringRelatedField()
@@ -103,6 +103,30 @@ class WriteSerializerHorariosHorario(serializers.ModelSerializer):
         detalles_data = validated_data.pop('detalles', None)
         aprobaciones_data = validated_data.pop('aprobaciones', None)
 
+        es_publicado = instance.estado == 'Publicado'
+        cambios_detectados = False
+
+        if detalles_data is not None and es_publicado:
+            detalles_antiguos = list(HorariosDetalle.objects.filter(horario=instance).values(
+                'dia_semana', 'hora_inicio', 'hora_fin', 'aula'
+            ))
+            
+            if len(detalles_antiguos) != len(detalles_data):
+                cambios_detectados = True
+            else:
+                for i in range(len(detalles_data)):
+                    inicio_antiguo = str(detalles_antiguos[i]['hora_inicio'])[:5]
+                    inicio_nuevo = str(detalles_data[i]['hora_inicio'])[:5]
+                    
+                    if (inicio_antiguo != inicio_nuevo or 
+                        detalles_antiguos[i]['dia_semana'] != detalles_data[i]['dia_semana'] or
+                        detalles_antiguos[i]['aula'] != detalles_data[i]['aula']):
+                        cambios_detectados = True
+                        break
+
+        if cambios_detectados:
+            instance.version += 1
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -110,12 +134,12 @@ class WriteSerializerHorariosHorario(serializers.ModelSerializer):
         if detalles_data is not None:
             HorariosDetalle.objects.filter(horario=instance).delete()
             self._process_detalles_bulk(instance, detalles_data)
-
-        if aprobaciones_data is not None:
-            HorariosAprobacion.objects.filter(horario=instance).delete()
-            self._process_aprobaciones_bulk(instance, aprobaciones_data)
+            
+        if cambios_detectados:
+            transaction.on_commit(lambda: HorarioNotificationService.enviar_aviso_cambio(instance))
 
         return instance
+    
     def _process_detalles_bulk(self, horario, detalles_data):
         HorariosDetalle.objects.bulk_create([
             HorariosDetalle(horario=horario, **d) for d in detalles_data

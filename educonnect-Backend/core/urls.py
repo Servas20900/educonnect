@@ -23,9 +23,10 @@ urlpatterns = [
     path('api/v1/oficiosPlantillas/', include('apps.oficiosPlantillas.urls')),
     path('api/v1/planeamientos/', include('apps.planeamientos.urls')),
     path('api/v1/reuniones/', include('apps.reuniones.urls')),
+    path('api/v1/asistencia/', include('apps.asistencia.urls')),
     path("api/v1/exportaciones/", include("apps.exportaciones.urls")),
-
-
+    path("api/v1/notificaciones/", include("apps.notificaciones.urls")),
+    path("api/v1/informes-economicos/", include("apps.informesEconomicos.urls")),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

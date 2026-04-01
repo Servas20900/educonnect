@@ -62,7 +62,10 @@ INSTALLED_APPS = [
     'apps.planeamientos',
     'apps.grupo',
     'apps.reuniones',
-    'apps.exportaciones'
+    'apps.asistencia',
+    'apps.notificaciones',
+    'apps.exportaciones',
+    'apps.informesEconomicos'
 ]
 
 MIDDLEWARE = [
@@ -221,3 +224,15 @@ AUTH_ALLOWED_EMAIL_DOMAINS = ['mep.go.cr', 'est.mep.go.cr']
 # Dominio de estudiantes (asignacion automatica de rol)
 AUTH_STUDENT_EMAIL_DOMAIN = 'est.mep.go.cr'
 AUTH_TEACHER_EMAIL_DOMAIN = 'mep.go.cr'
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.getenv('EMAIL_HOST')
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+
+DEFAULT_FROM_EMAIL = 'EduConnect <no-reply@educonnect.com>'
