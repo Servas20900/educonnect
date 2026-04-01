@@ -1,17 +1,29 @@
 from rest_framework import serializers
-from apps.databaseModels.models import AcademicoGrupo
+from apps.databaseModels.models import AcademicoGrado, AcademicoGrupo
+
+
+class AcademicoGradoSerializer(serializers.ModelSerializer):
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AcademicoGrado
+        fields = ['id', 'nombre', 'nivel', 'numero_grado', 'descripcion', 'activo', 'label']
+
+    def get_label(self, obj):
+        return obj.nombre
+
 
 class AcademicoGrupoSerializer(serializers.ModelSerializer):
-    grado_nombre = serializers.CharField(source='grado.nombre', read_only=True)
+    grado_nombre   = serializers.CharField(source='grado.nombre',   read_only=True)
     seccion_nombre = serializers.CharField(source='seccion.nombre', read_only=True)
-    label = serializers.SerializerMethodField()
+    label          = serializers.SerializerMethodField()
 
     class Meta:
         model = AcademicoGrupo
         fields = [
-            'id', 'nombre', 'codigo_grupo', 'aula', 'estado', 
-            'periodo', 'grado', 'seccion', 'docente_guia',
-            'grado_nombre', 'seccion_nombre', 'label'
+            'id', 'nombre', 'codigo_grupo', 'aula', 'estado', 'periodo',
+            'grado', 'seccion', 'docente_guia',
+            'grado_nombre', 'seccion_nombre', 'label',
         ]
 
     def get_label(self, obj):

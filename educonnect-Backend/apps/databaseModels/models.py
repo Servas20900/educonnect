@@ -386,6 +386,10 @@ class ComunicacionesCircular(models.Model):
     id = models.BigAutoField(primary_key=True)
     titulo = models.CharField(max_length=200)
     contenido = models.TextField()
+    detalle = models.TextField(blank=True, null=True)
+    tipo_comunicado = models.CharField(max_length=100, blank=True, null=True)
+    destinatarios = models.JSONField(default=list, blank=True)
+    visible = models.BooleanField(default=True)
     archivo_adjunto = models.CharField(max_length=255, blank=True, null=True)
     fecha_vigencia_inicio = models.DateField()
     fecha_vigencia_fin = models.DateField(blank=True, null=True)
@@ -394,7 +398,7 @@ class ComunicacionesCircular(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     creada_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True)
     archivo_adjunto = models.FileField(
-        upload_to='circulares/', 
+        upload_to='home/circular/', 
         null=True, 
         blank=True,
         validators=[validar_extension_archivo]

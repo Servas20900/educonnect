@@ -7,6 +7,25 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            return 'react-vendor'
+          }
+
+          if (id.includes('@mui') || id.includes('@emotion')) {
+            return 'mui-vendor'
+          }
+
+          return 'vendor'
+        }
+      }
+    }
+  },
   resolve: {
     alias: (() => {
       // __dirname is not defined in ESM; derive from import.meta.url

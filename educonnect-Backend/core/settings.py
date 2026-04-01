@@ -26,12 +26,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-0r5m+r0bxnkl2(kj!@rd=#)^3ymsb*g8=qmi$s9=k)ms%zjo3l'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 
 
 # Application definition
@@ -107,16 +107,17 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'Educonnect_db',
-        'USER': 'Educonnect_user',
-        'PASSWORD': 'Educonnect_secure_password_2024',
-        'HOST': 'postgres',
-        'PORT': '5432',
+        'NAME': os.getenv('DB_NAME', 'Educonnect_db'),
+        'USER': os.getenv('DB_USER', 'Educonnect_user'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'postgres'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
-# Archivos en local en DEBUG
-if DEBUG:
+# Archivos: por defecto local en DEBUG, pero se puede forzar Cloudinary con USE_CLOUDINARY=true
+USE_CLOUDINARY = os.getenv('USE_CLOUDINARY', 'false').lower() == 'true'
+if DEBUG and not USE_CLOUDINARY:
     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 else:
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.RawMediaCloudinaryStorage"
@@ -162,6 +163,12 @@ STATIC_URL = 'static/'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Dominios permitidos para el registro de usuarios.
+AUTH_ALLOWED_EMAIL_DOMAINS = [
+    'test.com',
+    'educonnect.ac.cr',
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -210,6 +217,13 @@ cloudinary.config(
     api_secret = CLOUDINARY_STORAGE['API_SECRET'],
     secure = True
 )
+
+# Dominios de correo permitidos para el registro
+AUTH_ALLOWED_EMAIL_DOMAINS = ['mep.go.cr', 'est.mep.go.cr']
+
+# Dominio de estudiantes (asignacion automatica de rol)
+AUTH_STUDENT_EMAIL_DOMAIN = 'est.mep.go.cr'
+AUTH_TEACHER_EMAIL_DOMAIN = 'mep.go.cr'
 
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

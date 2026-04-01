@@ -3,9 +3,11 @@ from .models import *
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
 from django.utils import timezone
+from django.conf import settings
+import json
 
 class ReadSerializerComunicacionesCircular (serializers.ModelSerializer):
-    publicado_por = serializers.ReadOnlyField(source='publicado_por.username')
+    publicado_por = serializers.ReadOnlyField(source='creada_por.username')
     creada_por = serializers.StringRelatedField()
     class Meta:
         model = ComunicacionesCircular
@@ -13,22 +15,18 @@ class ReadSerializerComunicacionesCircular (serializers.ModelSerializer):
 
 class WriteSerializerComunicacionesCircular(serializers.ModelSerializer):
     autor_nombre = serializers.ReadOnlyField(source='creada_por.username')
+    DESTINATARIOS_VALIDOS = {'docentes', 'estudiantes', 'encargados'}
 
     class Meta:
         model = ComunicacionesCircular
         fields = [
             'id', 'titulo', 'contenido', 'archivo_adjunto', 
             'fecha_vigencia_inicio', 'fecha_vigencia_fin', 
-            'estado', 'categoria', 'fecha_creacion', 'autor_nombre'
+            'estado', 'categoria', 'fecha_creacion', 'autor_nombre',
+            'detalle', 'tipo_comunicado', 'destinatarios', 'visible'
         ]
         read_only_fields = ['id', 'fecha_creacion', 'creada_por']
 
-    def validate_estado(self,value):
-        if value =="Inactivo" :
-            return serializers.ValidationError(
-            {"error": "Este registro está inactivo y no se puede editar."}
-        )
-        return value
     def validate_fecha_vigencia_fin(self, value):
         if value == "" or value is None:
             return None
@@ -38,6 +36,30 @@ class WriteSerializerComunicacionesCircular(serializers.ModelSerializer):
         if isinstance(value, str):
             return None
         return value
+
+    def validate_destinatarios(self, value):
+        if value in (None, ''):
+            return ['docentes']
+
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                raise serializers.ValidationError('Destinatarios debe ser un arreglo JSON válido.')
+
+        if not isinstance(value, list) or not value:
+            raise serializers.ValidationError('Debe seleccionar al menos un destinatario.')
+
+        normalizados = []
+        for item in value:
+            destino = str(item).strip().lower()
+            if destino == 'docente':
+                destino = 'docentes'
+            if destino not in self.DESTINATARIOS_VALIDOS:
+                raise serializers.ValidationError('Destinatario inválido. Use docentes, estudiantes o encargados.')
+            normalizados.append(destino)
+
+        return sorted(list(set(normalizados)))
 
 
 class ReadSerializerComunicacionesComunicado(serializers.ModelSerializer):
@@ -144,6 +166,7 @@ class WriteSerializerComunicacionesComunicado(serializers.ModelSerializer):
 
 #Necesario para registrarse
 class RegistroSerializer(serializers.ModelSerializer):
+    DEFAULT_ALLOWED_EMAIL_DOMAINS = ['test.com', 'educonnect.ac.cr']
     nombre = serializers.CharField(write_only=True)
     primer_apellido = serializers.CharField(write_only=True)
     segundo_apellido = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
@@ -160,6 +183,32 @@ class RegistroSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'password': {'write_only': True}
         }
+
+    def validate_email(self, value):
+        email = str(value or '').strip().lower()
+        if '@' not in email:
+            raise serializers.ValidationError('Correo electrónico inválido.')
+
+        allowed_domains = getattr(
+            settings,
+            'AUTH_ALLOWED_EMAIL_DOMAINS',
+            self.DEFAULT_ALLOWED_EMAIL_DOMAINS,
+        )
+        normalized_domains = {
+            str(domain).strip().lower().lstrip('@')
+            for domain in (allowed_domains or [])
+            if str(domain).strip()
+        }
+
+        if normalized_domains:
+            email_domain = email.split('@', 1)[1]
+            if email_domain not in normalized_domains:
+                domains_text = ', '.join(sorted(f'@{domain}' for domain in normalized_domains))
+                raise serializers.ValidationError(
+                    f'Dominio no permitido. Use un correo institucional: {domains_text}.'
+                )
+
+        return email
 
     def create(self, validated_data):
         nombre = validated_data.pop('nombre')
@@ -199,6 +248,25 @@ class RegistroSerializer(serializers.ModelSerializer):
                 persona=persona,
                 **validated_data
             )
+
+            # Determinar rol segun dominio del correo
+            email = validated_data.get('email', '').lower()
+            email_domain = email.split('@', 1)[1] if '@' in email else ''
+
+            student_domain = getattr(
+                settings, 'AUTH_STUDENT_EMAIL_DOMAIN', 'est.mep.go.cr'
+            ).lower()
+            teacher_domain = getattr(
+                settings, 'AUTH_TEACHER_EMAIL_DOMAIN', 'mep.go.cr'
+            ).lower()
+
+            if email_domain == student_domain:
+                rol_nombre = 'estudiante'
+            elif email_domain == teacher_domain:
+                rol_nombre = 'docente'
+            # Si llego un rol explicito en el payload y no es
+            # ninguno de los dos dominios conocidos, respetarlo.
+            # (Para casos de desarrollo o dominios futuros)
 
             # Asignar rol al usuario
             try:

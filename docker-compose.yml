@@ -2,10 +2,12 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: Educonnect_postgres
+    env_file:
+      - ./educonnect-Backend/.env
     environment:
-      POSTGRES_USER: Educonnect_user
-      POSTGRES_PASSWORD: Educonnect_secure_password_2024
-      POSTGRES_DB: Educonnect_db
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - '5432:5432'
     volumes:
@@ -24,7 +26,7 @@ services:
       dockerfile: Dockerfile.backend
     container_name: educonnectBackend
     env_file:
-      - .env
+      - ./educonnect-Backend/.env
     volumes:
       - ./educonnect-Backend:/app
     ports:

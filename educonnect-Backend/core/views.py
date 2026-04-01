@@ -2,9 +2,11 @@ from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from apps.databaseModels.models import AuthUsuarioRol
 from .serializers import CustomTokenObtainPairSerializer
 
@@ -73,6 +75,15 @@ class ObtencionTokens(TokenObtainPairView):
                     httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
                     samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
                 )
+
+                response.set_cookie(
+                    key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
+                    value=refresh_token,
+                    expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+                    secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                    httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                    samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+                )
                 
                 # Agregar información del usuario y rol a la respuesta
                 response.data['user'] = user.username
@@ -87,6 +98,48 @@ class ObtencionTokens(TokenObtainPairView):
             
         return response
 
+
+class RefreshDesdeCookieView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        data = request.data.copy()
+        if not data.get('refresh'):
+            cookie_refresh = request.COOKIES.get(settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'])
+            if cookie_refresh:
+                data['refresh'] = cookie_refresh
+
+        serializer = self.get_serializer(data=data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as exc:
+            raise InvalidToken(exc.args[0])
+
+        response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+        access_token = serializer.validated_data.get('access')
+        if access_token:
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE'],
+                value=access_token,
+                expires=settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'],
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            )
+
+        rotated_refresh = serializer.validated_data.get('refresh')
+        if rotated_refresh:
+            response.set_cookie(
+                key=settings.SIMPLE_JWT['AUTH_COOKIE_REFRESH'],
+                value=rotated_refresh,
+                expires=settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'],
+                secure=settings.SIMPLE_JWT['AUTH_COOKIE_SECURE'],
+                httponly=settings.SIMPLE_JWT['AUTH_COOKIE_HTTP_ONLY'],
+                samesite=settings.SIMPLE_JWT['AUTH_COOKIE_SAMESITE']
+            )
+
+        return response
+
 class EliminacionTokens(APIView):
     def post(self, request):
         response = Response({"message": "Sesión cerrada correctamente"}, status=status.HTTP_200_OK)
@@ -97,10 +150,13 @@ class EliminacionTokens(APIView):
         return response
 
 class SessionStatusView(APIView):
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAuthenticated]
+    # Keep this endpoint non-erroring for guests; frontend uses it to know auth state.
+    permission_classes = [AllowAny]
 
     def get(self, request):
+        if not request.user or not request.user.is_authenticated:
+            return Response({"isAuthenticated": False}, status=status.HTTP_200_OK)
+
         user = request.user
         rol = obtener_rol_usuario(user)
 

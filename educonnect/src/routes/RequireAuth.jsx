@@ -20,8 +20,7 @@ export default function RequireAuth({ children, allowedRoles }) {
 
   // Si hay roles permitidos y el actual no está incluido
   if (allowedRoles?.length && !allowedRoles.includes(role)) {
-    console.warn(`Acceso denegado. Rol actual: ${role}. Esperados:`, allowedRoles);
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/no-autorizado" replace />;
   }
 
   return children;

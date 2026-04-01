@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser
 from django.utils import timezone
 from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso
 from .serializers import (
@@ -37,27 +38,146 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def assign_role(self, request, pk=None):
-        """Asigna un rol a un usuario"""
+        """Agrega un rol al usuario sin borrar los anteriores"""
         usuario = self.get_object()
         rol_id = request.data.get('rol_id')
-        
+
         if not rol_id:
-            return Response({'error': 'rol_id es requerido'}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response(
+                {'error': 'rol_id es requerido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         try:
             rol = AuthRol.objects.get(id=rol_id, activo=True)
         except AuthRol.DoesNotExist:
-            return Response({'error': 'Rol no encontrado o inactivo'}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Eliminar roles anteriores y asignar el nuevo
-        AuthUsuarioRol.objects.filter(usuario=usuario).delete()
-        AuthUsuarioRol.objects.create(
+            return Response(
+                {'error': 'Rol no encontrado o inactivo'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        _, created = AuthUsuarioRol.objects.get_or_create(
             usuario=usuario,
             rol=rol,
-            fecha_asignacion=timezone.now()
+            defaults={'fecha_asignacion': timezone.now()}
         )
-        
-        return Response({'message': f'Rol {rol.nombre} asignado exitosamente'})
+
+        if not created:
+            return Response(
+                {'message': f'El usuario ya tiene el rol {rol.nombre}'}
+            )
+
+        return Response(
+            {'message': f'Rol {rol.nombre} agregado exitosamente'}
+        )
+
+    @action(detail=True, methods=['post'])
+    def remove_role(self, request, pk=None):
+        """Quita un rol especifico del usuario"""
+        usuario = self.get_object()
+        rol_id = request.data.get('rol_id')
+
+        if not rol_id:
+            return Response(
+                {'error': 'rol_id es requerido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        deleted, _ = AuthUsuarioRol.objects.filter(
+            usuario=usuario,
+            rol_id=rol_id
+        ).delete()
+
+        if deleted == 0:
+            return Response(
+                {'error': 'El usuario no tiene ese rol'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(
+            {'message': 'Rol removido exitosamente'}
+        )
+
+    @action(detail=False, methods=['post'],
+            parser_classes=[MultiPartParser])
+    def import_bulk(self, request):
+        """
+        Importa usuarios desde un archivo CSV o Excel.
+        El archivo debe tener columnas:
+        username, email, nombre, primer_apellido,
+        segundo_apellido (opcional), fecha_nacimiento
+        (YYYY-MM-DD), genero
+        Devuelve { creados: N, errores: [...] }
+        """
+        archivo = request.FILES.get('file')
+        if not archivo:
+            return Response(
+                {'error': 'No se proporciono ningun archivo'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        nombre_archivo = archivo.name.lower()
+        creados = 0
+        errores = []
+
+        try:
+            if nombre_archivo.endswith('.csv'):
+                import csv, io
+                contenido = archivo.read().decode('utf-8-sig')
+                reader = csv.DictReader(io.StringIO(contenido))
+                filas = list(reader)
+            elif nombre_archivo.endswith(('.xlsx', '.xls')):
+                import openpyxl
+                wb = openpyxl.load_workbook(archivo)
+                ws = wb.active
+                headers = [str(cell.value).strip() for cell in ws[1]]
+                filas = []
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    filas.append(dict(zip(headers, row)))
+            else:
+                return Response(
+                    {'error': 'Formato no soportado. Use CSV o XLSX.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            from apps.databaseModels.serializers import RegistroSerializer
+            for i, fila in enumerate(filas, start=2):
+                try:
+                    data = {
+                        'username': str(fila.get('username', '') or '').strip(),
+                        'email': str(fila.get('email', '') or '').strip(),
+                        'password': str(fila.get('username', '') or '').strip(),
+                        'nombre': str(fila.get('nombre', '') or '').strip(),
+                        'primer_apellido': str(fila.get('primer_apellido', '') or '').strip(),
+                        'segundo_apellido': str(fila.get('segundo_apellido', '') or '').strip(),
+                        'fecha_nacimiento': str(fila.get('fecha_nacimiento', '') or '').strip(),
+                        'genero': str(fila.get('genero', '') or 'No especificado').strip(),
+                    }
+                    if not data['username'] or not data['email']:
+                        errores.append(
+                            f'Fila {i}: username y email son requeridos'
+                        )
+                        continue
+
+                    serializer = RegistroSerializer(data=data)
+                    if serializer.is_valid():
+                        serializer.save()
+                        creados += 1
+                    else:
+                        errores.append(
+                            f'Fila {i} ({data["email"]}): '
+                            f'{serializer.errors}'
+                        )
+                except Exception as e:
+                    errores.append(f'Fila {i}: {str(e)}')
+
+        except Exception as e:
+            return Response(
+                {'error': f'Error al procesar el archivo: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response({'creados': creados, 'errores': errores})
 
 
 class RolViewSet(viewsets.ModelViewSet):
