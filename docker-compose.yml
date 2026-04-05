@@ -23,17 +23,17 @@ services:
   backend:
     build:
       context: ./educonnect-Backend
-      dockerfile: Dockerfile.backend
+      dockerfile: Dockerfile  
     container_name: educonnectBackend
     env_file:
-      - ./educonnect-Backend/.env
+      - .env
     volumes:
       - ./educonnect-Backend:/app
     ports:
       - "8000:8000"
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_healthy  
     command: >
       sh -c "python manage.py wait_for_db &&
              python manage.py migrate &&

@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 # Envia los mensajes a la consola de Docker en tiempo real
 ENV PYTHONUNBUFFERED 1
 
-RUN apt-get update && apt-get install -y pkg-config default-libmysqlclient-dev build-essential 
+RUN apt-get update && apt-get install -y libpq-dev gcc build-essential
 
 WORKDIR /app
 
