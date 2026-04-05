@@ -1,16 +1,31 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
+import { useHorarios } from './Horarios/hooks/useHorarios';
 import FormularioHorario from './Horarios/FormularioHorario';
 import RevisionHorarios from './Horarios/RevisionHorarios';
-import { useHorarios } from './Horarios/hooks/useHorarios';
-import { useEffect, useState } from 'react';
+import { PageHeader, DataTable } from '../../components/ui';
+import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import Toast from '../../../components/Toast';
 
-
 export default function Horarios() {
-  const { cargarHorario, HorarioExistentes, loading, error, uploading, errorUploading, crearHorario, actualizarHorario, eliminarHorario, cargarUsuario, loadingUsers, errorUsers, usuarios, cargarGrupos, loadingGrupos, errorGrupos, grupos, cargarAsignaturas, loadingAsignaturas, errorAsignaturas, asignaturas
+  const {
+    cargarHorario,
+    HorarioExistentes,
+    loading,
+    error,
+    uploading,
+    crearHorario,
+    actualizarHorario,
+    eliminarHorario,
+    cargarUsuario,
+    usuarios,
+    cargarGrupos,
+    grupos,
+    cargarAsignaturas,
+    asignaturas
   } = useHorarios();
-  const [form, setForm] = useState(false);
-  const [object, setObject] = useState({});
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [currentObject, setCurrentObject] = useState(null);
   const [information, setInformation] = useState("");
 
   useEffect(() => {
@@ -20,75 +35,102 @@ export default function Horarios() {
     cargarAsignaturas();
   }, [cargarHorario, cargarUsuario, cargarAsignaturas, cargarGrupos]);
 
-  const handleModalForm = () => {
-    setForm(!form);
-    setObject({})
+  const handleOpenForm = () => {
+    setCurrentObject(null);
+    setFormOpen(true);
   };
 
-  const onEdit = (horario) => {
-    setObject(horario);
-    setForm(true);
+  const handleEdit = (horario) => {
+    setCurrentObject(horario);
+    setFormOpen(true);
   };
 
-  if (loading) return <div className="p-10 text-center">Cargando circulares...</div>;
-  if (error) return <div className="p-10 text-center text-red-500">Error al cargar datos.</div>;
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setCurrentObject(null);
+  };
+
+  const handleSuccess = (msg) => {
+    setInformation(msg);
+    handleCloseForm();
+    setTimeout(() => setInformation(""), 3000);
+  };
+
+  if (loading) return <div className="p-10 text-center text-slate-500 font-medium">Cargando módulos de horarios...</div>;
+  if (error) return <div className="p-10 text-center text-red-500">Error al conectar con el servidor.</div>;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {form && (
-        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <FormularioHorario
-            uploading={uploading}
-            errorUploading={errorUploading}
-            crearHorario={crearHorario}
-            handleModalForm={handleModalForm}
-            object={object}
-            actualizarHorario={actualizarHorario}
-            setInformation={setInformation}
-            usuarios={usuarios}
-            grupos={grupos}
-            asignaturas={asignaturas}
-          />
-          
-        </section>
-      )}
+    <div className="space-y-6">
+      <PageHeader
+        title="Horarios Institucionales"
+        action={{
+          label: 'Nuevo Horario',
+          onClick: handleOpenForm,
+          icon: '+',
+        }}
+      />
 
-      <section className="bg-white p-6 rounded-lg shadow-md">
-
-        <div className='flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-100'>
-          <h2 className="text-3xl font-bold text-gray-800 ">
-            Horarios
-          </h2>
-          <button
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            onClick={handleModalForm}
-          >
-            <span className="mr-2">+</span> Crear Horario
-          </button>
-        </div>
+      <section className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
         {HorarioExistentes.length > 0 ? (
           <RevisionHorarios
             horarios={HorarioExistentes}
             deleteHorario={eliminarHorario}
-            onEdit={onEdit}
+            onEdit={handleEdit}
             actualizarHorario={actualizarHorario}
           />
         ) : (
-          <div className="flex flex-col items-center py-16">
-            <div className="text-gray-300 mb-4 text-6xl">📄</div>
-            <h2 className="text-xl font-medium text-gray-500">No hay horarios a revisar</h2>
-            <p className="text-gray-400">Los horarios que crees aparecerán aquí.</p>
+          <div className="flex flex-col items-center py-24 bg-white">
+            <h2 className="text-xl font-semibold text-slate-600">No hay horarios definidos</h2>
+            <p className="text-slate-400 mt-2">Los horarios creados aparecerán en esta lista para su revisión.</p>
+            <button
+              onClick={handleOpenForm}
+              className="mt-6 px-6 py-2 bg-[#185fa5] text-white rounded-md text-sm font-medium hover:bg-[#0b2545] transition-all"
+            >
+              Crear Horario ahora
+            </button>
           </div>
         )}
       </section>
+
+      <Dialog
+        open={formOpen}
+        onClose={handleCloseForm}
+        fullWidth
+        maxWidth="md"
+        PaperProps={{
+          className: 'rounded-xl',
+          style: { borderRadius: '16px' }
+        }}
+      >
+        <DialogTitle className="text-xl font-bold text-[#0b2545] border-b border-slate-100 px-8 py-5">
+          {currentObject ? 'Actualizar Horario' : 'Configuración de Nuevo Horario'}
+        </DialogTitle>
+        <DialogContent className="px-8 py-6">
+          <FormularioHorario
+            uploading={uploading}
+            crearHorario={async (data) => {
+              await crearHorario(data);
+              handleSuccess("Horario creado exitosamente");
+            }}
+            actualizarHorario={async (data, id) => {
+              await actualizarHorario(data, id);
+              handleSuccess("Horario actualizado correctamente");
+            }}
+            handleModalForm={handleCloseForm}
+            object={currentObject}
+            usuarios={usuarios}
+            grupos={grupos}
+            asignaturas={asignaturas}
+          />
+        </DialogContent>
+      </Dialog>
+
       {information !== "" && (
         <Toast
           information={information}
           setInformation={setInformation}
         />
       )}
-
     </div>
   );
-};
-
+}

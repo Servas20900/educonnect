@@ -1,225 +1,192 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import CustomSelect from "../../../components/ui/CustomSelect"
+import { useForm, Controller } from "react-hook-form";
+import CustomSelect from "../../../components/ui/CustomSelect";
 
-const FormularioHorario = ({ uploading, errorUploading, crearHorario, handleModalForm, object, actualizarHorario, usuarios, grupos, asignaturas }) => {
+const FormularioHorario = ({ 
+    uploading, 
+    crearHorario, 
+    handleModalForm, 
+    object, 
+    actualizarHorario, 
+    usuarios, 
+    grupos, 
+    asignaturas 
+}) => {
     const [docentesOptions, setDocentesOptions] = useState([]);
     const [gruposOptions, setGruposOptions] = useState([]);
     const [asignaturaOptions, setAsignaturaOptions] = useState([]);
 
-    // Corregimos los defaultValues para que no exploten si object es null
-    const { register, handleSubmit, control, formState: { errors } } = useForm({
+    const { register, handleSubmit, control, formState: { errors }, watch } = useForm({
         defaultValues: {
             nombre: object?.nombre || "",
             tipo_horario: object?.tipo_horario || "Presencial",
             estado: object?.estado || "Borrador",
             notas: object?.notas || "",
             grupo: object?.grupo || "",
-            // Usamos ?. para docente_info y detalles
             docente: object?.docente_info?.id || "",
             version: object?.version || 1,
-            dia_semana: "Lunes",
+            dia_semana: object?.detalles?.[0]?.dia_semana || "Lunes",
             hora_inicio: object?.detalles?.[0]?.hora_inicio || "", 
             hora_fin: object?.detalles?.[0]?.hora_fin || "",
             aula: object?.detalles?.[0]?.aula || "",
             asignatura: object?.detalles?.[0]?.asignatura || "",
-            docente_detalle: ""
         }
     });
 
     useEffect(() => {
-        const cargarDatos = async () => {
-            if (usuarios && usuarios.length > 0) {
-                const docentes = usuarios
-                    .filter(u => u.rol?.nombre === "docente")
-                    .map(u => ({
-                        value: u.id,
-                        label: u.persona
-                            ? `${u.persona.nombre} ${u.persona.primer_apellido}`
-                            : u.username
-                    }));
-                setDocentesOptions(docentes);
-            }
-            
-            if (grupos) {
-                setGruposOptions(grupos.map(grupo => ({
-                    value: grupo.id,
-                    label: grupo.label 
-                })));
-            }
-
-            if (asignaturas) {
-                setAsignaturaOptions(asignaturas.map(asignatura => ({
-                    value: asignatura.id,
-                    label: asignatura.label 
-                })));
-            }
-        };
-
-        cargarDatos();
+        if (usuarios) {
+            const docentes = usuarios
+                .filter(u => u.rol?.nombre === "docente")
+                .map(u => ({
+                    value: u.id,
+                    label: u.persona ? `${u.persona.nombre} ${u.persona.primer_apellido}` : u.username
+                }));
+            setDocentesOptions(docentes);
+        }
+        if (grupos) setGruposOptions(grupos.map(g => ({ value: g.id, label: g.label })));
+        if (asignaturas) setAsignaturaOptions(asignaturas.map(a => ({ value: a.id, label: a.label })));
     }, [usuarios, grupos, asignaturas]);
 
     const onSubmitHandler = (data) => {
-        const { dia_semana, hora_inicio, hora_fin, aula, asignatura, docente_detalle, ...cabecera } = data;
-
+        const { dia_semana, hora_inicio, hora_fin, aula, asignatura, ...cabecera } = data;
         const dataFinal = {
             ...cabecera,
             version: object?.id ? (parseInt(object.version) + 1) : 1,
-            detalles: [
-                {
-                    dia_semana,
-                    hora_inicio: hora_inicio.length === 5 ? `${hora_inicio}` : hora_inicio,
-                    hora_fin: hora_fin.length === 5 ? `${hora_fin}` : hora_fin,
-                    aula,
-                    asignatura: parseInt(asignatura),
-                    docente: parseInt(docente_detalle || cabecera.docente)
-                }
-            ],
-            aprobaciones: []
+            detalles: [{
+                dia_semana,
+                hora_inicio,
+                hora_fin,
+                aula,
+                asignatura: parseInt(asignatura),
+                docente: parseInt(cabecera.docente)
+            }]
         };
-
-        if (object?.id) {
-            actualizarHorario( dataFinal,object.id);
-        } else {
-            crearHorario(dataFinal);
-        }
+        object?.id ? actualizarHorario(dataFinal, object.id) : crearHorario(dataFinal);
     };
 
+    // Estilo unificado de inputs basado en tu FormularioCircular
     const inputClasses = (error) => `
-        block w-full rounded-xl border transition-all duration-200 outline-none p-2.5 text-sm
-        ${error
-            ? 'border-red-400 bg-red-50 focus:ring-4 focus:ring-red-100'
-            : 'border-gray-200 bg-gray-50/50 focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100'
+        w-full rounded-md border px-3 py-2 text-slate-900 transition-all outline-none text-sm
+        ${error 
+            ? "border-red-500 focus:ring-2 focus:ring-red-100" 
+            : "border-slate-300 focus:border-[#185fa5] focus:ring-2 focus:ring-[#e6f1fb]"
         }
     `;
 
     return (
-        <div>
-            <div className="px-6 flex justify-between mb-4">
-                <h2 className="text-2xl font-bold ">
-                    {object?.id ? "Editar Horario" : "Crear Nuevo Horario"}
-                </h2>
-                <button onClick={handleModalForm} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmitHandler)} className="p-8 space-y-10">
-                <section className="space-y-6">
-                    <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
-                        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Datos Generales</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Nombre del Horario</label>
-                            <input
-                                type="text"
-                                className={inputClasses(errors.nombre)}
-                                placeholder="Ej: Horario Matemáticas 2026"
-                                {...register("nombre", { required: "El nombre es obligatorio" })}
-                            />
-                            {errors.nombre && <p className="text-xs text-red-500 mt-1 ml-1">{errors.nombre.message}</p>}
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Tipo de Horario</label>
-                            <select className={inputClasses()} {...register("tipo_horario")}>
-                                <option value="Presencial">Presencial</option>
-                                <option value="Virtual">Virtual</option>
-                            </select>
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Docente Principal</label>
-                            <CustomSelect
-                                name="docente"
-                                control={control}
-                                options={docentesOptions}
-                                placeholder="Buscar docente..."
-                                rules={{ required: "Seleccione un docente" }}
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Grupo</label>
-                            <CustomSelect
-                                name="grupo"
-                                control={control}
-                                options={gruposOptions}
-                                placeholder="Buscar grupo..."
-                                rules={{ required: "Seleccione un grupo" }}
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                <section>
-                    <div className="flex items-center gap-2 pb-2 border-b border-slate-200 mb-4">
-                        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Primer Bloque de Clase</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="space-y-1 md:col-span-1">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Día de la semana</label>
-                            <select className={inputClasses()} {...register("dia_semana")}>
-                                <option value="Lunes">Lunes</option>
-                                <option value="Martes">Martes</option>
-                                <option value="Miercoles">Miércoles</option>
-                                <option value="Jueves">Jueves</option>
-                                <option value="Viernes">Viernes</option>
-                            </select>
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Hora Inicio</label>
-                            <input type="time" className={inputClasses()} {...register("hora_inicio")} />
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Hora Fin</label>
-                            <input type="time" className={inputClasses()} {...register("hora_fin")} />
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Aula / Salón</label>
-                            <input type="text" className={inputClasses()} placeholder="Ej: 302-B" {...register("aula")} />
-                        </div>
-
-                        <div className="space-y-1">
-                            <label className="text-sm font-semibold text-gray-700 ml-1">Asignatura</label>
-                            <CustomSelect
-                                name="asignatura"
-                                control={control}
-                                options={asignaturaOptions}
-                                placeholder="Buscar asignatura..."
-                                rules={{ required: "Seleccione una asignatura" }}
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                <div className="flex items-center justify-end gap-4 pt-4">
-                    <button
-                        type="button"
-                        onClick={handleModalForm}
-                        className="px-6 py-2.5 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        disabled={uploading}
-                        type="submit"
-                        className="px-8 py-2.5 bg-indigo-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:bg-gray-300 disabled:shadow-none"
-                    >
-                        {uploading ? "Guardando..." : "Confirmar y Guardar"}
-                    </button>
+        <form onSubmit={handleSubmit(onSubmitHandler)} className="space-y-6">
+            {/* SECCIÓN: DATOS GENERALES */}
+            <div className="space-y-4">
+                <div className="border-b border-slate-100 pb-2">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Información General</h3>
                 </div>
 
-                {errorUploading && (
-                    <p className="text-center text-sm text-red-500 font-medium bg-red-50 p-3 rounded-lg border border-red-100">
-                        Ocurrió un error al procesar la solicitud. Por favor, intente de nuevo.
-                    </p>
-                )}
-            </form>
-        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <label className="block text-sm font-semibold text-slate-700">Nombre del Horario</label>
+                        <input
+                            type="text"
+                            className={inputClasses(errors.nombre)}
+                            placeholder="Ej: Horario 10-1 Matemáticas"
+                            {...register("nombre", { required: "El nombre es obligatorio" })}
+                        />
+                        {errors.nombre && <p className="text-xs text-red-500 font-medium">{errors.nombre.message}</p>}
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="block text-sm font-semibold text-slate-700">Modalidad</label>
+                        <select className={inputClasses()} {...register("tipo_horario")}>
+                            <option value="Presencial">Presencial</option>
+                            <option value="Virtual">Virtual</option>
+                        </select>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="block text-sm font-semibold text-slate-700">Docente Principal</label>
+                        <CustomSelect
+                            name="docente"
+                            control={control}
+                            options={docentesOptions}
+                            placeholder="Seleccionar docente..."
+                            rules={{ required: "Requerido" }}
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="block text-sm font-semibold text-slate-700">Grupo Asignado</label>
+                        <CustomSelect
+                            name="grupo"
+                            control={control}
+                            options={gruposOptions}
+                            placeholder="Seleccionar grupo..."
+                            rules={{ required: "Requerido" }}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* SECCIÓN: DETALLES DEL BLOQUE */}
+            <div className="space-y-4 pt-2">
+                <div className="border-b border-slate-100 pb-2">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Detalle de la Lección</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                        <label className="block text-sm font-semibold text-slate-700">Día</label>
+                        <select className={inputClasses()} {...register("dia_semana")}>
+                            {["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"].map(d => (
+                                <option key={d} value={d}>{d}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="block text-sm font-semibold text-slate-700">Hora Inicio</label>
+                        <input type="time" className={inputClasses()} {...register("hora_inicio", { required: true })} />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="block text-sm font-semibold text-slate-700">Hora Fin</label>
+                        <input type="time" className={inputClasses()} {...register("hora_fin", { required: true })} />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="block text-sm font-semibold text-slate-700">Aula</label>
+                        <input type="text" className={inputClasses()} placeholder="Ej: Laboratorio 1" {...register("aula")} />
+                    </div>
+
+                    <div className="md:col-span-2 space-y-1">
+                        <label className="block text-sm font-semibold text-slate-700">Asignatura</label>
+                        <CustomSelect
+                            name="asignatura"
+                            control={control}
+                            options={asignaturaOptions}
+                            placeholder="Seleccionar materia..."
+                            rules={{ required: "Requerido" }}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* BOTONES DE ACCIÓN */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-slate-200">
+                <button
+                    type="button"
+                    onClick={handleModalForm}
+                    className="px-4 py-2 rounded-md border border-slate-300 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    disabled={uploading}
+                    className="px-6 py-2 rounded-md bg-[#185fa5] text-sm font-medium text-white hover:bg-[#0b2545] transition-colors disabled:opacity-50"
+                >
+                    {uploading ? "Guardando..." : object?.id ? "Actualizar Horario" : "Guardar Horario"}
+                </button>
+            </div>
+        </form>
     );
 };
 
