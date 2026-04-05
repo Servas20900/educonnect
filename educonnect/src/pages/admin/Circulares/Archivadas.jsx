@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useCirculares } from './Circulares/hooks/useCirculares';
+import { useCirculares } from './hooks/useCirculares';
 import {
   PageHeader,
   SearchFilter,
   DataTable,
   ConfirmModal,
   StatusBadge,
-} from '../../components/ui';
+} from '../../../components/ui';
 
 export default function CircularesArchivadas() {
   const {
@@ -24,6 +24,7 @@ export default function CircularesArchivadas() {
     action: null,
   });
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     cargarCirculares();
@@ -45,16 +46,23 @@ export default function CircularesArchivadas() {
     const { circular, action } = confirmModal;
     try {
       if (action === 'restore') {
-        await actualizarCircular(
-          { ...circular, estado: 'Publicado' },
-          circular.id,
-          null
-        );
+        await actualizarCircular({ estado: 'Publicado' }, circular.id, null);
         setSuccessMessage('Circular desarchivada con éxito');
         setTimeout(() => setSuccessMessage(''), 3000);
       }
     } catch (error) {
-      console.error('Error:', error);
+      const payload = error?.details;
+      if (payload && typeof payload === 'object') {
+        const [field, value] = Object.entries(payload)[0] || [];
+        if (field && value) {
+          setErrorMessage(`${field}: ${Array.isArray(value) ? value[0] : value}`);
+        } else {
+          setErrorMessage('No fue posible desarchivar la circular');
+        }
+      } else {
+        setErrorMessage(error?.message || 'No fue posible desarchivar la circular');
+      }
+      setTimeout(() => setErrorMessage(''), 4000);
     } finally {
       setConfirmModal({ open: false, circular: null, action: null });
     }
@@ -123,6 +131,12 @@ export default function CircularesArchivadas() {
       {successMessage && (
         <div className="fixed bottom-4 right-4 rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
           {successMessage}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="fixed bottom-4 left-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {errorMessage}
         </div>
       )}
     </div>

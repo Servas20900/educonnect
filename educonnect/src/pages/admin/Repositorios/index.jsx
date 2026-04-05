@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import PopUp from "../../../components/PopUp";
-import Paginador from "../../components/ui/Paginador";
-import RenderSubirArchivo from "./Repositorios/RenderSubirArchivo";
-import RenderNuevaCarpeta from "./Repositorios/RenderNuevaCarpeta";
-import RenderEditarPermisos from "./Repositorios/RenderEditarPermisos";
-import { useRepositorios } from './Repositorios/useRepositorios';
-import { BtnDescargar } from "../../components/ui/ActionButtons";
+import PopUp from "../../../components/ui/PopUp";
+import Paginador from "../../../components/ui/Paginador";
+import RenderSubirArchivo from "./RenderSubirArchivo";
+import RenderNuevaCarpeta from "./RenderNuevaCarpeta";
+import RenderEditarPermisos from "./RenderEditarPermisos";
+import { useRepositorios } from './useRepositorios';
+import { BtnDescargar } from "../../../components/ui/ActionButtons";
 
 const MODELO_REPOSITORIO = "documentosrepositorio";
 

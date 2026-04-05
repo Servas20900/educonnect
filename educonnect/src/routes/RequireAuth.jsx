@@ -2,10 +2,12 @@ import PropTypes from 'prop-types';
 import { Navigate, useLocation } from 'react-router-dom';
 
 import useAuth from '../hooks/useAuth';
+import useSystemConfig from '../hooks/useSystemConfig';
 import Loader from '../components/ui/Loader';
 
-export default function RequireAuth({ children, allowedRoles }) {
+export default function RequireAuth({ children, permissionKey }) {
   const { role, isLoading } = useAuth();
+  const { canAccess } = useSystemConfig();
   const location = useLocation();
 
   // Si aún está cargando, mostrar loader
@@ -18,8 +20,8 @@ export default function RequireAuth({ children, allowedRoles }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Si hay roles permitidos y el actual no está incluido
-  if (allowedRoles?.length && !allowedRoles.includes(role)) {
+  // Si la matriz de permisos no autoriza esta ruta para el rol actual
+  if (!canAccess(permissionKey)) {
     return <Navigate to="/no-autorizado" replace />;
   }
 
@@ -28,5 +30,5 @@ export default function RequireAuth({ children, allowedRoles }) {
 
 RequireAuth.propTypes = {
   children: PropTypes.node,
-  allowedRoles: PropTypes.arrayOf(PropTypes.string)
+  permissionKey: PropTypes.string
 };

@@ -5,6 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser
 from django.utils import timezone
 from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso
+from .models import ConfiguracionSistema
+from .defaults import DEFAULT_CONFIGURATION_MAP
 from .serializers import (
     UsuarioListSerializer, UsuarioDetailSerializer, UsuarioUpdateSerializer,
     RolSerializer, RolUpdateSerializer, PermisoSerializer, ModuloSerializer
@@ -267,6 +269,14 @@ class ModuloViewSet(viewsets.ViewSet):
     ViewSet para listar los módulos del sistema (definidos estáticamente)
     """
     permission_classes = [IsAuthenticated]
+
+    @staticmethod
+    def _config_value_or_default(clave):
+        default_value = DEFAULT_CONFIGURATION_MAP[clave]['valor']
+        config = ConfiguracionSistema.objects.filter(clave=clave, activo=True).first()
+        if not config:
+            return default_value
+        return config.valor
     
     def list(self, request):
         """Lista todos los módulos disponibles en el sistema"""
@@ -336,3 +346,38 @@ class ModuloViewSet(viewsets.ViewSet):
             }
         
         return Response(configuracion)
+
+    @action(detail=False, methods=['get'])
+    def bootstrap(self, request):
+        """Devuelve configuración inicial para frontend: autorización, navegación y catálogos."""
+        role_names = list(
+            AuthUsuarioRol.objects.filter(usuario=request.user)
+            .select_related('rol')
+            .values_list('rol__nombre', flat=True)
+        )
+        roles = [str(role_name).lower() for role_name in role_names if role_name]
+
+        if request.user.is_superuser and 'administrador' not in roles:
+            roles.insert(0, 'administrador')
+
+        current_role = roles[0] if roles else 'usuario'
+
+        route_permissions = self._config_value_or_default('route_permissions')
+        allowed_permission_keys = [
+            key for key, allowed_roles in route_permissions.items()
+            if set(allowed_roles).intersection(set(roles))
+        ]
+
+        return Response({
+            'user': {
+                'username': request.user.username,
+                'current_role': current_role,
+                'roles': roles,
+            },
+            'navigation': self._config_value_or_default('navigation'),
+            'route_permissions': route_permissions,
+            'allowed_permission_keys': allowed_permission_keys,
+            'catalogs': self._config_value_or_default('catalogs'),
+            'branding': self._config_value_or_default('branding'),
+            'public_nav': self._config_value_or_default('public_nav'),
+        })

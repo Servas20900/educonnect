@@ -12,10 +12,10 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { IconMenu2, IconUser, IconLogout } from '@tabler/icons-react';
 import { handlerDrawerOpen, useGetMenuMaster } from '../../api/menu';
 import useAuth from '../../hooks/useAuth';
-import menuItems from '../../menu-items';
+import useSystemConfig from '../../hooks/useSystemConfig';
 
-function getBreadcrumb(pathname) {
-  for (const group of menuItems.items) {
+function getBreadcrumb(pathname, navigation = []) {
+  for (const group of navigation) {
     for (const child of group.children || []) {
       for (const item of child.children || []) {
         if (item.url && pathname.startsWith(item.url)) {
@@ -33,17 +33,19 @@ function getBreadcrumb(pathname) {
 export default function Topbar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { logout, user, role } = useAuth();
+  const { logout, username, role } = useAuth();
+  const { getNavigationForRole } = useSystemConfig();
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster?.isDashboardDrawerOpened;
   const downMD = useMediaQuery('(max-width:900px)');
   const [anchorEl, setAnchorEl] = useState(null);
 
-  const { section, page } = getBreadcrumb(pathname);
-  const initials = user?.nombre
-    ? user.nombre.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+  const groups = getNavigationForRole(role);
+  const { section, page } = getBreadcrumb(pathname, groups);
+  const initials = username
+    ? username.slice(0, 2).toUpperCase()
     : role?.[0]?.toUpperCase() || 'U';
-  const displayName = user?.nombre || role || 'Usuario';
+  const displayName = username || role || 'Usuario';
 
   const handleOpen = (e) => setAnchorEl(e.currentTarget);
   const handleClose = () => setAnchorEl(null);

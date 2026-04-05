@@ -1,9 +1,17 @@
-import PopUp from "../../../../components/PopUp";
+import PopUp from "../../../components/ui/PopUp";
 import { RenderVer } from "./RenderVer";
 import { useRevisionHorarios } from "./hooks/useRevisionHorarios";
 import { useState } from "react";
 import Paginador from '../../../components/ui/Paginador'
+import useSystemConfig from '../../../hooks/useSystemConfig';
 const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }) => {
+    const { getCatalog } = useSystemConfig();
+    const horariosEstados = getCatalog('horarios_estados', [
+        { value: 'Publicado', label: 'Publicado' },
+        { value: 'Borrador', label: 'Borrador' },
+        { value: 'Inactivo', label: 'Inactivo' },
+    ]);
+
     const {
         modal,
         accion,
@@ -169,9 +177,9 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                     className="py-2 px-4 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-bold text-gray-600 cursor-pointer"
                 >
                     <option value="">Todos los estados</option>
-                    <option value="Publicado">Publicado</option>
-                    <option value="Borrador">Borrador</option>
-                    <option value="Inactivo">Inactivo</option>
+                    {horariosEstados.map((estado) => (
+                        <option key={estado.value} value={estado.value}>{estado.label}</option>
+                    ))}
                 </select>
             </div>
             <div className="overflow-hidden rounded-3xl border border-gray-100 shadow-sm bg-white">

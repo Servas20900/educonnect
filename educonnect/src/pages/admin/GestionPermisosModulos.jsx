@@ -10,19 +10,21 @@ import {
   StatusBadge,
   TabsLayout,
 } from '../../components/ui'
-
-const FILTROS_USUARIOS = [
-  {
-    key: 'estado',
-    label: 'Estado',
-    options: [
-      { value: 'activo', label: 'Activos' },
-      { value: 'inactivo', label: 'Inactivos' },
-    ],
-  },
-]
+import useSystemConfig from '../../hooks/useSystemConfig'
 
 export default function GestionPermisosModulos() {
+  const { getCatalog } = useSystemConfig()
+  const FILTROS_USUARIOS = [
+    {
+      key: 'estado',
+      label: 'Estado',
+      options: getCatalog('filtro_estado_usuario', [
+        { value: 'activo', label: 'Activos' },
+        { value: 'inactivo', label: 'Inactivos' },
+      ]),
+    },
+  ]
+
   const [usuarios, setUsuarios] = useState([])
   const [roles, setRoles] = useState([])
   const [modulos, setModulos] = useState([])

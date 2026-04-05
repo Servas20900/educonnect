@@ -1,10 +1,9 @@
-const politicas = [
-  { id: 1, nombre: 'Circulares publicadas', retencion: '12 meses', accion: 'Archivar', alcance: 'Todos' },
-  { id: 2, nombre: 'Backups incrementales', retencion: '30 días', accion: 'Borrar', alcance: 'Admin' },
-  { id: 3, nombre: 'Actas de comité', retencion: 'Indefinido', accion: 'Guardar', alcance: 'Comité' }
-];
+import useSystemConfig from '../../hooks/useSystemConfig';
 
 export default function Retencion() {
+  const { getCatalog } = useSystemConfig();
+  const politicas = getCatalog('retencion_politicas', []);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

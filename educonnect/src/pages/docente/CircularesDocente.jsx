@@ -5,8 +5,8 @@ import {
   EmptyState,
   StatusBadge,
 } from '../../components/ui';
-import { fetchCirculares } from '../../api/circulares';
-import { api } from '../../api/authService';
+import { downloadCircularArchivo, fetchCirculares } from '../../api/circulares';
+import useSystemConfig from '../../hooks/useSystemConfig';
 
 export default function CircularesDocente() {
   const [circulares, setCirculares] = useState([]);
@@ -14,22 +14,69 @@ export default function CircularesDocente() {
   const [searchValue, setSearchValue] = useState('');
   const [filterCategoria, setFilterCategoria] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [downloadError, setDownloadError] = useState('');
+  const [downloadSuccess, setDownloadSuccess] = useState('');
+  const [downloadingId, setDownloadingId] = useState(null);
+  const { getCatalog } = useSystemConfig();
+  const categoriasCirculares = getCatalog('circulares_categorias', [
+    { value: 'Institucional', label: 'Institucional' },
+    { value: 'General', label: 'General' },
+  ]);
 
   const handleDownload = async (circular) => {
+    setDownloadError('');
+    setDownloadSuccess('');
+    setDownloadingId(circular.id);
     try {
-      const backendBaseUrl = api?.defaults?.baseURL || 'http://localhost:8000/';
-      const downloadUrl = new URL(
-        `api/v1/ComunicacionesCircular/${circular.id}/descargar/`,
-        backendBaseUrl
-      ).toString();
+      const response = await downloadCircularArchivo(circular.id);
+      const rawBlob = response.data;
+      const contentType = String(response.headers?.['content-type'] || '').toLowerCase();
 
+      if (!rawBlob || rawBlob.size === 0) {
+        throw new Error('El archivo descargado está vacío');
+      }
+
+      if (contentType.includes('application/json') || contentType.includes('text/html')) {
+        throw new Error('El servidor devolvió una respuesta no válida para descarga');
+      }
+
+      const blob = rawBlob.type
+        ? rawBlob
+        : new Blob([rawBlob], { type: contentType || 'application/octet-stream' });
+
+      const contentDisposition = response.headers?.['content-disposition'] || '';
+      const encodedFileNameMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+      const plainFileNameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+      const encodedFileName = encodedFileNameMatch?.[1]
+        ? decodeURIComponent(encodedFileNameMatch[1])
+        : null;
+      const plainFileName = plainFileNameMatch?.[1] || null;
+
+      const storageName = circular?.archivo_adjunto
+        ? String(circular.archivo_adjunto).split('/').pop()
+        : null;
+      const fallbackName = `${(circular?.titulo || 'circular').replace(/\s+/g, '_')}.pdf`;
+      const fileName = encodedFileName || plainFileName || storageName || fallbackName;
+
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = downloadUrl;
+      link.href = blobUrl;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 2000);
+      setDownloadSuccess(`Se descargó correctamente: ${fileName}`);
+      window.setTimeout(() => setDownloadSuccess(''), 5000);
     } catch (error) {
       console.error('Error al descargar archivo:', error);
+      const errorMessage = error?.message || 'No fue posible descargar el archivo';
+      setDownloadError(`No se descargó el archivo. ${errorMessage}`);
+      window.setTimeout(() => setDownloadError(''), 6000);
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -41,6 +88,7 @@ export default function CircularesDocente() {
         const circularesFiltradas = Array.isArray(data)
           ? data.filter((c) => {
               if (String(c.estado || '').toLowerCase() !== 'publicado') return false;
+              if (c.visible === false) return false;
 
               let destinatarios = c.destinatarios;
               if (typeof destinatarios === 'string') {
@@ -55,9 +103,9 @@ export default function CircularesDocente() {
                 return true;
               }
 
-              return destinatarios
+              const listaNormalizada = destinatarios
                 .map((d) => String(d || '').toLowerCase())
-                .includes('docentes');
+              return listaNormalizada.includes('docentes');
             })
           : [];
         setCirculares(circularesFiltradas);
@@ -94,14 +142,23 @@ export default function CircularesDocente() {
           {
             key: 'categoria',
             label: 'Categoría:',
-            options: [
-              { value: 'Institucional', label: 'Institucional' },
-              { value: 'General', label: 'General' },
-            ],
+            options: categoriasCirculares,
           },
         ]}
         onFilterChange={({ value }) => setFilterCategoria(value)}
       />
+
+      {downloadError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800" role="alert">
+          {downloadError}
+        </div>
+      )}
+
+      {downloadSuccess && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800" role="status">
+          {downloadSuccess}
+        </div>
+      )}
 
       <div className="space-y-4">
         {!loading && filteredCirculares.length === 0 ? (
@@ -219,9 +276,10 @@ export default function CircularesDocente() {
                                       <button
                                         type="button"
                                         onClick={() => handleDownload(circular)}
-                                        className="inline-flex items-center rounded-md bg-[#e6f1fb] px-3 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#d0e6f7]"
+                                        disabled={downloadingId === circular.id}
+                                        className="inline-flex items-center rounded-md bg-[#e6f1fb] px-3 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#d0e6f7] disabled:cursor-not-allowed disabled:opacity-60"
                                       >
-                                        Descargar Archivo
+                                        {downloadingId === circular.id ? 'Descargando...' : 'Descargar Archivo'}
                                       </button>
                                     </div>
                                   )}

@@ -3,7 +3,6 @@ import MainLayout from '../layout/MainLayout/index';
 import Loadable from '../components/ui/Loadable';
 import PublicLayout from '../layout/PublicLayout/index';
 import RequireAuth from './RequireAuth';
-import { ROLES } from '../constants/roles';
 
 // Public
 const PublicHome  = Loadable(lazy(() => import('../pages/public/Home')));
@@ -16,8 +15,8 @@ const Dashboard   = Loadable(lazy(() => import('../pages/admin/Dashboard')));
 const Perfil      = Loadable(lazy(() => import('../pages/profile/Perfil')));
 
 // Admin
-const Circulares        = Loadable(lazy(() => import('../pages/admin/CircularesList')));
-const CircularesArchivadas = Loadable(lazy(() => import('../pages/admin/CircularesArchivadas')));
+const Circulares        = Loadable(lazy(() => import('../pages/admin/Circulares')));
+const CircularesArchivadas = Loadable(lazy(() => import('../pages/admin/Circulares/Archivadas')));
 const Horarios          = Loadable(lazy(() => import('../pages/admin/Horarios')));
 const Documentos        = Loadable(lazy(() => import('../pages/admin/OficiosPlantillas')));
 const Incapacidades     = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
@@ -42,17 +41,15 @@ const Reuniones    = Loadable(lazy(() => import('../pages/comite/AgendarReunion'
 const RolesComite  = Loadable(lazy(() => import('../pages/comite/RolesComite')));
 
 // Auxiliares
-const Informes      = Loadable(lazy(() => import('../pages/auxiliares/InformesEconomicos')));
+const Informes      = Loadable(lazy(() => import('../pages/auxiliares/informesEconomicos')));
 const Reglamentos   = Loadable(lazy(() => import('../pages/auxiliares/Reglamentos')));
 const Cumplimiento  = Loadable(lazy(() => import('../pages/auxiliares/ReportesCumplimiento')));
 
 // Estudiante
 const EstudianteComunicados = Loadable(lazy(() => import('../pages/estudiante/Notificaciones')));
 
-const ALL_AUTH = [ROLES.ADMIN, ROLES.DOCENTE, ROLES.ESTUDIANTE, ROLES.COMITE];
-
-function Guard({ roles, children }) {
-  return <RequireAuth allowedRoles={roles}>{children}</RequireAuth>;
+function Guard({ permissionKey, children }) {
+  return <RequireAuth permissionKey={permissionKey}>{children}</RequireAuth>;
 }
 
 const PublicRoutes = {
@@ -69,38 +66,38 @@ const PublicRoutes = {
 const AppRoutes = {
   path: '/',
   element: (
-    <Guard roles={ALL_AUTH}>
+    <Guard>
       <MainLayout />
     </Guard>
   ),
   children: [
     // Transversal
-    { path: 'dashboard', element: <Guard roles={ALL_AUTH}><Dashboard /></Guard> },
-    { path: 'perfil',    element: <Guard roles={ALL_AUTH}><Perfil /></Guard> },
+    { path: 'dashboard', element: <Guard permissionKey="dashboard"><Dashboard /></Guard> },
+    { path: 'perfil',    element: <Guard permissionKey="perfil"><Perfil /></Guard> },
 
     // Admin
-    { path: 'circulares',    element: <Guard roles={[ROLES.ADMIN]}><Circulares /></Guard> },
-    { path: 'circulares-archivadas', element: <Guard roles={[ROLES.ADMIN]}><CircularesArchivadas /></Guard> },
-    { path: 'horarios',      element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Horarios /></Guard> },
-    { path: 'documentos',    element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE, ROLES.COMITE]}><Documentos /></Guard> },
-    { path: 'incapacidades', element: <Guard roles={[ROLES.ADMIN]}><Incapacidades /></Guard> },
-    { path: 'usuarios',      element: <Guard roles={[ROLES.ADMIN]}><Usuarios /></Guard> },
-    { path: 'reportes',      element: <Guard roles={[ROLES.ADMIN]}><Reportes /></Guard> },
-    { path: 'comites',       element: <Guard roles={[ROLES.ADMIN]}><Comites /></Guard> },
-    { path: 'backups',       element: <Guard roles={[ROLES.ADMIN]}><Backups /></Guard> },
+    { path: 'circulares',    element: <Guard permissionKey="circulares"><Circulares /></Guard> },
+    { path: 'circulares-archivadas', element: <Guard permissionKey="circulares-archivadas"><CircularesArchivadas /></Guard> },
+    { path: 'horarios',      element: <Guard permissionKey="horarios"><Horarios /></Guard> },
+    { path: 'documentos',    element: <Guard permissionKey="documentos"><Documentos /></Guard> },
+    { path: 'incapacidades', element: <Guard permissionKey="incapacidades"><Incapacidades /></Guard> },
+    { path: 'usuarios',      element: <Guard permissionKey="usuarios"><Usuarios /></Guard> },
+    { path: 'reportes',      element: <Guard permissionKey="reportes"><Reportes /></Guard> },
+    { path: 'comites',       element: <Guard permissionKey="comites"><Comites /></Guard> },
+    { path: 'backups',       element: <Guard permissionKey="backups"><Backups /></Guard> },
 
     // Docente
     {
       path: 'docente',
       children: [
-        { path: 'estudiantes',  element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><DocenteEstudiantes /></Guard> },
-        { path: 'academico',    element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Academico /></Guard> },
-        { path: 'asistencia',   element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Asistencia /></Guard> },
-        { path: 'riesgo',       element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Riesgo /></Guard> },
-        { path: 'planeamientos',element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Planeamientos /></Guard> },
-        { path: 'comunicados',  element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Comunicados /></Guard> },
-        { path: 'circulares',   element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><CircularesDocente /></Guard> },
-        { path: 'exportaciones',element: <Guard roles={[ROLES.ADMIN, ROLES.DOCENTE]}><Exportaciones /></Guard> },
+        { path: 'estudiantes',  element: <Guard permissionKey="docente-estudiantes"><DocenteEstudiantes /></Guard> },
+        { path: 'academico',    element: <Guard permissionKey="academico"><Academico /></Guard> },
+        { path: 'asistencia',   element: <Guard permissionKey="asistencia"><Asistencia /></Guard> },
+        { path: 'riesgo',       element: <Guard permissionKey="riesgo"><Riesgo /></Guard> },
+        { path: 'planeamientos',element: <Guard permissionKey="planeamientos"><Planeamientos /></Guard> },
+        { path: 'comunicados',  element: <Guard permissionKey="comunicados"><Comunicados /></Guard> },
+        { path: 'circulares',   element: <Guard permissionKey="docente-circulares"><CircularesDocente /></Guard> },
+        { path: 'exportaciones',element: <Guard permissionKey="exportaciones"><Exportaciones /></Guard> },
       ],
     },
 
@@ -108,9 +105,9 @@ const AppRoutes = {
     {
       path: 'comite',
       children: [
-        { path: 'actas',    element: <Guard roles={[ROLES.ADMIN, ROLES.COMITE]}><Actas /></Guard> },
-        { path: 'reuniones',element: <Guard roles={[ROLES.ADMIN, ROLES.COMITE]}><Reuniones /></Guard> },
-        { path: 'roles',    element: <Guard roles={[ROLES.ADMIN, ROLES.COMITE]}><RolesComite /></Guard> },
+        { path: 'actas',    element: <Guard permissionKey="comite-actas"><Actas /></Guard> },
+        { path: 'reuniones',element: <Guard permissionKey="comite-reuniones"><Reuniones /></Guard> },
+        { path: 'roles',    element: <Guard permissionKey="comite-roles"><RolesComite /></Guard> },
       ],
     },
 
@@ -118,9 +115,9 @@ const AppRoutes = {
     {
       path: 'auxiliares',
       children: [
-        { path: 'informes',     element: <Guard roles={[ROLES.ADMIN]}><Informes /></Guard> },
-        { path: 'reglamentos',  element: <Guard roles={[ROLES.ADMIN]}><Reglamentos /></Guard> },
-        { path: 'cumplimiento', element: <Guard roles={[ROLES.ADMIN]}><Cumplimiento /></Guard> },
+        { path: 'informes',     element: <Guard permissionKey="auxiliares-informes"><Informes /></Guard> },
+        { path: 'reglamentos',  element: <Guard permissionKey="auxiliares-reglamentos"><Reglamentos /></Guard> },
+        { path: 'cumplimiento', element: <Guard permissionKey="auxiliares-cumplimiento"><Cumplimiento /></Guard> },
       ],
     },
 
@@ -128,7 +125,7 @@ const AppRoutes = {
     {
       path: 'estudiante',
       children: [
-        { path: 'comunicados', element: <Guard roles={[ROLES.ADMIN, ROLES.ESTUDIANTE]}><EstudianteComunicados /></Guard> },
+        { path: 'comunicados', element: <Guard permissionKey="estudiante-comunicados"><EstudianteComunicados /></Guard> },
       ],
     },
   ],

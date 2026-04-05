@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { api } from "../../api/authService";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = (api.defaults.baseURL || "http://localhost:8000/").replace(/\/$/, "");
 
 function getToken() {
   return localStorage.getItem("access_token") || "";

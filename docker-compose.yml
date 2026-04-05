@@ -5,9 +5,9 @@ services:
     env_file:
       - ./educonnect-Backend/.env
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:-Educonnect_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Educonnect_secure_password_2024}
+      POSTGRES_DB: ${DB_NAME:-dbeduconet}
     ports:
       - '5432:5432'
     volumes:
@@ -15,7 +15,7 @@ services:
     networks:
       - Educonnect_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U Educonnect_user -d Educonnect_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-Educonnect_user} -d ${DB_NAME:-dbeduconet}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -37,6 +37,7 @@ services:
     command: >
       sh -c "python manage.py wait_for_db &&
              python manage.py migrate &&
+             python manage.py seed_system --skip-admin &&
              python manage.py runserver 0.0.0.0:8000"
     networks:
       - Educonnect_network

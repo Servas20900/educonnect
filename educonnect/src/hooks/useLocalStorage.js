@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 
-// ==============================|| HOOKS - LOCAL STORAGE ||============================== //
 
 export default function useLocalStorage(key, defaultValue) {
   const [value, setValue] = useState(() => {

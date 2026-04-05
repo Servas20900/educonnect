@@ -1,0 +1,2 @@
+from .serializers import ReadSerializerComunicacionesCircular, WriteSerializerComunicacionesCircular
+from .views import ViewComunicacionesCircular

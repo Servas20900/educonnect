@@ -67,20 +67,25 @@ export default function ConfirmModal({
       onClose={handleClose}
       fullWidth
       maxWidth="xs"
-      PaperProps={{ className: 'rounded-xl' }}
+      PaperProps={{ className: 'overflow-hidden rounded-2xl shadow-xl' }}
+      slotProps={{
+        backdrop: {
+          className: 'bg-slate-900/40 backdrop-blur-[2px]',
+        },
+      }}
     >
       <DialogTitle className="sr-only">{title}</DialogTitle>
 
-      <DialogContent className="px-6 pb-6 pt-7">
+      <DialogContent className="px-5 pb-5 pt-8 sm:px-6 sm:pb-6 sm:pt-9">
         <div className="flex flex-col items-center text-center">
-          <div className={`mb-4 rounded-full p-3 ${currentVariant.iconClasses}`}>
+          <div className={`mb-5 mt-1 rounded-full p-3.5 ${currentVariant.iconClasses}`}>
             <Icon fontSize="small" />
           </div>
 
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-          <div className="mt-2 text-sm text-slate-600">{message}</div>
+          <h2 className="text-lg font-semibold leading-tight text-slate-900">{title}</h2>
+          <div className="mt-2 max-w-sm text-sm leading-relaxed text-slate-600">{message}</div>
 
-          <div className="mt-6 flex w-full justify-end gap-3">
+          <div className="mt-6 flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
             <button
               type="button"
               onClick={onCancel}

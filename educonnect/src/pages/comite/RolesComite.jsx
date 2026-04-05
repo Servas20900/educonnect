@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { fetchComites, fetchMiembrosConRoles, asignarRol } from '../../api/comitesService';
-
-const ROLES_DISPONIBLES = [
-  { value: 'Presidente', label: 'Presidente', unique: true },
-  { value: 'Secretario', label: 'Secretario', unique: true },
-  { value: 'Vocal', label: 'Vocal', unique: false },
-  { value: 'Tesorero', label: 'Tesorero', unique: true },
-  { value: 'Miembro', label: 'Miembro', unique: false }
-];
+import useSystemConfig from '../../hooks/useSystemConfig';
 
 export default function RolesComite() {
+  const { getCatalog } = useSystemConfig();
+  const ROLES_DISPONIBLES = getCatalog('comites_roles_disponibles', [
+    { value: 'Presidente', label: 'Presidente', unique: true },
+    { value: 'Secretario', label: 'Secretario', unique: true },
+    { value: 'Miembro', label: 'Miembro', unique: false },
+  ]);
+
   const [comites, setComites] = useState([]);
   const [selectedComite, setSelectedComite] = useState('');
   const [miembros, setMiembros] = useState([]);

@@ -9,20 +9,7 @@ import {
     updateComite,
     updateMiembro
 } from '../../api/comitesService';
-
-const tiposComite = [
-    { value: 'institucional', label: 'Institucional' },
-    { value: 'disciplinario', label: 'Disciplinario' },
-    { value: 'evaluacion', label: 'Evaluación' },
-    { value: 'apoyo', label: 'Apoyo' },
-    { value: 'especial', label: 'Especial' }
-];
-
-const estadosComite = [
-    { value: 'activo', label: 'Activo' },
-    { value: 'inactivo', label: 'Inactivo' },
-    { value: 'disuelto', label: 'Disuelto' }
-];
+import useSystemConfig from '../../hooks/useSystemConfig';
 
 const defaultForm = {
     nombre: '',
@@ -34,6 +21,16 @@ const defaultForm = {
 };
 
 export default function Comites() {
+    const { getCatalog } = useSystemConfig();
+    const tiposComite = getCatalog('comites_tipos', [
+        { value: 'institucional', label: 'Institucional' },
+        { value: 'disciplinario', label: 'Disciplinario' },
+    ]);
+    const estadosComite = getCatalog('comites_estados', [
+        { value: 'activo', label: 'Activo' },
+        { value: 'inactivo', label: 'Inactivo' },
+    ]);
+
     const [comites, setComites] = useState([]);
     const [personas, setPersonas] = useState([]);
     const [selectedPersonas, setSelectedPersonas] = useState([]);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { useOficiosPlantillas } from "./OficiosPlantillas/useOficiosPlantillas";
-import FormularioPlantilla from "./OficiosPlantillas/FormularioPlantilla";
+import { useOficiosPlantillas } from "./useOficiosPlantillas";
+import FormularioPlantilla from "./FormularioPlantilla";
 
 export default function OficiosPlantillas() {
   const {

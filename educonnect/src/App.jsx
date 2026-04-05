@@ -19,6 +19,7 @@ import { createAppTheme } from './theme';
 // project imports
 import { ConfigContext, ConfigProvider } from './contexts/ConfigContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { SystemConfigProvider } from './contexts/SystemConfigContext';
 
 
 // ==============================|| APP ||============================== //
@@ -41,9 +42,11 @@ function AppWithTheme() {
 export default function App() {
   return (
     <AuthProvider>
-      <ConfigProvider>
-        <AppWithTheme />
-      </ConfigProvider>
+      <SystemConfigProvider>
+        <ConfigProvider>
+          <AppWithTheme />
+        </ConfigProvider>
+      </SystemConfigProvider>
     </AuthProvider>
   );
 }

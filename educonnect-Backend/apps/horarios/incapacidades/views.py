@@ -7,10 +7,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from apps.databaseModels.models import HorariosIncapacidad
-from .serializers_incapacidades import (
+from .serializers import (
     ReadSerializerHorariosIncapacidad,
     WriteSerializerHorariosIncapacidad,
 )
+
 
 def save_upload(file, folder: str) -> str:
     os.makedirs(os.path.join(settings.MEDIA_ROOT, folder), exist_ok=True)
@@ -43,11 +44,8 @@ class ViewHorariosIncapacidad(viewsets.ModelViewSet):
 
         data = dict(serializer.validated_data)
 
-        # ✅ IMPORTANTE: evitar duplicar fecha_registro (ya viene en validated_data)
+        # Evita duplicar fecha_registro, ya viene en validated_data.
         data.pop("fecha_registro", None)
-
-        # Opcional: si también te llega "archivo" en validated_data, lo podés quitar
-        # porque vos ya lo manejas con request.FILES y lo guardas a mano.
         data.pop("archivo", None)
 
         obj = HorariosIncapacidad.objects.create(

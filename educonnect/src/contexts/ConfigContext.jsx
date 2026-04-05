@@ -2,8 +2,15 @@ import PropTypes from 'prop-types';
 import { createContext } from 'react';
 
 // project imports
-import defaultConfig from 'config';
 import useLocalStorage from '../hooks/useLocalStorage';
+
+// Default UI configuration (for theme/styling only, not business logic)
+const defaultConfig = {
+  fontFamily: `'Roboto', sans-serif`,
+  borderRadius: 8,
+  miniDrawer: false,
+  mode: 'light'
+};
 
 // initial state
 const initialState = {

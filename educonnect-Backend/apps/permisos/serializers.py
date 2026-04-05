@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso, PersonasPersona
+from .models import ConfiguracionSistema
 from datetime import datetime
 from django.utils import timezone
 
@@ -177,3 +178,17 @@ class ModuloSerializer(serializers.Serializer):
     nombre = serializers.CharField()
     grupo = serializers.CharField()
     submodulos = serializers.ListField(child=serializers.CharField())
+
+
+class ConfiguracionSistemaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConfiguracionSistema
+        fields = [
+            'id',
+            'clave',
+            'descripcion',
+            'valor',
+            'activo',
+            'fecha_creacion',
+            'fecha_modificacion',
+        ]

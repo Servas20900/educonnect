@@ -1,13 +1,10 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-
-const NAV_LINKS = [
-  { to: '/',         label: 'Inicio' },
-  { to: '/login',    label: 'Iniciar sesión' },
-  { to: '/register', label: 'Registrarse' },
-];
+import useSystemConfig from '../../hooks/useSystemConfig';
 
 export default function PublicLayout() {
   const { pathname } = useLocation();
+  const { branding, getPublicNav } = useSystemConfig();
+  const navLinks = getPublicNav();
 
   return (
     <div className="min-h-screen flex">
@@ -18,7 +15,7 @@ export default function PublicLayout() {
         <div>
           <div className="w-11 h-11 rounded-xl overflow-hidden mb-7">
             <img
-              src="https://www.arcgis.com/sharing/rest/content/items/9c260e88f4cf4841ae1dcbbaa7f8db4f/resources/images/widget_2/1753990272849.jpg"
+              src={branding.logo_url || 'https://www.arcgis.com/sharing/rest/content/items/9c260e88f4cf4841ae1dcbbaa7f8db4f/resources/images/widget_2/1753990272849.jpg'}
               alt="logo"
               className="w-full h-full object-cover"
             />
@@ -27,7 +24,7 @@ export default function PublicLayout() {
             Sistema escolar
           </p>
           <h1 className="text-xl font-medium leading-snug mb-3.5" style={{ color: '#fff' }}>
-            Escuela Manuela Santamaría Rodríguez
+            {branding.institution_name || 'Escuela Manuela Santamaria Rodriguez'}
           </h1>
           <div className="w-8 h-0.5 rounded mb-3.5" style={{ background: '#378add' }} />
           <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,.45)' }}>
@@ -37,7 +34,7 @@ export default function PublicLayout() {
 
         <div>
           <nav className="flex flex-col">
-            {NAV_LINKS.map((link) => {
+            {navLinks.map((link) => {
               const active = pathname === link.to;
               return (
                 <Link
@@ -59,7 +56,7 @@ export default function PublicLayout() {
             })}
           </nav>
           <p className="text-xs mt-5" style={{ color: 'rgba(255,255,255,.18)' }}>
-            © {new Date().getFullYear()} EduConnect
+            © {new Date().getFullYear()} {branding.app_name || 'EduConnect'}
           </p>
         </div>
       </aside>

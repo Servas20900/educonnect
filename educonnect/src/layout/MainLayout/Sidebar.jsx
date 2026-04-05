@@ -14,8 +14,7 @@ import { IconLayoutDashboard, IconFileText, IconCalendar, IconFolder, IconUsers,
 
 import { handlerDrawerOpen, useGetMenuMaster } from '../../api/menu';
 import useAuth from '../../hooks/useAuth';
-import menuItems from '../../menu-items';
-import { ROLES } from '../../constants/roles';
+import useSystemConfig from '../../hooks/useSystemConfig';
 
 const ICON_MAP = {
   dashboard:              IconLayoutDashboard,
@@ -107,11 +106,9 @@ function SidebarContent({ drawerOpen }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { role, logout } = useAuth();
+  const { getNavigationForRole, branding } = useSystemConfig();
 
-  const filteredGroups = menuItems.items.filter((group) => {
-    if (!group.allowedRoles) return true;
-    return role ? group.allowedRoles.includes(role) : false;
-  });
+  const filteredGroups = getNavigationForRole(role);
 
   const grouped = filteredGroups.map((group) => ({
     title: group.title,
@@ -139,14 +136,14 @@ function SidebarContent({ drawerOpen }) {
     overflow: 'hidden', flexShrink: 0,
     }}>
     <img
-        src="https://www.arcgis.com/sharing/rest/content/items/9c260e88f4cf4841ae1dcbbaa7f8db4f/resources/images/widget_2/1753990272849.jpg"
+        src={branding.logo_url || 'https://www.arcgis.com/sharing/rest/content/items/9c260e88f4cf4841ae1dcbbaa7f8db4f/resources/images/widget_2/1753990272849.jpg'}
         alt="logo"
         style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
     />
     </Box>
         {drawerOpen && (
           <Typography sx={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            EduConnect
+            {branding.app_name || 'EduConnect'}
           </Typography>
         )}
       </Box>

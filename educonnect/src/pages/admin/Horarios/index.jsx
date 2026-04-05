@@ -1,9 +1,9 @@
 import React from 'react';
-import FormularioHorario from './Horarios/FormularioHorario';
-import RevisionHorarios from './Horarios/RevisionHorarios';
-import { useHorarios } from './Horarios/hooks/useHorarios';
+import FormularioHorario from './FormularioHorario';
+import RevisionHorarios from './RevisionHorarios';
+import { useHorarios } from './hooks/useHorarios';
 import { useEffect, useState } from 'react';
-import Toast from '../../../components/Toast';
+import Toast from '../../../components/ui/Toast';
 
 
 export default function Horarios() {
@@ -91,4 +91,3 @@ export default function Horarios() {
     </div>
   );
 };
-

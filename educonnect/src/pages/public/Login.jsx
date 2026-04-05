@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLogin } from '../../hooks/useLogin';
 import useAuth from '../../hooks/useAuth';
+import useSystemConfig from '../../hooks/useSystemConfig';
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { branding } = useSystemConfig();
   const { executeLogin, loading, error } = useLogin();
   const [credentials, setCredentials] = useState({ username: '', password: '' });
 
@@ -29,12 +31,12 @@ export default function Login() {
       <div className="flex items-center gap-2 mb-6">
         <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0">
           <img
-            src="https://www.arcgis.com/sharing/rest/content/items/9c260e88f4cf4841ae1dcbbaa7f8db4f/resources/images/widget_2/1753990272849.jpg"
+            src={branding.logo_url || 'https://www.arcgis.com/sharing/rest/content/items/9c260e88f4cf4841ae1dcbbaa7f8db4f/resources/images/widget_2/1753990272849.jpg'}
             alt="logo"
             className="w-full h-full object-cover"
           />
         </div>
-        <span className="text-sm font-medium" style={{ color: '#0b2545' }}>EduConnect</span>
+        <span className="text-sm font-medium" style={{ color: '#0b2545' }}>{branding.app_name || 'EduConnect'}</span>
       </div>
 
       <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#378add' }}>

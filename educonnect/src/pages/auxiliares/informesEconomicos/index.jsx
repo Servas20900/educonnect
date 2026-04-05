@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
-import useInformeEconomico from "./informesEconomicos/hooks/useInformeEconomico";
-import InformeEconomicoForm from './informesEconomicos/InformeEconomicoForm';
-import Toast from '../../../components/Toast';
-import Paginador from '../../components/ui/Paginador';
-import { BtnDescargar } from "../../components/ui/ActionButtons";
+import useInformeEconomico from "./hooks/useInformeEconomico";
+import InformeEconomicoForm from './InformeEconomicoForm';
+import Toast from '../../../components/ui/Toast';
+import Paginador from '../../../components/ui/Paginador';
+import { BtnDescargar } from "../../../components/ui/ActionButtons";
 
 export default function InformesEconomicos() {
     const { informes, loading, error, cargarInformes, ejecutarSubida, limpiarError, descargarInforme } = useInformeEconomico();
