@@ -9,6 +9,8 @@ import {
   StatusBadge,
 } from '../../components/ui';
 import { Dialog, DialogContent, DialogTitle } from '@mui/material';
+import { BtnArchivar, BtnDesactivar } from '../../components/ui/ActionButtons';
+
 
 export default function CircularesList() {
   const {
