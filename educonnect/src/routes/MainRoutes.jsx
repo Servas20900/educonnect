@@ -21,6 +21,7 @@ const Horarios          = Loadable(lazy(() => import('../pages/admin/Horarios'))
 const HorariosArchivados = Loadable(lazy(() => import('../pages/admin/Horarios/Archivados')));
 const Documentos        = Loadable(lazy(() => import('../pages/admin/Repositorios')));
 const Incapacidades     = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
+const PlaneamientosAdmin = Loadable(lazy(() => import('../pages/admin/Planeamientos')));
 const GestionPermisos   = Loadable(lazy(() => import('../pages/admin/GestionPermisosModulos')));
 const Reportes          = Loadable(lazy(() => import('../pages/admin/Reportes')));
 const Comites           = Loadable(lazy(() => import('../pages/admin/Comites')));
@@ -92,6 +93,7 @@ const AppRoutes = {
     { path: 'horarios-archivados', element: <Guard permissionKey="horarios"><HorariosArchivados /></Guard> },
     { path: 'documentos',    element: <Guard permissionKey="documentos"><Documentos /></Guard> },
     { path: 'incapacidades', element: <Guard permissionKey="incapacidades"><Incapacidades /></Guard> },
+    { path: 'planeamientos', element: <Guard permissionKey="planeamientos"><PlaneamientosAdmin /></Guard> },
     { path: 'permisos',      element: <Guard permissionKey="permisos"><GestionPermisos /></Guard> },
     { path: 'reportes',      element: <Guard permissionKey="reportes"><Reportes /></Guard> },
     { path: 'comites',       element: <Guard permissionKey="comites"><Comites /></Guard> },
@@ -106,6 +108,7 @@ const AppRoutes = {
         { path: 'estudiantes', element: <Guard permissionKey="usuarios"><UsuariosEstudiantes /></Guard> },
         { path: 'grados-grupos', element: <Guard permissionKey="usuarios"><UsuariosGradosGrupos /></Guard> },
         { path: 'grados-grupos/:grupoId/estudiantes', element: <Guard permissionKey="usuarios"><UsuariosGrupoEstudiantes /></Guard> },
+        { path: 'permisos', element: <Guard permissionKey="permisos"><GestionPermisos /></Guard> },
       ],
     },
     {
@@ -116,6 +119,7 @@ const AppRoutes = {
         { path: 'estudiantes', element: <Guard permissionKey="usuarios"><UsuariosEstudiantes /></Guard> },
         { path: 'grados-grupos', element: <Guard permissionKey="usuarios"><UsuariosGradosGrupos /></Guard> },
         { path: 'grados-grupos/:grupoId/estudiantes', element: <Guard permissionKey="usuarios"><UsuariosGrupoEstudiantes /></Guard> },
+        { path: 'permisos', element: <Guard permissionKey="permisos"><GestionPermisos /></Guard> },
       ],
     },
 

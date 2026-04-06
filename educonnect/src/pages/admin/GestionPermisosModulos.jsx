@@ -79,6 +79,11 @@ export default function GestionPermisosModulos() {
       const nombre = (u.persona?.nombre_completo || u.username || '').toLowerCase()
       const email = (u.email || '').toLowerCase()
       const q = busqueda.toLowerCase()
+      const isCorreoEstudiante = email.endsWith('@est.mep.go.cr')
+
+      if (isCorreoEstudiante) {
+        return false
+      }
 
       const coincideBusqueda = !q || nombre.includes(q) || email.includes(q)
 
@@ -93,7 +98,15 @@ export default function GestionPermisosModulos() {
   }, [usuarios, busqueda, filtros.estado])
 
   const abrirEditar = (usuario) => {
-    setUsuarioSel({ ...usuario })
+    const rolesActuales = usuario.roles || (usuario.rol ? [usuario.rol] : [])
+    const rolesActualesIds = rolesActuales.map((rol) => Number(rol.id)).filter(Boolean)
+
+    setUsuarioSel({
+      ...usuario,
+      _rolesAsignados: rolesActualesIds,
+      _rolesOriginales: rolesActualesIds,
+      _rolNuevo: '',
+    })
     setModalEditar(true)
   }
 
@@ -109,8 +122,22 @@ export default function GestionPermisosModulos() {
     setGuardando(true)
     try {
       await PermisosAPI.updateUsuario(usuarioSel.id, { email: usuarioSel.email })
-      if (usuarioSel._rolNuevo) {
-        await PermisosAPI.assignRoleToUser(usuarioSel.id, usuarioSel._rolNuevo)
+
+      const originales = new Set((usuarioSel._rolesOriginales || []).map(Number))
+      const asignados = new Set((usuarioSel._rolesAsignados || []).map(Number))
+      const rolesAgregar = [...asignados].filter((id) => !originales.has(id))
+      const rolesQuitar = [...originales].filter((id) => !asignados.has(id))
+
+      if (rolesAgregar.length > 0) {
+        await Promise.all(
+          rolesAgregar.map((rolId) => PermisosAPI.assignRoleToUser(usuarioSel.id, rolId))
+        )
+      }
+
+      if (rolesQuitar.length > 0) {
+        await Promise.all(
+          rolesQuitar.map((rolId) => PermisosAPI.removeRoleFromUser(usuarioSel.id, rolId))
+        )
       }
 
       mostrarToast('Usuario actualizado correctamente')
@@ -122,6 +149,30 @@ export default function GestionPermisosModulos() {
     } finally {
       setGuardando(false)
     }
+  }
+
+  const agregarRolLocal = () => {
+    const nuevoRolId = Number(usuarioSel?._rolNuevo)
+    if (!nuevoRolId) return
+
+    setUsuarioSel((prev) => {
+      const actuales = prev?._rolesAsignados || []
+      if (actuales.includes(nuevoRolId)) {
+        return { ...prev, _rolNuevo: '' }
+      }
+      return {
+        ...prev,
+        _rolesAsignados: [...actuales, nuevoRolId],
+        _rolNuevo: '',
+      }
+    })
+  }
+
+  const quitarRolLocal = (rolId) => {
+    setUsuarioSel((prev) => ({
+      ...prev,
+      _rolesAsignados: (prev?._rolesAsignados || []).filter((id) => id !== rolId),
+    }))
   }
 
   const handleToggle = async () => {
@@ -379,25 +430,60 @@ export default function GestionPermisosModulos() {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">Asignar rol adicional</label>
-            <select
-              value={usuarioSel?._rolNuevo || ''}
-              onChange={(e) => {
-                const rolId = e.target.value ? Number(e.target.value) : ''
-                setUsuarioSel((prev) => ({ ...prev, _rolNuevo: rolId }))
-              }}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#378add]"
-            >
-              <option value="">Sin cambio de rol</option>
-              {roles
-                .filter((rol) => rol.activo)
-                .map((rol) => (
-                  <option key={rol.id} value={rol.id}>
-                    {rol.nombre}
-                  </option>
-                ))}
-            </select>
-            <p className="mt-1 text-xs text-slate-400">El rol se agrega sin quitar los anteriores.</p>
+            <label className="mb-1 block text-xs font-medium text-slate-600">Roles asignados</label>
+
+            <div className="mb-3 flex flex-wrap gap-2">
+              {(usuarioSel?._rolesAsignados || []).length > 0 ? (
+                (usuarioSel?._rolesAsignados || []).map((rolId) => {
+                  const rol = roles.find((item) => Number(item.id) === Number(rolId))
+                  return (
+                    <span
+                      key={rolId}
+                      className="inline-flex items-center gap-2 rounded-full bg-[#e6f1fb] px-3 py-1 text-xs font-medium text-[#185fa5]"
+                    >
+                      {rol?.nombre || `Rol ${rolId}`}
+                      <button
+                        type="button"
+                        onClick={() => quitarRolLocal(Number(rolId))}
+                        className="text-[#0b2545] hover:text-red-600"
+                      >
+                        Quitar
+                      </button>
+                    </span>
+                  )
+                })
+              ) : (
+                <span className="text-xs italic text-slate-400">Sin roles asignados</span>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <select
+                value={usuarioSel?._rolNuevo || ''}
+                onChange={(e) => {
+                  const rolId = e.target.value ? Number(e.target.value) : ''
+                  setUsuarioSel((prev) => ({ ...prev, _rolNuevo: rolId }))
+                }}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#378add]"
+              >
+                <option value="">Seleccionar rol para agregar</option>
+                {roles
+                  .filter((rol) => rol.activo)
+                  .map((rol) => (
+                    <option key={rol.id} value={rol.id}>
+                      {rol.nombre}
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                onClick={agregarRolLocal}
+                className="rounded-lg bg-[#185fa5] px-3 py-2 text-sm font-medium text-white hover:bg-[#0c447c]"
+              >
+                Agregar
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">Podés asignar varios roles y quitar solo los necesarios.</p>
           </div>
         </div>
       </FormModal>

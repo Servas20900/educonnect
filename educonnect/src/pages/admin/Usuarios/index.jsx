@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, BookOpen, GraduationCap } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, ShieldCheck } from 'lucide-react';
 import { PageHeader } from '../../../components/ui';
 
 export default function UsuariosHome() {
@@ -32,6 +32,14 @@ export default function UsuariosHome() {
       color: 'from-purple-500 to-purple-600',
         ruta: 'grados-grupos',
     },
+    {
+      id: 'permisos',
+      titulo: 'Permisos y Roles',
+      descripcion: 'Gestionar matriz de permisos y asignación de roles por usuario',
+      icono: <ShieldCheck className="w-16 h-16" />,
+      color: 'from-[#185fa5] to-[#0b2545]',
+      ruta: 'permisos',
+    },
   ];
 
   const handleNavigate = (ruta) => {
@@ -42,13 +50,13 @@ export default function UsuariosHome() {
     <div className="space-y-6">
       <PageHeader
         title="Usuarios"
-        subtitle="Selecciona una sección para gestionar docentes, estudiantes y grupos"
+        subtitle="Selecciona una sección para gestionar docentes, estudiantes, grupos y permisos"
       />
 
       <div className="max-w-6xl">
 
         {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
           {subsecciones.map((seccion) => (
             <div
               key={seccion.id}
@@ -107,7 +115,7 @@ export default function UsuariosHome() {
         <div className="mt-12 rounded-lg border border-[#cfe3f7] bg-[#e6f1fb] p-6">
           <h3 className="mb-2 text-lg font-semibold text-[#0b2545]">Información</h3>
           <p className="text-[#185fa5]">
-            El sistema de usuario permite gestionar todos los aspectos de docentes, estudiantes y organización académica.
+            El sistema de usuario permite gestionar docentes, estudiantes, organización académica y control de permisos por roles.
             Se requieren permisos de administrador para acceder a estas funciones.
           </p>
         </div>

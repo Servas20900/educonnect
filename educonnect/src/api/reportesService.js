@@ -23,7 +23,7 @@ export const fetchAuditoriaLogs = async (filtros = {}) => {
 // Obtener reporte de uso del sistema (últimos 30 días)
 export const fetchReporteUsoSistema = async () => {
     try {
-        const response = await api.get('api/v1/reportes/auditoria/reporte_uso_sistema/');
+        const response = await api.get('api/v1/reportes/reporte_uso_sistema/');
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');
@@ -33,7 +33,7 @@ export const fetchReporteUsoSistema = async () => {
 // Obtener reporte por módulo
 export const fetchReportePorModulo = async () => {
     try {
-        const response = await api.get('api/v1/reportes/auditoria/reporte_por_modulo/');
+        const response = await api.get('api/v1/reportes/reporte_por_modulo/');
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');
@@ -43,7 +43,7 @@ export const fetchReportePorModulo = async () => {
 // Obtener reporte de errores
 export const fetchReporteErrores = async () => {
     try {
-        const response = await api.get('api/v1/reportes/auditoria/reporte_errores/');
+        const response = await api.get('api/v1/reportes/reporte_errores/');
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');
