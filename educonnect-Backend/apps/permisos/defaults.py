@@ -68,15 +68,14 @@ DEFAULT_NAVIGATION = {
             "id": "auxiliares",
             "title": "Auxiliares",
             "type": "group",
-            "allowed_roles": ["administrador"],
+            "allowed_roles": ["administrador", "auxiliares", "auxiliar"],
             "children": [
                 {
                     "id": "auxiliares-items",
                     "type": "collapse",
                     "children": [
                         {"id": "informes-economicos", "title": "Informes", "type": "item", "url": "/auxiliares/informes"},
-                        {"id": "reglamentos", "title": "Reglamentos", "type": "item", "url": "/auxiliares/reglamentos"},
-                        {"id": "reportes-cumplimiento", "title": "Cumplimiento", "type": "item", "url": "/auxiliares/cumplimiento"}
+                        {"id": "reglamentos", "title": "Reglamentos", "type": "item", "url": "/auxiliares/reglamentos"}
                     ]
                 }
             ]
@@ -122,9 +121,8 @@ DEFAULT_ROUTE_PERMISSIONS = {
     "comite-actas": ["administrador", "comite"],
     "comite-reuniones": ["administrador", "comite"],
     "comite-roles": ["administrador", "comite"],
-    "auxiliares-informes": ["administrador"],
-    "auxiliares-reglamentos": ["administrador"],
-    "auxiliares-cumplimiento": ["administrador"],
+    "auxiliares-informes": ["administrador", "auxiliares", "auxiliar"],
+    "auxiliares-reglamentos": ["administrador", "auxiliares", "auxiliar"],
     "estudiante-comunicados": ["administrador", "estudiante"]
 }
 
@@ -183,6 +181,11 @@ DEFAULT_CATALOGS = {
     "filtro_estado_usuario": [
         {"value": "activo", "label": "Activos"},
         {"value": "inactivo", "label": "Inactivos"}
+    ],
+    "auxiliares_tipos_informe": [
+        {"value": "economico", "label": "Economico"},
+        {"value": "pat", "label": "PAT"},
+        {"value": "reglamento", "label": "Reglamento"}
     ]
 }
 

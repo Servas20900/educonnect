@@ -59,7 +59,6 @@ const RolesComite  = Loadable(lazy(() => import('../pages/comite/RolesComite')))
 // Auxiliares
 const Informes      = Loadable(lazy(() => import('../pages/auxiliares/informesEconomicos')));
 const Reglamentos   = Loadable(lazy(() => import('../pages/auxiliares/Reglamentos')));
-const Cumplimiento  = Loadable(lazy(() => import('../pages/auxiliares/ReportesCumplimiento')));
 
 // Estudiante
 const EstudianteComunicados = Loadable(lazy(() => import('../pages/estudiante/Notificaciones')));
@@ -171,7 +170,6 @@ const AppRoutes = {
       children: [
         { path: 'informes',     element: <Guard permissionKey="auxiliares-informes"><Informes /></Guard> },
         { path: 'reglamentos',  element: <Guard permissionKey="auxiliares-reglamentos"><Reglamentos /></Guard> },
-        { path: 'cumplimiento', element: <Guard permissionKey="auxiliares-cumplimiento"><Cumplimiento /></Guard> },
       ],
     },
 

@@ -37,7 +37,6 @@ const ICON_MAP = {
   'roles-comite':         IconUsers,
   'informes-economicos':  IconReportAnalytics,
   reglamentos:            IconFileText,
-  'reportes-cumplimiento':IconChartBar,
   'estudiante-comunicados': IconMessageCircle,
   'docente-estudiantes':  IconUsers,
   'docente-horario':      IconCalendar,

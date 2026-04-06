@@ -7,14 +7,16 @@ from apps.carpetas.serializers import DocumentoReadSerializer
 class InformeEconomicoWriteSerializer(serializers.ModelSerializer):
     archivo = serializers.FileField(write_only=True)
     reemplazar_id = serializers.IntegerField(required=False, write_only=True)
+    categoria = serializers.CharField(required=False)
 
     class Meta:
         model = PatronatoInforme
-        fields = ['id', 'titulo', 'archivo', 'reemplazar_id']
+        fields = ['id', 'titulo', 'categoria', 'archivo', 'reemplazar_id']
 
     def create(self, validated_data):
         archivo = validated_data.pop('archivo')
         reemplazar_id = validated_data.pop('reemplazar_id', None)
+        categoria = validated_data.get('categoria', 'economico')
         request = self.context.get('request')
 
         # 1. Asegurar repositorio (esto se queda igual)
@@ -29,6 +31,7 @@ class InformeEconomicoWriteSerializer(serializers.ModelSerializer):
         if reemplazar_id:
             informe = PatronatoInforme.objects.get(id=reemplazar_id)
             informe.titulo = validated_data.get('titulo', informe.titulo)
+            informe.categoria = categoria
             informe.save()
 
             ultimo_doc = DocumentosDocumento.objects.filter(
@@ -46,6 +49,7 @@ class InformeEconomicoWriteSerializer(serializers.ModelSerializer):
             # Si no hay reemplazar_id, sí es un informe nuevo desde cero
             informe = PatronatoInforme.objects.create(
                 titulo=validated_data['titulo'],
+                categoria=categoria,
                 responsable=request.user
             )
 
@@ -86,7 +90,7 @@ class InformeEconomicoReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PatronatoInforme
-        fields = ['id', 'titulo', 'fecha_creacion', 'responsable_nombre', 'estado', 'documento']
+        fields = ['id', 'titulo', 'categoria', 'fecha_creacion', 'responsable_nombre', 'estado', 'documento']
 
     def get_documento(self, obj):
         # Buscamos el documento actual

@@ -14,7 +14,7 @@ export const subirInformeEconomico = async (datos) => {
     try {
         const formData = new FormData();
         formData.append('titulo', datos.titulo);
-        formData.append('periodo', datos.periodo);
+        formData.append('categoria', datos.categoria || 'economico');
         formData.append('archivo', datos.archivo); 
         if (datos.reemplazarId) {
             formData.append('reemplazar_id', datos.reemplazarId);
@@ -28,33 +28,74 @@ export const subirInformeEconomico = async (datos) => {
 };
 
 
-export const obtenerInformesEconomicos = async () => {
+export const obtenerInformesEconomicos = async ({ includeArchived = false, categoria = '' } = {}) => {
     try {
-        const response = await api.get('api/v1/informes-economicos/informes-economicos/');
+        const params = new URLSearchParams();
+        if (includeArchived) {
+            params.set('include_archived', 'true');
+        }
+        if (categoria) {
+            params.set('categoria', categoria);
+        }
+        const query = params.toString();
+        const response = await api.get(`api/v1/informes-economicos/informes-economicos/${query ? `?${query}` : ''}`);
         return response.data;
     } catch (error) {
         handleApiError(error, 'Error al obtener la lista de informes');
     }
 };
 
-export const descargarArchivoBlob = async (url, nombreArchivo) => {
+export const archivarInformeEconomico = async (id) => {
     try {
-        const response = await api.get(url, {
-            responseType: 'blob', 
-        });
-        const blob = new Blob([response.data], { type: response.headers['content-type'] });
-        const downloadUrl = window.URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.setAttribute('download', nombreArchivo); 
-        document.body.appendChild(link);
-        link.click();
-        
-        link.remove();
-        window.URL.revokeObjectURL(downloadUrl);
+        const response = await api.patch(`api/v1/informes-economicos/informes-economicos/${id}/archivar/`);
+        return response.data;
     } catch (error) {
-        console.error("Error al descargar el archivo:", error);
-        throw new Error("No se pudo iniciar la descarga del archivo.");
+        handleApiError(error, 'Error al archivar el informe');
+    }
+};
+
+export const desarchivarInformeEconomico = async (id) => {
+    try {
+        const response = await api.patch(`api/v1/informes-economicos/informes-economicos/${id}/desarchivar/`);
+        return response.data;
+    } catch (error) {
+        handleApiError(error, 'Error al desarchivar el informe');
+    }
+};
+
+export const descargarInformeEconomico = async (id) => {
+    try {
+        const response = await api.get(`api/v1/informes-economicos/informes-economicos/${id}/descargar/`, {
+            responseType: 'blob',
+        });
+        return response;
+    } catch (error) {
+        const normalizedError = new Error('No se pudo descargar el archivo del informe');
+        const payload = error.response?.data;
+
+        if (payload instanceof Blob) {
+            try {
+                const text = await payload.text();
+                if (text) {
+                    try {
+                        const parsed = JSON.parse(text);
+                        normalizedError.message = parsed?.error || parsed?.detail || normalizedError.message;
+                        normalizedError.details = parsed;
+                        throw normalizedError;
+                    } catch {
+                        const cleanedText = String(text).trim();
+                        normalizedError.message = cleanedText || normalizedError.message;
+                        normalizedError.details = { error: cleanedText || 'Respuesta inválida al descargar archivo' };
+                        throw normalizedError;
+                    }
+                }
+            } catch {
+                normalizedError.details = { error: 'Respuesta inválida al descargar archivo' };
+                throw normalizedError;
+            }
+        }
+
+        normalizedError.details = payload || null;
+        throw normalizedError;
     }
 };

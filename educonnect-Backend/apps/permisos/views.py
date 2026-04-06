@@ -313,8 +313,7 @@ class ModuloViewSet(viewsets.ViewSet):
                 'nombre': 'Órganos Auxiliares',
                 'grupo': 'Auxiliares',
                 'submodulos': [
-                    'Informes Económicos', 'Reglamentos',
-                    'Informes PAT', 'Reportes Cumplimiento'
+                    'Informes Económicos', 'Reglamentos', 'Informes PAT'
                 ]
             },
             {
@@ -366,6 +365,7 @@ class ModuloViewSet(viewsets.ViewSet):
         route_permissions['horarios'] = ['administrador']
         route_permissions['documentos'] = ['administrador', 'docente']
         route_permissions.pop('docente-incapacidades', None)
+        route_permissions.pop('auxiliares-cumplimiento', None)
 
         navigation = self._config_value_or_default('navigation')
         if isinstance(navigation, dict):
@@ -382,6 +382,22 @@ class ModuloViewSet(viewsets.ViewSet):
                             item for item in child.get('children', [])
                             if item.get('id') not in {'docente-incapacidades', 'incapacidades'}
                         ]
+                if group.get('id') == 'auxiliares':
+                    # Garantiza visibilidad del modulo Auxiliares para roles vigentes y legado.
+                    group['allowed_roles'] = ['administrador', 'auxiliares', 'auxiliar']
+                    for child in group.get('children', []):
+                        if child.get('id') != 'auxiliares-items':
+                            continue
+                        child['children'] = [
+                            item for item in child.get('children', [])
+                            if item.get('id') != 'reportes-cumplimiento'
+                        ]
+
+        for key in ('auxiliares-informes', 'auxiliares-reglamentos'):
+            existing_roles = route_permissions.get(key, [])
+            normalized_roles = {str(role).strip().lower() for role in existing_roles if role}
+            normalized_roles.update({'administrador', 'auxiliares', 'auxiliar'})
+            route_permissions[key] = sorted(normalized_roles)
 
         allowed_permission_keys = [
             key for key, allowed_roles in route_permissions.items()
