@@ -1,23 +1,17 @@
-import { useState, useEffect } from 'react';
-import { fetchComites, fetchMiembrosConRoles, asignarRol } from '../../api/comitesService';
+import { useEffect, useMemo, useState } from 'react';
+import { fetchComites, fetchMiembrosConRoles } from '../../api/comitesService';
+import { DataTable, PageHeader, StatusBadge } from '../../components/ui';
 import useSystemConfig from '../../hooks/useSystemConfig';
 
 export default function RolesComite() {
   const { getCatalog } = useSystemConfig();
-  const ROLES_DISPONIBLES = getCatalog('comites_roles_disponibles', [
-    { value: 'Presidente', label: 'Presidente', unique: true },
-    { value: 'Secretario', label: 'Secretario', unique: true },
-    { value: 'Miembro', label: 'Miembro', unique: false },
-  ]);
 
   const [comites, setComites] = useState([]);
   const [selectedComite, setSelectedComite] = useState('');
   const [miembros, setMiembros] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(null);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [selectedRoles, setSelectedRoles] = useState({});
+  const [searchValue, setSearchValue] = useState('');
 
   // Cargar comités disponibles al montar el componente
   useEffect(() => {
@@ -31,19 +25,17 @@ export default function RolesComite() {
     }
   }, [selectedComite]);
 
+  useEffect(() => {
+    if (!selectedComite && comites.length > 0) {
+      setSelectedComite(comites[0].id);
+    }
+  }, [comites, selectedComite]);
+
   const loadComites = async () => {
     try {
       setLoading(true);
       const data = await fetchComites({ estado: 'activo', mis_comites: true });
       setComites(data.results || data);
-      
-      // Seleccionar automáticamente el primer comité si hay uno
-      const list = data.results || data;
-      if (list.length > 0) {
-        setSelectedComite(list[0].id);
-      } else {
-        setSelectedComite('');
-      }
     } catch (err) {
       setError(parseError(err));
     } finally {
@@ -57,48 +49,10 @@ export default function RolesComite() {
       setError('');
       const data = await fetchMiembrosConRoles(selectedComite);
       setMiembros(data);
-      
-      // Inicializar roles seleccionados con los actuales
-      const rolesMap = {};
-      data.forEach(m => {
-        rolesMap[m.id] = m.cargo || 'Miembro';
-      });
-      setSelectedRoles(rolesMap);
     } catch (err) {
       setError(parseError(err));
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleRolChange = (miembroId, nuevoRol) => {
-    setSelectedRoles(prev => ({
-      ...prev,
-      [miembroId]: nuevoRol
-    }));
-  };
-
-  const handleAsignarRol = async (miembroId) => {
-    const nuevoRol = selectedRoles[miembroId];
-    
-    try {
-      setSaving(miembroId);
-      setError('');
-      setSuccess('');
-      
-      const result = await asignarRol(selectedComite, miembroId, nuevoRol);
-      
-      setSuccess(result.message || `Rol ${nuevoRol} asignado exitosamente`);
-      
-      // Recargar miembros para actualizar la vista
-      await loadMiembros();
-      
-      // Limpiar mensaje de éxito después de 3 segundos
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(parseError(err));
-    } finally {
-      setSaving(null);
     }
   };
 
@@ -111,151 +65,110 @@ export default function RolesComite() {
     return 'Ocurrió un error. Por favor intenta de nuevo.';
   };
 
-  const getRolBadgeClass = (cargo) => {
-    const cargoLower = cargo?.toLowerCase() || '';
-    if (cargoLower === 'presidente') return 'bg-purple-100 text-purple-700';
-    if (cargoLower === 'secretario') return 'bg-blue-100 text-blue-700';
-    if (cargoLower === 'tesorero') return 'bg-green-100 text-green-700';
-    if (cargoLower === 'vocal') return 'bg-yellow-100 text-yellow-700';
-    return 'bg-gray-100 text-gray-700';
-  };
+  const comitesFiltrados = useMemo(() => {
+    const query = searchValue.trim().toLowerCase();
+    if (!query) return comites;
+    return comites.filter((comite) => {
+      return [comite.nombre, comite.descripcion, comite.tipo_comite].some((value) =>
+        String(value || '').toLowerCase().includes(query)
+      );
+    });
+  }, [comites, searchValue]);
+
+  const miembrosTabla = useMemo(() => {
+    return miembros.map((miembro) => ({
+      ...miembro,
+      integrante: miembro.persona_info?.nombre_completo || 'N/A',
+      correo: miembro.persona_info?.email_institucional || miembro.persona_info?.email_personal || 'N/A',
+    }));
+  }, [miembros]);
+
+  const columnasMiembros = [
+    {
+      key: 'integrante',
+      label: 'Integrante',
+      render: (row) => <span className="font-medium text-slate-900">{row.integrante}</span>,
+    },
+    {
+      key: 'correo',
+      label: 'Correo',
+      render: (row) => <span className="text-slate-600">{row.correo}</span>,
+    },
+    {
+      key: 'cargo',
+      label: 'Rol',
+      render: (row) => <StatusBadge status={row.cargo || 'Miembro'} size="sm" />,
+    },
+    {
+      key: 'activo',
+      label: 'Estado',
+      render: (row) => <StatusBadge status={row.activo ? 'Activo' : 'Inactivo'} size="sm" />,
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Roles del Comité</h2>
-          <p className="text-sm text-gray-500">Asigna responsabilidades dentro del comité.</p>
+    <div className="space-y-6 p-6">
+      <PageHeader
+        title="Integrantes de comités"
+        subtitle="Vista de consulta para comités asignados: integrantes, correos y roles internos"
+      />
+
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="grid gap-4 md:grid-cols-[1fr_2fr] md:items-end">
+          <label className="space-y-1 text-sm">
+            <span className="block font-medium text-slate-700">Comité</span>
+            <select
+              value={selectedComite}
+              onChange={(event) => setSelectedComite(event.target.value)}
+              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
+              disabled={loading}
+            >
+              <option value="">Selecciona un comité</option>
+              {comitesFiltrados.map((comite) => (
+                <option key={comite.id} value={comite.id}>
+                  {comite.nombre} - {comite.tipo_comite}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1 text-sm">
+            <span className="block font-medium text-slate-700">Buscar comité</span>
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              placeholder="Filtrar por nombre o tipo"
+              className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
+            />
+          </label>
         </div>
       </div>
 
-      {/* Selector de Comité */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Seleccionar Comité
-        </label>
-        <select
-          value={selectedComite}
-          onChange={(e) => setSelectedComite(e.target.value)}
-          className="block w-full max-w-md rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border"
-          disabled={loading}
-        >
-          <option value="">Seleccione un comité...</option>
-          {comites.map((comite) => (
-            <option key={comite.id} value={comite.id}>
-              {comite.nombre} - {comite.tipo_comite}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Mensajes de estado */}
-      {error && (
-        <div className="rounded-md bg-red-50 p-4">
-          <p className="text-sm text-red-800">{error}</p>
+      {selectedComite ? (
+        <DataTable
+          columns={columnasMiembros}
+          data={miembrosTabla}
+          loading={loading}
+          emptyMessage="No hay integrantes activos en este comité"
+        />
+      ) : (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          No tienes comités asignados para revisar.
         </div>
       )}
 
-      {success && (
-        <div className="rounded-md bg-green-50 p-4">
-          <p className="text-sm text-green-800">{success}</p>
+      {selectedComite && miembros.length > 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+          Los roles se asignan desde administración. Esta vista solo expone la composición vigente del comité.
         </div>
-      )}
-
-      {/* Tabla de miembros */}
-      {selectedComite && (
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-          {loading ? (
-            <div className="p-8 text-center text-gray-500">
-              Cargando miembros...
-            </div>
-          ) : miembros.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              No hay miembros activos en este comité.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
-                    <th className="px-4 py-3">Miembro</th>
-                    <th className="px-4 py-3">Email</th>
-                    <th className="px-4 py-3">Rol Actual</th>
-                    <th className="px-4 py-3">Nuevo Rol</th>
-                    <th className="px-4 py-3">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {miembros.map((miembro) => (
-                    <tr key={miembro.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-900">
-                        {miembro.persona_info?.nombre_completo || 'N/A'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {miembro.persona_info?.email_institucional || miembro.persona_info?.email_personal || 'N/A'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getRolBadgeClass(miembro.cargo)}`}>
-                          {miembro.cargo || 'Sin rol'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={selectedRoles[miembro.id] || miembro.cargo || 'Miembro'}
-                          onChange={(e) => handleRolChange(miembro.id, e.target.value)}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-2 py-1.5 border"
-                          disabled={saving === miembro.id}
-                        >
-                          {ROLES_DISPONIBLES.map((rol) => (
-                            <option key={rol.value} value={rol.value}>
-                              {rol.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => handleAsignarRol(miembro.id)}
-                          disabled={
-                            saving === miembro.id || 
-                            selectedRoles[miembro.id] === miembro.cargo
-                          }
-                          className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                        >
-                          {saving === miembro.id ? 'Guardando...' : 'Asignar'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!selectedComite && !loading && (
-        <div className="rounded-md bg-yellow-50 p-4">
-          <p className="text-sm text-yellow-800">
-            No tienes comités asignados para gestionar roles.
-          </p>
-        </div>
-      )}
-
-      {/* Información sobre roles */}
-      {selectedComite && miembros.length > 0 && (
-        <div className="rounded-lg bg-blue-50 p-4">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">
-            Información sobre roles
-          </h3>
-          <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-            <li>Solo puede haber un <strong>Presidente</strong> activo por comité</li>
-            <li>Solo puede haber un <strong>Secretario</strong> activo por comité</li>
-            <li>Solo puede haber un <strong>Tesorero</strong> activo por comité</li>
-            <li>Puede haber múltiples <strong>Vocales</strong> y <strong>Miembros</strong></li>
-          </ul>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

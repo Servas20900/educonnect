@@ -20,7 +20,7 @@ export const SystemConfigContext = createContext({
 });
 
 export function SystemConfigProvider({ children }) {
-  const { role } = useAuth();
+  const { role, roles } = useAuth();
   const [state, setState] = useState(initialState);
 
   const refreshBootstrap = useCallback(async () => {
@@ -47,9 +47,10 @@ export function SystemConfigProvider({ children }) {
       if (!permissionKey) return true;
       const allowed = state.bootstrap?.route_permissions?.[permissionKey] || [];
       if (allowed.length === 0) return true;
-      return allowed.includes(role);
+      const roleList = Array.isArray(roles) && roles.length > 0 ? roles : (role ? [role] : []);
+      return allowed.some((allowedRole) => roleList.includes(allowedRole));
     },
-    [role, state.bootstrap]
+    [role, roles, state.bootstrap]
   );
 
   const getCatalog = useCallback(
@@ -60,10 +61,13 @@ export function SystemConfigProvider({ children }) {
   const getNavigationForRole = useCallback(
     (currentRole) => {
       const groups = state.bootstrap?.navigation?.items || [];
-      if (!currentRole) return [];
+      const roleList = Array.isArray(currentRole)
+        ? currentRole
+        : (currentRole ? [currentRole] : []);
+      if (roleList.length === 0) return [];
       const filteredGroups = groups.filter((group) => {
         const allowedRoles = group.allowed_roles || [];
-        return allowedRoles.length === 0 || allowedRoles.includes(currentRole);
+        return allowedRoles.length === 0 || allowedRoles.some((allowedRole) => roleList.includes(allowedRole));
       });
 
       // Fallback defensivo: asegura items clave de docente aunque la configuracion

@@ -13,6 +13,19 @@ export const fetchComites = async (params = {}) => {
     }
 };
 
+export const fetchDocentesDisponibles = async (params = {}) => {
+    try {
+        const query = new URLSearchParams(params).toString();
+        const url = query
+            ? `api/v1/comites/personas-disponibles/docentes/?${query}`
+            : 'api/v1/comites/personas-disponibles/docentes/';
+        const response = await api.get(url);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al obtener docentes');
+    }
+};
+
 export const createComite = async (data) => {
     try {
         const response = await api.post('api/v1/comites/comites/', data);
@@ -37,6 +50,24 @@ export const deleteComite = async (id) => {
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error al eliminar comité');
+    }
+};
+
+export const archiveComite = async (id) => {
+    try {
+        const response = await api.patch(`api/v1/comites/comites/${id}/archivar/`);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al archivar comité');
+    }
+};
+
+export const unarchiveComite = async (id) => {
+    try {
+        const response = await api.patch(`api/v1/comites/comites/${id}/desarchivar/`);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al desarchivar comité');
     }
 };
 
@@ -80,29 +111,10 @@ export const fetchMiembrosConRoles = async (comiteId) => {
     }
 };
 
-export const asignarRol = async (comiteId, miembroId, cargo) => {
-    try {
-        const response = await api.post(`api/v1/comites/comites/${comiteId}/asignar_rol/`, {
-            miembro_id: miembroId,
-            cargo: cargo
-        });
-        return response.data;
-    } catch (error) {
-        throw error.response ? error.response.data : new Error('Error al asignar rol');
-    }
-};
-
 // ==================== PERSONAS DISPONIBLES ====================
 
 export const fetchPersonasDisponibles = async (params = {}) => {
-    try {
-        const query = new URLSearchParams(params).toString();
-        const url = query ? `api/v1/comites/personas-disponibles/?${query}` : 'api/v1/comites/personas-disponibles/';
-        const response = await api.get(url);
-        return response.data;
-    } catch (error) {
-        throw error.response ? error.response.data : new Error('Error al obtener personas');
-    }
+    return fetchDocentesDisponibles(params);
 };
 
 // ==================== ACTAS ====================

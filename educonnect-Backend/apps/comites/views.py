@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count, Q
+from django.utils import timezone
 from apps.databaseModels.models import (
     ComitesComite,
     ComitesMiembro,
@@ -17,6 +18,8 @@ from .serializers import (
     PersonaSimpleSerializer,
     ComitesActaSerializer,
     ComitesInformeOrganoSerializer,
+    _ensure_committee_role_for_persona,
+    _remove_committee_role_if_unused,
 )
 
 
@@ -43,12 +46,66 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
             ComitesMiembro.objects.filter(persona=persona, activo=True)
             .values_list('comite_id', flat=True)
         )
+
+    def _require_manage_permission(self, request):
+        if self._is_privileged(request):
+            return None
+        return Response(
+            {'error': 'Solo administración puede gestionar comités y sus integrantes.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
     
     def get_serializer_class(self):
         """Usar serializer específico para creación"""
         if self.action == 'create':
             return ComitesComiteCreateSerializer
         return ComitesComiteSerializer
+
+    def create(self, request, *args, **kwargs):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['patch'])
+    def archivar(self, request, pk=None):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+
+        comite = self.get_object()
+        comite.estado = 'inactivo'
+        comite.save(update_fields=['estado'])
+        return Response({'message': 'Comité archivado correctamente', 'estado': comite.estado})
+
+    @action(detail=True, methods=['patch'])
+    def desarchivar(self, request, pk=None):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+
+        comite = self.get_object()
+        comite.estado = 'activo'
+        comite.save(update_fields=['estado'])
+        return Response({'message': 'Comité desarchivado correctamente', 'estado': comite.estado})
     
     def get_queryset(self):
         """Filtrar comités por estado si se especifica"""
@@ -76,6 +133,9 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         Agregar un miembro a un comité existente.
         Esperado: {persona_id, cargo, fecha_nombramiento}
         """
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
         comite = self.get_object()
         serializer = ComitesMiembroSerializer(
             data=request.data,
@@ -83,7 +143,8 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         )
         
         if serializer.is_valid():
-            serializer.save(comite=comite)
+            miembro = serializer.save(comite=comite)
+            _ensure_committee_role_for_persona(miembro.persona, asignado_por=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -94,6 +155,9 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         Remover un miembro de un comité.
         Esperado: {miembro_id}
         """
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
         comite = self.get_object()
         miembro_id = request.data.get('miembro_id')
         
@@ -105,7 +169,10 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         
         try:
             miembro = ComitesMiembro.objects.get(id=miembro_id, comite=comite)
+            persona = miembro.persona
             miembro.delete()
+            if persona:
+                _remove_committee_role_if_unused(persona)
             return Response(
                 {'message': 'Miembro removido exitosamente'},
                 status=status.HTTP_200_OK
@@ -122,6 +189,9 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         Actualizar información de un miembro del comité.
         Esperado: {miembro_id, cargo?, activo?, fecha_cese?}
         """
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
         comite = self.get_object()
         miembro_id = request.data.get('miembro_id')
         
@@ -141,7 +211,8 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
             )
             
             if serializer.is_valid():
-                serializer.save()
+                miembro_actualizado = serializer.save()
+                _ensure_committee_role_for_persona(miembro_actualizado.persona, asignado_por=request.user)
                 return Response(serializer.data)
             
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -198,6 +269,9 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         Asignar o actualizar rol de un miembro en el comité.
         Esperado: {miembro_id, cargo}
         """
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
         comite = self.get_object()
         if not self._is_privileged(request):
             comite_ids = self._get_user_comite_ids(request)
@@ -250,6 +324,52 @@ class ComitesMiembroViewSet(viewsets.ModelViewSet):
     search_fields = ['persona__nombre', 'persona__primer_apellido', 'cargo']
     ordering_fields = ['fecha_nombramiento', 'cargo']
     ordering = ['-fecha_nombramiento']
+
+    def _require_manage_permission(self, request):
+        if bool(request.user and (request.user.is_staff or request.user.is_superuser)):
+            return None
+        return Response(
+            {'error': 'Solo administración puede modificar integrantes de comités.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    def create(self, request, *args, **kwargs):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        denied = self._require_manage_permission(request)
+        if denied:
+            return denied
+        return super().destroy(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        miembro = serializer.save()
+        _ensure_committee_role_for_persona(miembro.persona, asignado_por=self.request.user)
+
+    def perform_update(self, serializer):
+        miembro = serializer.save()
+        _ensure_committee_role_for_persona(miembro.persona, asignado_por=self.request.user)
+
+    def perform_destroy(self, instance):
+        persona = instance.persona
+        super().perform_destroy(instance)
+        if persona:
+            _remove_committee_role_if_unused(persona)
     
     def get_queryset(self):
         """Filtrar miembros por comité si se especifica"""
@@ -284,7 +404,10 @@ class PersonasDisponiblesViewSet(viewsets.ReadOnlyModelViewSet):
         # Filtrar personas que tienen un registro en PersonasDocente
         from apps.databaseModels.models import PersonasDocente
         docentes_ids = PersonasDocente.objects.values_list('persona_id', flat=True)
-        queryset = self.get_queryset().filter(id__in=docentes_ids)
+        queryset = self.get_queryset().filter(
+            id__in=docentes_ids,
+            email_institucional__iendswith='@mep.go.cr'
+        )
         
         page = self.paginate_queryset(queryset)
         if page is not None:

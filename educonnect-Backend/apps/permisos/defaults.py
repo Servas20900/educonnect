@@ -53,7 +53,7 @@ DEFAULT_NAVIGATION = {
             "id": "comite-group",
             "title": "Comite",
             "type": "group",
-            "allowed_roles": ["administrador", "docente", "comite"],
+            "allowed_roles": ["administrador", "comite"],
             "children": [
                 {
                     "id": "comite-items",

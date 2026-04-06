@@ -1,15 +1,23 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, Edit2, Users, AlertCircle, CheckCircle, Search } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Plus } from 'lucide-react';
 import {
     addMiembro,
+    archiveComite,
     createComite,
-    deleteComite,
     fetchComites,
-    fetchPersonasDisponibles,
+    fetchDocentesDisponibles,
     removeMiembro,
+    unarchiveComite,
     updateComite,
     updateMiembro
 } from '../../api/comitesService';
+import {
+    DataTable,
+    FormModal,
+    PageHeader,
+    SearchFilter,
+    StatusBadge,
+} from '../../components/ui';
 import useSystemConfig from '../../hooks/useSystemConfig';
 
 const defaultForm = {
@@ -21,35 +29,127 @@ const defaultForm = {
     reglamento: ''
 };
 
+const DEFAULT_ROLES = [
+    { value: 'Presidente', label: 'Presidente' },
+    { value: 'Secretario', label: 'Secretario' },
+    { value: 'Tesorero', label: 'Tesorero' },
+    { value: 'Vocal', label: 'Vocal' },
+    { value: 'Miembro', label: 'Miembro' },
+];
+
+const formatErrorMessage = (error) => {
+    if (!error) return 'Ocurrió un error inesperado';
+    if (typeof error === 'string') return error;
+
+    if (typeof error?.detail === 'string' && error.detail.trim()) {
+        return error.detail;
+    }
+
+    if (typeof error?.error === 'string' && error.error.trim()) {
+        return error.error;
+    }
+
+    if (error?.non_field_errors?.length) {
+        return error.non_field_errors[0];
+    }
+
+    if (error && typeof error === 'object') {
+        const firstEntry = Object.entries(error)[0];
+        if (firstEntry) {
+            const [field, value] = firstEntry;
+            if (Array.isArray(value) && value.length > 0) {
+                return `${field}: ${value[0]}`;
+            }
+            if (typeof value === 'string') {
+                return `${field}: ${value}`;
+            }
+        }
+    }
+
+    return 'No fue posible completar la acción';
+};
+
+const toOptionList = (items, fallback) => {
+    if (!Array.isArray(items) || items.length === 0) return fallback;
+    return items;
+};
+
 export default function Comites() {
     const { getCatalog } = useSystemConfig();
-    const tiposComite = getCatalog('comites_tipos', [
+    const tiposComite = toOptionList(getCatalog('comites_tipos', [
+        { value: 'institucional', label: 'Institucional' },
+        { value: 'disciplinario', label: 'Disciplinario' },
+    ]), [
         { value: 'institucional', label: 'Institucional' },
         { value: 'disciplinario', label: 'Disciplinario' },
     ]);
-    const estadosComite = getCatalog('comites_estados', [
+    const estadosComite = toOptionList(getCatalog('comites_estados', [
+        { value: 'activo', label: 'Activo' },
+        { value: 'inactivo', label: 'Inactivo' },
+    ]), [
         { value: 'activo', label: 'Activo' },
         { value: 'inactivo', label: 'Inactivo' },
     ]);
+    const rolesComite = toOptionList(getCatalog('comites_roles_disponibles', DEFAULT_ROLES), DEFAULT_ROLES);
 
     const [comites, setComites] = useState([]);
-    const [personas, setPersonas] = useState([]);
-    const [selectedPersonas, setSelectedPersonas] = useState([]);
+    const [docentes, setDocentes] = useState([]);
+    const [selectedDocentes, setSelectedDocentes] = useState([]);
     const [form, setForm] = useState(defaultForm);
     const [editingId, setEditingId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [expandedComite, setExpandedComite] = useState(null);
-    const [editingMiembroId, setEditingMiembroId] = useState(null);
-    const [miembroDraft, setMiembroDraft] = useState({ cargo: 'Miembro', activo: true });
+    const [miembroRoles, setMiembroRoles] = useState({});
     const [savingMiembroId, setSavingMiembroId] = useState(null);
+    const [formOpen, setFormOpen] = useState(false);
+    const [searchValue, setSearchValue] = useState('');
+    const [filtroTipo, setFiltroTipo] = useState('');
+    const [viewMode, setViewMode] = useState('activos');
+    const [successMessage, setSuccessMessage] = useState('');
+    const [editingMembers, setEditingMembers] = useState([]);
+    const [newMemberPersonaId, setNewMemberPersonaId] = useState('');
 
-    const personasOptions = useMemo(() => {
-        return personas.map((p) => ({
+    const docentesOptions = useMemo(() => {
+        return docentes.map((p) => ({
             id: p.id,
-            label: p.nombre_completo || `${p.nombre} ${p.primer_apellido}`
+            label: p.nombre_completo || `${p.nombre} ${p.primer_apellido}`,
+            email: p.email_institucional || '',
         }));
-    }, [personas]);
+    }, [docentes]);
+
+    const comitesFiltrados = useMemo(() => {
+        const query = searchValue.trim().toLowerCase();
+        return comites.filter((comite) => {
+            const matchesSearch = !query || [
+                comite.nombre,
+                comite.descripcion,
+                comite.tipo_comite,
+            ].some((value) => String(value || '').toLowerCase().includes(query));
+
+            const matchesTipo = !filtroTipo || comite.tipo_comite === filtroTipo;
+
+            return matchesSearch && matchesTipo;
+        });
+    }, [comites, searchValue, filtroTipo]);
+
+    const comitesActivos = useMemo(
+        () => comitesFiltrados.filter((comite) => comite.estado === 'activo'),
+        [comitesFiltrados]
+    );
+
+    const comitesArchivados = useMemo(
+        () => comitesFiltrados.filter((comite) => comite.estado !== 'activo'),
+        [comitesFiltrados]
+    );
+
+    const comitesEnVista = viewMode === 'archivados' ? comitesArchivados : comitesActivos;
+
+    const docentesDisponiblesParaEditar = useMemo(() => {
+        if (!editingId) return [];
+        const personaIds = new Set(editingMembers.map((member) => Number(member.personaId)));
+        return docentesOptions.filter((docente) => !personaIds.has(Number(docente.id)));
+    }, [editingId, editingMembers, docentesOptions]);
 
     const loadData = async () => {
         setLoading(true);
@@ -57,16 +157,16 @@ export default function Comites() {
         try {
             const [comitesData, personasData] = await Promise.all([
                 fetchComites(),
-                fetchPersonasDisponibles()
+                fetchDocentesDisponibles()
             ]);
 
             const comitesList = Array.isArray(comitesData) ? comitesData : comitesData.results || [];
             const personasList = Array.isArray(personasData) ? personasData : personasData.results || [];
 
             setComites(comitesList);
-            setPersonas(personasList);
+            setDocentes(personasList);
         } catch (err) {
-            setError('No se pudo cargar la información de comités.');
+            setError(formatErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -76,18 +176,42 @@ export default function Comites() {
         loadData();
     }, []);
 
+    useEffect(() => {
+        if (!expandedComite) {
+            setMiembroRoles({});
+            return;
+        }
+
+        const comite = comites.find((item) => item.id === expandedComite);
+        if (!comite?.miembros) return;
+
+        const initialRoles = {};
+        comite.miembros.forEach((miembro) => {
+            initialRoles[miembro.id] = miembro.cargo || 'Miembro';
+        });
+        setMiembroRoles(initialRoles);
+    }, [expandedComite, comites]);
+
     const resetForm = () => {
         setForm(defaultForm);
-        setSelectedPersonas([]);
+        setSelectedDocentes([]);
         setEditingId(null);
+        setEditingMembers([]);
+        setNewMemberPersonaId('');
     };
 
-    const toggleSelectedPersona = (personaId) => {
-        setSelectedPersonas((prev) => (
-            prev.includes(personaId)
-                ? prev.filter((id) => id !== personaId)
-                : [...prev, personaId]
+    const toggleSelectedDocente = (personaId) => {
+        setSelectedDocentes((prev) => (
+            prev.some((item) => item.personaId === personaId)
+                ? prev.filter((item) => item.personaId !== personaId)
+                : [...prev, { personaId, cargo: 'Miembro' }]
         ));
+    };
+
+    const updateSelectedDocenteCargo = (personaId, cargo) => {
+        setSelectedDocentes((prev) => prev.map((item) => (
+            item.personaId === personaId ? { ...item, cargo } : item
+        )));
     };
 
     const handleSubmit = async (e) => {
@@ -95,28 +219,52 @@ export default function Comites() {
         setLoading(true);
         setError('');
         try {
+            const today = new Date().toISOString().slice(0, 10);
             if (editingId) {
                 await updateComite(editingId, form);
 
-                if (selectedPersonas.length > 0) {
-                    const today = new Date().toISOString().slice(0, 10);
-                    await Promise.all(
-                        selectedPersonas.map((personaId) =>
-                            addMiembro(editingId, {
-                                persona_id: personaId,
-                                cargo: 'Miembro',
-                                fecha_nombramiento: today
-                            })
-                        )
+                const comiteOriginal = comites.find((item) => item.id === editingId);
+                const miembrosOriginales = comiteOriginal?.miembros || [];
+                const miembrosOriginalesMap = new Map(miembrosOriginales.map((m) => [m.id, m]));
+                const idsRetenidos = new Set(
+                    editingMembers.filter((member) => !member.isNew && member.id).map((member) => member.id)
+                );
+
+                const removerPromises = miembrosOriginales
+                    .filter((miembro) => !idsRetenidos.has(miembro.id))
+                    .map((miembro) => removeMiembro(editingId, miembro.id));
+
+                const actualizarPromises = editingMembers
+                    .filter((member) => !member.isNew && member.id)
+                    .filter((member) => {
+                        const original = miembrosOriginalesMap.get(member.id);
+                        return original && (original.cargo || 'Miembro') !== member.cargo;
+                    })
+                    .map((member) =>
+                        updateMiembro(editingId, {
+                            miembro_id: member.id,
+                            cargo: member.cargo,
+                            activo: true,
+                        })
                     );
-                }
+
+                const agregarPromises = editingMembers
+                    .filter((member) => member.isNew && member.personaId)
+                    .map((member) =>
+                        addMiembro(editingId, {
+                            persona_id: member.personaId,
+                            cargo: member.cargo,
+                            fecha_nombramiento: today,
+                        })
+                    );
+
+                await Promise.all([...removerPromises, ...actualizarPromises, ...agregarPromises]);
             } else {
-                const today = new Date().toISOString().slice(0, 10);
                 const payload = {
                     ...form,
-                    miembros: selectedPersonas.map((personaId) => ({
+                    miembros: selectedDocentes.map(({ personaId, cargo }) => ({
                         persona_id: personaId,
-                        cargo: 'Miembro',
+                        cargo,
                         fecha_nombramiento: today
                     }))
                 };
@@ -125,8 +273,11 @@ export default function Comites() {
 
             await loadData();
             resetForm();
+            setFormOpen(false);
+            setSuccessMessage(editingId ? 'Comité actualizado correctamente' : 'Comité creado correctamente');
+            setTimeout(() => setSuccessMessage(''), 3000);
         } catch (err) {
-            setError('No se pudo guardar el comité. Verifica los datos.');
+            setError(formatErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -142,49 +293,68 @@ export default function Comites() {
             estado: comite.estado || 'activo',
             reglamento: comite.reglamento || ''
         });
-        setSelectedPersonas([]);
+        setEditingMembers((comite.miembros || []).map((miembro) => ({
+            id: miembro.id,
+            personaId: miembro.persona_info?.id || miembro.persona || miembro.persona_id,
+            nombre: miembro.persona_info?.nombre_completo || 'Sin nombre',
+            email: miembro.persona_info?.email_institucional || '',
+            cargo: miembro.cargo || 'Miembro',
+            isNew: false,
+        })));
+        setNewMemberPersonaId('');
+        setFormOpen(true);
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('¿Seguro que deseas eliminar este comité?')) return;
+    const handleNewComite = () => {
+        resetForm();
+        setFormOpen(true);
+    };
+
+    const handleToggleArchive = async (comite) => {
         setLoading(true);
         setError('');
         try {
-            await deleteComite(id);
+            if (comite.estado === 'activo') {
+                await archiveComite(comite.id);
+                setSuccessMessage('Comité archivado correctamente');
+            } else {
+                await unarchiveComite(comite.id);
+                setSuccessMessage('Comité desarchivado correctamente');
+            }
             await loadData();
+            setTimeout(() => setSuccessMessage(''), 3000);
         } catch (err) {
-            setError('No se pudo eliminar el comité.');
+            setError(formatErrorMessage(err));
         } finally {
             setLoading(false);
         }
     };
 
-    const handleEditMiembro = (miembro) => {
-        setEditingMiembroId(miembro.id);
-        setMiembroDraft({
-            cargo: miembro.cargo || 'Miembro',
-            activo: !!miembro.activo
-        });
+    const handleToggleExpanded = (comiteId) => {
+        setExpandedComite((current) => (current === comiteId ? null : comiteId));
     };
 
-    const handleCancelMiembro = () => {
-        setEditingMiembroId(null);
-        setMiembroDraft({ cargo: 'Miembro', activo: true });
+    const handleMemberRoleChange = (miembroId, cargo) => {
+        setMiembroRoles((prev) => ({
+            ...prev,
+            [miembroId]: cargo
+        }));
     };
 
-    const handleSaveMiembro = async (comiteId, miembroId) => {
-        setSavingMiembroId(miembroId);
+    const handleSaveMiembro = async (comiteId, miembro) => {
+        setSavingMiembroId(miembro.id);
         setError('');
         try {
             await updateMiembro(comiteId, {
-                miembro_id: miembroId,
-                cargo: miembroDraft.cargo,
-                activo: miembroDraft.activo
+                miembro_id: miembro.id,
+                cargo: miembroRoles[miembro.id] || miembro.cargo || 'Miembro',
+                activo: miembro.activo
             });
             await loadData();
-            handleCancelMiembro();
+            setSuccessMessage('Integrante actualizado correctamente');
+            setTimeout(() => setSuccessMessage(''), 3000);
         } catch (err) {
-            setError('No se pudo actualizar el miembro del comité.');
+            setError(formatErrorMessage(err));
         } finally {
             setSavingMiembroId(null);
         }
@@ -197,312 +367,467 @@ export default function Comites() {
         try {
             await removeMiembro(comiteId, miembroId);
             await loadData();
-            if (editingMiembroId === miembroId) {
-                handleCancelMiembro();
-            }
+            setSuccessMessage('Integrante removido correctamente');
+            setTimeout(() => setSuccessMessage(''), 3000);
         } catch (err) {
-            setError('No se pudo remover el miembro del comité.');
+            setError(formatErrorMessage(err));
         } finally {
             setSavingMiembroId(null);
         }
     };
 
+    const handleEditMemberRoleChange = (memberId, cargo) => {
+        setEditingMembers((prev) => prev.map((member) => (
+            member.id === memberId ? { ...member, cargo } : member
+        )));
+    };
+
+    const handleRemoveEditMember = (memberId) => {
+        setEditingMembers((prev) => prev.filter((member) => member.id !== memberId));
+    };
+
+    const handleAddEditMember = () => {
+        const personaId = Number(newMemberPersonaId);
+        if (!personaId) return;
+        const docente = docentesOptions.find((item) => Number(item.id) === personaId);
+        if (!docente) return;
+
+        setEditingMembers((prev) => [
+            ...prev,
+            {
+                id: `new-${personaId}-${Date.now()}`,
+                personaId,
+                nombre: docente.label,
+                email: docente.email,
+                cargo: 'Miembro',
+                isNew: true,
+            }
+        ]);
+        setNewMemberPersonaId('');
+    };
+
+    const tableColumns = [
+        {
+            key: 'nombre',
+            label: 'Nombre',
+            render: (row) => <div className="font-medium text-slate-900">{row.nombre}</div>,
+        },
+        {
+            key: 'tipo_comite',
+            label: 'Tipo',
+            render: (row) => <span className="text-slate-600">{row.tipo_comite}</span>,
+        },
+        {
+            key: 'miembros',
+            label: 'Miembros',
+            render: (row) => (
+                <button
+                    type="button"
+                    onClick={() => handleToggleExpanded(row.id)}
+                    className="font-medium text-[#185fa5] hover:underline"
+                >
+                    {(row.total_miembros ?? row.total_miembros_activos ?? row.miembros?.length ?? 0)} integrantes
+                </button>
+            ),
+        },
+        {
+            key: 'estado',
+            label: 'Estado',
+            render: (row) => <StatusBadge status={row.estado} size="sm" />,
+        },
+        {
+            key: 'acciones',
+            label: 'Acciones',
+            render: (row) => (
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={() => handleEdit(row)}
+                        className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c]"
+                    >
+                        Editar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleToggleArchive(row)}
+                        className="rounded-md bg-[#0f6e56] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0a5542]"
+                    >
+                        {row.estado === 'activo' ? 'Archivar' : 'Desarchivar'}
+                    </button>
+                </div>
+            ),
+        },
+    ];
+
+    const selectedCommittee = comites.find((item) => item.id === expandedComite);
+
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
-            <h1 className="text-3xl font-bold text-gray-700 mb-8 border-b pb-2">
-                Creación y Gestión de Comités
-            </h1>
+        <div className="space-y-6 p-6">
+            <PageHeader
+                title="Comités"
+                subtitle="Administra la composición de comités y asigna roles únicamente a docentes institucionales"
+                action={{
+                    label: 'Nuevo Comité',
+                    onClick: handleNewComite,
+                    icon: <Plus className="h-4 w-4" />,
+                }}
+            />
 
             {error && (
-                <div className="mb-6 p-3 rounded-md bg-red-50 text-red-700 text-sm border border-red-200">
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     {error}
                 </div>
             )}
 
-            <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                    {editingId ? 'Editar Comité' : 'Crear Nuevo Comité'}
-                </h2>
-                <form className="space-y-4" onSubmit={handleSubmit}>
+            <SearchFilter
+                value={searchValue}
+                onChange={setSearchValue}
+                placeholder="Buscar por nombre, tipo o descripción..."
+                filters={[
+                    {
+                        key: 'tipo',
+                        label: 'Tipo',
+                        options: tiposComite,
+                    },
+                ]}
+                onFilterChange={({ key, value }) => {
+                    if (key === 'tipo') setFiltroTipo(value);
+                }}
+            />
+
+            <div className="flex flex-wrap items-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => setViewMode('activos')}
+                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                        viewMode === 'activos'
+                            ? 'bg-[#185fa5] text-white'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                >
+                    Activos ({comitesActivos.length})
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setViewMode('archivados')}
+                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                        viewMode === 'archivados'
+                            ? 'bg-[#185fa5] text-white'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                >
+                    Archivados ({comitesArchivados.length})
+                </button>
+            </div>
+
+            <DataTable
+                columns={tableColumns}
+                data={comitesEnVista}
+                loading={loading}
+                emptyMessage={
+                    searchValue || filtroTipo
+                        ? 'No se encontraron comités con ese criterio'
+                        : viewMode === 'archivados'
+                            ? 'No hay comités archivados'
+                            : 'No hay comités activos registrados'
+                }
+                emptyAction={{
+                    label: 'Nuevo Comité',
+                    onClick: handleNewComite,
+                }}
+            />
+
+            {selectedCommittee ? (
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                        <div>
+                            <h2 className="text-lg font-semibold text-slate-900">{selectedCommittee.nombre}</h2>
+                            <p className="text-sm text-slate-500">Integrantes activos y rol asignado por administración.</p>
+                        </div>
+                        <StatusBadge status={selectedCommittee.estado} size="sm" />
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                        <table className="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th className="px-4 py-3">Integrante</th>
+                                    <th className="px-4 py-3">Correo institucional</th>
+                                    <th className="px-4 py-3">Rol</th>
+                                    <th className="px-4 py-3">Estado</th>
+                                    <th className="px-4 py-3 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white">
+                                {(selectedCommittee.miembros || []).length > 0 ? (
+                                    selectedCommittee.miembros.map((miembro) => (
+                                        <tr key={miembro.id} className="hover:bg-slate-50">
+                                            <td className="px-4 py-3 font-medium text-slate-900">
+                                                {miembro.persona_info?.nombre_completo || 'N/A'}
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-600">
+                                                {miembro.persona_info?.email_institucional || 'N/A'}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <select
+                                                    value={miembroRoles[miembro.id] || miembro.cargo || 'Miembro'}
+                                                    onChange={(event) => handleMemberRoleChange(miembro.id, event.target.value)}
+                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
+                                                >
+                                                    {rolesComite.map((rol) => (
+                                                        <option key={rol.value} value={rol.value}>
+                                                            {rol.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <StatusBadge status={miembro.activo ? 'Activo' : 'Inactivo'} size="sm" />
+                                            </td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="inline-flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSaveMiembro(selectedCommittee.id, miembro)}
+                                                        disabled={savingMiembroId === miembro.id}
+                                                        className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c] disabled:opacity-60"
+                                                    >
+                                                        Guardar
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveMiembro(selectedCommittee.id, miembro.id)}
+                                                        disabled={savingMiembroId === miembro.id}
+                                                        className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31] disabled:opacity-60"
+                                                    >
+                                                        Remover
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="5" className="px-4 py-8 text-center text-slate-500">
+                                            Este comité aún no tiene integrantes activos.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            ) : null}
+
+            <FormModal
+                open={formOpen}
+                title={editingId ? 'Editar comité' : 'Nuevo comité'}
+                onClose={() => {
+                    setFormOpen(false);
+                    resetForm();
+                }}
+                onSubmit={handleSubmit}
+                loading={loading}
+                submitLabel={editingId ? 'Guardar cambios' : 'Crear comité'}
+                maxWidth="lg"
+            >
+                <div className="space-y-4">
                     <input
                         type="text"
-                        placeholder="Nombre del Comité"
+                        placeholder="Nombre del comité"
                         value={form.nombre}
-                        onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                        className="block w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-teal-500 focus:border-teal-500"
+                        onChange={(event) => setForm({ ...form, nombre: event.target.value })}
+                        className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
                         required
                     />
 
                     <textarea
                         rows="3"
-                        placeholder="Definir descripción y propósito del comité..."
+                        placeholder="Descripción y propósito del comité"
                         value={form.descripcion}
-                        onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                        className="block w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-teal-500 focus:border-teal-500"
+                        onChange={(event) => setForm({ ...form, descripcion: event.target.value })}
+                        className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
                         required
                     />
 
                     <textarea
                         rows="3"
-                        placeholder="Objetivos del comité..."
+                        placeholder="Objetivos"
                         value={form.objetivos}
-                        onChange={(e) => setForm({ ...form, objetivos: e.target.value })}
-                        className="block w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-teal-500 focus:border-teal-500"
+                        onChange={(event) => setForm({ ...form, objetivos: event.target.value })}
+                        className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
                     />
 
                     <textarea
                         rows="2"
-                        placeholder="Reglamento o lineamientos internos..."
+                        placeholder="Reglamento o lineamientos"
                         value={form.reglamento}
-                        onChange={(e) => setForm({ ...form, reglamento: e.target.value })}
-                        className="block w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-teal-500 focus:border-teal-500"
+                        onChange={(event) => setForm({ ...form, reglamento: event.target.value })}
+                        className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Comité</label>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <label className="space-y-1 text-sm">
+                            <span className="block font-medium text-slate-700">Tipo</span>
                             <select
                                 value={form.tipo_comite}
-                                onChange={(e) => setForm({ ...form, tipo_comite: e.target.value })}
-                                className="block w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-teal-500 focus:border-teal-500"
+                                onChange={(event) => setForm({ ...form, tipo_comite: event.target.value })}
+                                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
                             >
                                 {tiposComite.map((tipo) => (
                                     <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
                                 ))}
                             </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                        </label>
+                        <label className="space-y-1 text-sm">
+                            <span className="block font-medium text-slate-700">Estado</span>
                             <select
                                 value={form.estado}
-                                onChange={(e) => setForm({ ...form, estado: e.target.value })}
-                                className="block w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-teal-500 focus:border-teal-500"
+                                onChange={(event) => setForm({ ...form, estado: event.target.value })}
+                                className="block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
                             >
                                 {estadosComite.map((estado) => (
                                     <option key={estado.value} value={estado.value}>{estado.label}</option>
                                 ))}
                             </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label htmlFor="miembros" className="block text-sm font-medium text-gray-700 mb-1">
-                            {editingId ? 'Agregar Miembros al Comité' : 'Seleccionar Miembros'}
                         </label>
-                        <div className="mt-1 max-h-44 overflow-y-auto rounded-md border border-gray-200 p-2">
-                            {personasOptions.map((persona) => {
-                                const checked = selectedPersonas.includes(persona.id);
-                                return (
-                                    <label key={persona.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-gray-50 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={checked}
-                                            onChange={() => toggleSelectedPersona(persona.id)}
-                                            className="h-4 w-4 text-teal-600 border-gray-300 rounded"
-                                        />
-                                        <span>{persona.label}</span>
-                                    </label>
-                                );
-                            })}
-                            {personasOptions.length === 0 && (
-                                <p className="text-sm text-gray-500 px-2 py-1">No hay personas disponibles.</p>
-                            )}
-                        </div>
-                        {selectedPersonas.length > 0 && (
-                            <p className="mt-2 text-sm text-teal-600">
-                                {selectedPersonas.length} {selectedPersonas.length === 1 ? 'miembro seleccionado' : 'miembros seleccionados'}
-                            </p>
-                        )}
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-2">
-                        {editingId && (
-                            <button
-                                type="button"
-                                onClick={resetForm}
-                                className="px-6 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
-                            >
-                                Cancelar
-                            </button>
-                        )}
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-60"
-                        >
-                            {editingId ? 'Guardar Cambios' : 'Registrar Comité'}
-                        </button>
-                    </div>
-                </form>
-            </section>
-
-            <section className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                    Listado de Comités
-                </h2>
-                <div className="overflow-x-auto border rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Nombre
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Tipo
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Miembros
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Estado
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Acciones
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {comites.map((comite) => (
-                                <Fragment key={comite.id}>
-                                    <tr key={comite.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {comite.nombre}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {comite.tipo_comite}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <button
-                                                onClick={() => setExpandedComite(expandedComite === comite.id ? null : comite.id)}
-                                                className="text-teal-600 hover:text-teal-900 font-medium"
-                                            >
-                                                {comite.total_miembros ?? comite.total_miembros_activos ?? 0} miembros
-                                                <span className="ml-1">{expandedComite === comite.id ? '▼' : '▶'}</span>
-                                            </button>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                comite.estado === 'activo' ? 'bg-green-100 text-green-800' :
-                                                comite.estado === 'inactivo' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            }`}>
-                                                {comite.estado}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm space-x-3">
-                                            <button
-                                                onClick={() => handleEdit(comite)}
-                                                className="text-teal-600 hover:text-teal-900"
-                                            >
-                                                Editar
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(comite.id)}
-                                                className="text-red-600 hover:text-red-900"
-                                            >
-                                                Eliminar
-                                            </button>
-                                        </td>
-                                    </tr>
-                                    {expandedComite === comite.id && comite.miembros && comite.miembros.length > 0 && (
-                                        <tr key={`${comite.id}-miembros`}>
-                                            <td colSpan="5" className="px-6 py-4 bg-gray-50">
-                                                <div className="space-y-2">
-                                                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Integrantes del Comité:</h4>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                        {comite.miembros.map((miembro) => (
-                                                            <div key={miembro.id} className="flex items-center space-x-2 bg-white p-3 rounded-md border border-gray-200">
-                                                                <div className="flex-1">
-                                                                    <p className="text-sm font-medium text-gray-900">
-                                                                        {miembro.persona_info?.nombre_completo || 'N/A'}
-                                                                    </p>
-                                                                    {editingMiembroId === miembro.id ? (
-                                                                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                                                                            <input
-                                                                                type="text"
-                                                                                value={miembroDraft.cargo}
-                                                                                onChange={(e) => setMiembroDraft((prev) => ({ ...prev, cargo: e.target.value }))}
-                                                                                className="border border-gray-300 rounded px-2 py-1 text-xs"
-                                                                            />
-                                                                            <label className="flex items-center gap-1 text-xs text-gray-600">
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={miembroDraft.activo}
-                                                                                    onChange={(e) => setMiembroDraft((prev) => ({ ...prev, activo: e.target.checked }))}
-                                                                                    className="h-3 w-3"
-                                                                                />
-                                                                                Activo
-                                                                            </label>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <p className="text-xs text-gray-500">{miembro.cargo || 'Miembro'}</p>
-                                                                    )}
-                                                                    <p className="text-xs text-gray-400">
-                                                                        {miembro.persona_info?.email_institucional || miembro.persona_info?.email_personal}
-                                                                    </p>
-                                                                </div>
-                                                                <div className="flex flex-col items-end gap-1">
-                                                                    {miembro.activo && (
-                                                                        <span className="text-green-500 text-xs">●</span>
-                                                                    )}
-                                                                    {editingMiembroId === miembro.id ? (
-                                                                        <div className="flex gap-1">
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => handleSaveMiembro(comite.id, miembro.id)}
-                                                                                disabled={savingMiembroId === miembro.id}
-                                                                                className="text-xs text-teal-600 hover:text-teal-800"
-                                                                            >
-                                                                                Guardar
-                                                                            </button>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={handleCancelMiembro}
-                                                                                className="text-xs text-gray-600 hover:text-gray-800"
-                                                                            >
-                                                                                Cancelar
-                                                                            </button>
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="flex gap-1">
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => handleEditMiembro(miembro)}
-                                                                                className="text-xs text-teal-600 hover:text-teal-800"
-                                                                            >
-                                                                                Editar
-                                                                            </button>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => handleRemoveMiembro(comite.id, miembro.id)}
-                                                                                disabled={savingMiembroId === miembro.id}
-                                                                                className="text-xs text-red-600 hover:text-red-800"
-                                                                            >
-                                                                                Remover
-                                                                            </button>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                    {!editingId ? (
+                        <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div>
+                                <h3 className="text-sm font-semibold text-slate-900">Docentes iniciales</h3>
+                                <p className="text-xs text-slate-500">Solo docentes con correo institucional @mep.go.cr.</p>
+                            </div>
+                            <div className="max-h-72 space-y-2 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2">
+                                {docentesOptions.map((docente) => {
+                                    const selected = selectedDocentes.find((item) => item.personaId === docente.id);
+                                    return (
+                                        <div key={docente.id} className="rounded-lg border border-transparent px-3 py-2 hover:border-slate-200 hover:bg-slate-50">
+                                            <label className="flex items-start gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={Boolean(selected)}
+                                                    onChange={() => toggleSelectedDocente(docente.id)}
+                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-[#185fa5]"
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="text-sm font-medium text-slate-900">{docente.label}</div>
+                                                    <div className="text-xs text-slate-500">{docente.email_institucional || 'Sin correo institucional'}</div>
+                                                    {selected ? (
+                                                        <div className="mt-2 max-w-xs">
+                                                            <select
+                                                                value={selected.cargo}
+                                                                onChange={(event) => updateSelectedDocenteCargo(docente.id, event.target.value)}
+                                                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
+                                                            >
+                                                                {rolesComite.map((rol) => (
+                                                                    <option key={rol.value} value={rol.value}>{rol.label}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    ) : null}
                                                 </div>
-                                            </td>
+                                            </label>
+                                        </div>
+                                    );
+                                })}
+                                {docentesOptions.length === 0 ? (
+                                    <p className="px-3 py-4 text-sm text-slate-500">No hay docentes disponibles.</p>
+                                ) : null}
+                            </div>
+                            {selectedDocentes.length > 0 ? (
+                                <p className="text-sm text-[#185fa5]">{selectedDocentes.length} docente(s) seleccionados.</p>
+                            ) : null}
+                        </div>
+                    ) : (
+                        <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div>
+                                <h3 className="text-sm font-semibold text-slate-900">Integrantes del comité</h3>
+                                <p className="text-xs text-slate-500">Aquí puedes quitar, agregar y cambiar el rol interno de cada integrante.</p>
+                            </div>
+
+                            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                    <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th className="px-3 py-2">Docente</th>
+                                            <th className="px-3 py-2">Correo</th>
+                                            <th className="px-3 py-2">Rol</th>
+                                            <th className="px-3 py-2 text-right">Acción</th>
                                         </tr>
-                                    )}
-                                </Fragment>
-                            ))}
-                            {comites.length === 0 && !loading && (
-                                <tr>
-                                    <td className="px-6 py-6 text-center text-sm text-gray-500" colSpan="5">
-                                        No hay comités registrados.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                        {editingMembers.length > 0 ? (
+                                            editingMembers.map((member) => (
+                                                <tr key={member.id}>
+                                                    <td className="px-3 py-2 font-medium text-slate-900">{member.nombre}</td>
+                                                    <td className="px-3 py-2 text-slate-600">{member.email || 'Sin correo institucional'}</td>
+                                                    <td className="px-3 py-2">
+                                                        <select
+                                                            value={member.cargo}
+                                                            onChange={(event) => handleEditMemberRoleChange(member.id, event.target.value)}
+                                                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
+                                                        >
+                                                            {rolesComite.map((rol) => (
+                                                                <option key={rol.value} value={rol.value}>{rol.label}</option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveEditMember(member.id)}
+                                                            className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
+                                                        >
+                                                            Quitar
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="4" className="px-3 py-6 text-center text-slate-500">
+                                                    Este comité no tiene integrantes.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                                <select
+                                    value={newMemberPersonaId}
+                                    onChange={(event) => setNewMemberPersonaId(event.target.value)}
+                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
+                                >
+                                    <option value="">Selecciona un docente para agregar</option>
+                                    {docentesDisponiblesParaEditar.map((docente) => (
+                                        <option key={docente.id} value={docente.id}>
+                                            {docente.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={handleAddEditMember}
+                                    disabled={!newMemberPersonaId}
+                                    className="rounded-md bg-[#185fa5] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0c447c] disabled:opacity-60"
+                                >
+                                    Agregar integrante
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            </section>
+            </FormModal>
+
+            {successMessage ? (
+                <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-lg">
+                    {successMessage}
+                </div>
+            ) : null}
         </div>
     );
 }

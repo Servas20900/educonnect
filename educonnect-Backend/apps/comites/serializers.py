@@ -5,8 +5,54 @@ from apps.databaseModels.models import (
     ComitesActa,
     ComitesInformeOrgano,
     PersonasPersona,
+    PersonasDocente,
+    AuthRol,
+    AuthUsuarioRol,
 )
 from django.utils import timezone
+from django.db import transaction
+
+
+COMITE_CARGOS_PERMITIDOS = {
+    'presidente': 'Presidente',
+    'secretario': 'Secretario',
+    'tesorero': 'Tesorero',
+    'vocal': 'Vocal',
+    'miembro': 'Miembro',
+}
+
+
+def _ensure_committee_role_for_persona(persona, asignado_por=None):
+    usuario = getattr(persona, 'authusuario', None)
+    if not usuario:
+        return
+
+    rol_comite = AuthRol.objects.filter(nombre__iexact='comite', activo=True).first()
+    if not rol_comite:
+        return
+
+    AuthUsuarioRol.objects.get_or_create(
+        usuario=usuario,
+        rol=rol_comite,
+        defaults={
+            'fecha_asignacion': timezone.now(),
+            'asignado_por': asignado_por,
+        }
+    )
+
+
+def _remove_committee_role_if_unused(persona):
+    usuario = getattr(persona, 'authusuario', None)
+    if not usuario:
+        return
+
+    if ComitesMiembro.objects.filter(persona=persona, activo=True).exists():
+        return
+
+    AuthUsuarioRol.objects.filter(
+        usuario=usuario,
+        rol__nombre__iexact='comite'
+    ).delete()
 
 
 class PersonaSimpleSerializer(serializers.ModelSerializer):
@@ -37,6 +83,9 @@ class ComitesMiembroSerializer(serializers.ModelSerializer):
         source='persona',
         write_only=True
     )
+    cargo = serializers.CharField(required=False, default='Miembro')
+    fecha_nombramiento = serializers.DateField(required=False, default=timezone.localdate)
+    activo = serializers.BooleanField(required=False, default=True)
     
     class Meta:
         model = ComitesMiembro
@@ -46,27 +95,55 @@ class ComitesMiembroSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id']
 
+    def _normalizar_cargo(self, cargo):
+        cargo_normalizado = str(cargo or '').strip().lower()
+        return COMITE_CARGOS_PERMITIDOS.get(cargo_normalizado)
+
+    def _persona_es_docente(self, persona):
+        email = str(getattr(persona, 'email_institucional', '') or '').strip().lower()
+        if not email.endswith('@mep.go.cr'):
+            return False
+        return PersonasDocente.objects.filter(persona=persona).exists()
+
     def validate(self, data):
         """Validar que no exista un miembro duplicado en el mismo comité"""
         comite = self.context.get('comite')
-        persona = data.get('persona')
-        cargo = data.get('cargo')
+        persona = data.get('persona') or getattr(self.instance, 'persona', None)
+        cargo = self._normalizar_cargo(data.get('cargo') or getattr(self.instance, 'cargo', None) or 'Miembro')
+
+        if not comite and self.instance:
+            comite = self.instance.comite
+
+        if not comite:
+            raise serializers.ValidationError({'comite': 'Se requiere un comité válido.'})
+
+        if not persona:
+            raise serializers.ValidationError({'persona_id': 'Se requiere una persona válida.'})
+
+        if not cargo:
+            raise serializers.ValidationError({
+                'cargo': 'Cargo no válido. Use presidente, secretario, tesorero, vocal o miembro.'
+            })
+
+        if not self._persona_es_docente(persona):
+            raise serializers.ValidationError({
+                'persona_id': 'Solo se pueden asignar docentes con correo institucional @mep.go.cr.'
+            })
+
+        data['cargo'] = cargo
         
         # Si estamos actualizando, excluir el registro actual
         instance = self.instance
         queryset = ComitesMiembro.objects.filter(
             comite=comite,
             persona=persona,
-            cargo=cargo
         )
         
         if instance:
             queryset = queryset.exclude(pk=instance.pk)
             
         if queryset.exists():
-            raise serializers.ValidationError(
-                "Esta persona ya tiene el mismo cargo en este comité"
-            )
+            raise serializers.ValidationError('Esta persona ya pertenece a este comité.')
         
         # Validar que solo haya un presidente o secretario activo por comité
         if cargo and cargo.lower() in ['presidente', 'secretario']:
@@ -152,22 +229,24 @@ class ComitesComiteCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         miembros_data = validated_data.pop('miembros', [])
+        request = self.context.get('request')
         
         # Establecer fecha_creacion
         validated_data['fecha_creacion'] = timezone.now().date()
-        
-        comite = ComitesComite.objects.create(**validated_data)
-        
-        # Crear miembros si se proporcionaron
-        for miembro_data in miembros_data:
-            ComitesMiembro.objects.create(
-                comite=comite,
-                persona_id=miembro_data.get('persona_id'),
-                cargo=miembro_data.get('cargo', 'Miembro'),
-                fecha_nombramiento=miembro_data.get('fecha_nombramiento', timezone.now().date()),
-                activo=True
-            )
-        
+
+        with transaction.atomic():
+            comite = ComitesComite.objects.create(**validated_data)
+
+            # Crear miembros si se proporcionaron
+            for miembro_data in miembros_data:
+                serializer = ComitesMiembroSerializer(
+                    data=miembro_data,
+                    context={'comite': comite}
+                )
+                serializer.is_valid(raise_exception=True)
+                miembro = serializer.save(comite=comite)
+                _ensure_committee_role_for_persona(miembro.persona, asignado_por=request.user if request else None)
+
         return comite
 
 

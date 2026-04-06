@@ -370,6 +370,11 @@ class ModuloViewSet(viewsets.ViewSet):
         navigation = self._config_value_or_default('navigation')
         if isinstance(navigation, dict):
             for group in navigation.get('items', []):
+                if group.get('id') == 'comite-group':
+                    # Normaliza configuraciones antiguas para que el modulo Comite
+                    # solo aparezca a usuarios con rol comite o administrador.
+                    group['allowed_roles'] = ['administrador', 'comite']
+
                 if group.get('id') != 'docente':
                     continue
                 for child in group.get('children', []):
