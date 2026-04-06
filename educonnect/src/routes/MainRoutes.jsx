@@ -18,12 +18,20 @@ const Perfil      = Loadable(lazy(() => import('../pages/profile/Perfil')));
 const Circulares        = Loadable(lazy(() => import('../pages/admin/Circulares')));
 const CircularesArchivadas = Loadable(lazy(() => import('../pages/admin/Circulares/Archivadas')));
 const Horarios          = Loadable(lazy(() => import('../pages/admin/Horarios')));
+const HorariosArchivados = Loadable(lazy(() => import('../pages/admin/Horarios/Archivados')));
 const Documentos        = Loadable(lazy(() => import('../pages/admin/Repositorios')));
 const Incapacidades     = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
-const Usuarios          = Loadable(lazy(() => import('../pages/admin/GestionPermisosModulos')));
+const GestionPermisos   = Loadable(lazy(() => import('../pages/admin/GestionPermisosModulos')));
 const Reportes          = Loadable(lazy(() => import('../pages/admin/Reportes')));
 const Comites           = Loadable(lazy(() => import('../pages/admin/Comites')));
 const Backups           = Loadable(lazy(() => import('../pages/admin/Backups')));
+
+// Usuarios Module
+const UsuariosHome      = Loadable(lazy(() => import('../pages/admin/Usuarios')));
+const UsuariosDocentes  = Loadable(lazy(() => import('../pages/admin/Usuarios/Docentes')));
+const UsuariosEstudiantes = Loadable(lazy(() => import('../pages/admin/Usuarios/Estudiantes')));
+const UsuariosGradosGrupos = Loadable(lazy(() => import('../pages/admin/Usuarios/GradosGrupos')));
+const UsuariosGrupoEstudiantes = Loadable(lazy(() => import('../pages/admin/Usuarios/GradosGrupos/GrupoEstudiantes')));
 
 // Docente
 const DocenteEstudiantes = Loadable(lazy(() => import('../pages/docente/RegistroEstudiantes')));
@@ -35,6 +43,7 @@ const Comunicados        = Loadable(lazy(() => import('../pages/docente/Comunica
 const CircularesDocente  = Loadable(lazy(() => import('../pages/docente/CircularesDocente')));
 const HorarioDocente     = Loadable(lazy(() => import('../pages/docente/HorarioDocente')));
 const Exportaciones      = Loadable(lazy(() => import('../pages/docente/Exportaciones')));
+const IncapacidadesDocente = Loadable(lazy(() => import('../pages/docente/IncapacidadesDocente')));
 
 // Comité
 const Actas        = Loadable(lazy(() => import('../pages/comite/CrearActa')));
@@ -80,12 +89,35 @@ const AppRoutes = {
     { path: 'circulares',    element: <Guard permissionKey="circulares"><Circulares /></Guard> },
     { path: 'circulares-archivadas', element: <Guard permissionKey="circulares-archivadas"><CircularesArchivadas /></Guard> },
     { path: 'horarios',      element: <Guard permissionKey="horarios"><Horarios /></Guard> },
+    { path: 'horarios-archivados', element: <Guard permissionKey="horarios"><HorariosArchivados /></Guard> },
     { path: 'documentos',    element: <Guard permissionKey="documentos"><Documentos /></Guard> },
     { path: 'incapacidades', element: <Guard permissionKey="incapacidades"><Incapacidades /></Guard> },
-    { path: 'usuarios',      element: <Guard permissionKey="usuarios"><Usuarios /></Guard> },
+    { path: 'permisos',      element: <Guard permissionKey="permisos"><GestionPermisos /></Guard> },
     { path: 'reportes',      element: <Guard permissionKey="reportes"><Reportes /></Guard> },
     { path: 'comites',       element: <Guard permissionKey="comites"><Comites /></Guard> },
     { path: 'backups',       element: <Guard permissionKey="backups"><Backups /></Guard> },
+
+    // Usuarios Module
+    {
+      path: 'usuarios',
+      children: [
+        { index: true, element: <Guard permissionKey="usuarios"><UsuariosHome /></Guard> },
+        { path: 'docentes', element: <Guard permissionKey="usuarios"><UsuariosDocentes /></Guard> },
+        { path: 'estudiantes', element: <Guard permissionKey="usuarios"><UsuariosEstudiantes /></Guard> },
+        { path: 'grados-grupos', element: <Guard permissionKey="usuarios"><UsuariosGradosGrupos /></Guard> },
+        { path: 'grados-grupos/:grupoId/estudiantes', element: <Guard permissionKey="usuarios"><UsuariosGrupoEstudiantes /></Guard> },
+      ],
+    },
+    {
+      path: 'admin/usuarios',
+      children: [
+        { index: true, element: <Guard permissionKey="usuarios"><UsuariosHome /></Guard> },
+        { path: 'docentes', element: <Guard permissionKey="usuarios"><UsuariosDocentes /></Guard> },
+        { path: 'estudiantes', element: <Guard permissionKey="usuarios"><UsuariosEstudiantes /></Guard> },
+        { path: 'grados-grupos', element: <Guard permissionKey="usuarios"><UsuariosGradosGrupos /></Guard> },
+        { path: 'grados-grupos/:grupoId/estudiantes', element: <Guard permissionKey="usuarios"><UsuariosGrupoEstudiantes /></Guard> },
+      ],
+    },
 
     // Docente
     {
@@ -99,6 +131,7 @@ const AppRoutes = {
         { path: 'comunicados',  element: <Guard permissionKey="comunicados"><Comunicados /></Guard> },
         { path: 'circulares',   element: <Guard permissionKey="docente-circulares"><CircularesDocente /></Guard> },
         { path: 'horario',      element: <Guard permissionKey="docente-horario"><HorarioDocente /></Guard> },
+        { path: 'incapacidades',element: <Guard permissionKey="docente-incapacidades"><IncapacidadesDocente /></Guard> },
         { path: 'exportaciones',element: <Guard permissionKey="exportaciones"><Exportaciones /></Guard> },
       ],
     },
