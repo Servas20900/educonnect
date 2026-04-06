@@ -16,9 +16,19 @@ export const fetchRepositorios = async () => {
     }
 };
 
-export const fetchItemsByObject = async (modelName, objectId) => {
+export const fetchItemsByObject = async (modelName, objectId, options = {}) => {
     try {
-        const response = await api.get(`api/v1/documentos/items/${modelName.toLowerCase()}/${objectId}/`);
+        const params = {};
+        if (options.archivadosOnly) {
+            params.archivados_only = true;
+        }
+        if (options.includeArchivados) {
+            params.include_archivados = true;
+        }
+
+        const response = await api.get(`api/v1/documentos/items/${modelName.toLowerCase()}/${objectId}/`, {
+            params,
+        });
         return response.data;
     } catch (error) {
         normalizeError(error, 'Error al cargar documentos');
@@ -93,5 +103,29 @@ export const downloadDocumentoRepositorioArchivo = async (repositorioId, documen
         const normalizedError = new Error('No se pudo descargar el documento');
         normalizedError.details = error?.response?.data || null;
         throw normalizedError;
+    }
+};
+
+export const archivarDocumentoRepositorio = async (repositorioId, documentoId) => {
+    try {
+        const response = await api.patch(
+            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/`,
+            { archivado: true }
+        );
+        return response.data;
+    } catch (error) {
+        normalizeError(error, 'Error al archivar el documento');
+    }
+};
+
+export const desarchivarDocumentoRepositorio = async (repositorioId, documentoId) => {
+    try {
+        const response = await api.patch(
+            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/`,
+            { archivado: false }
+        );
+        return response.data;
+    } catch (error) {
+        normalizeError(error, 'Error al desarchivar el documento');
     }
 };

@@ -42,6 +42,7 @@ DEFAULT_NAVIGATION = {
                         {"id": "circulares", "title": "Circulares", "type": "item", "url": "/docente/circulares"},
                         {"id": "documentos", "title": "Documentos", "type": "item", "url": "/documentos"},
                         {"id": "docente-horario", "title": "Horario", "type": "item", "url": "/docente/horario"},
+                        {"id": "docente-incapacidades", "title": "Incapacidades", "type": "item", "url": "/docente/incapacidades"},
                         {"id": "exportaciones", "title": "Exportaciones", "type": "item", "url": "/docente/exportaciones"}
                     ]
                 }
@@ -119,6 +120,7 @@ DEFAULT_ROUTE_PERMISSIONS = {
     "comunicados": ["administrador", "docente"],
     "docente-circulares": ["administrador", "docente"],
     "docente-horario": ["administrador", "docente"],
+    "docente-incapacidades": ["administrador", "docente"],
     "exportaciones": ["administrador", "docente"],
     "comite-actas": ["administrador", "comite"],
     "comite-reuniones": ["administrador", "comite"],

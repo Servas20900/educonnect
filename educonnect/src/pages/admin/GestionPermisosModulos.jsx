@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Shield, Lock, Unlock, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react'
 import * as PermisosAPI from '../../api/permisosService'
 import {
   ConfirmModal,

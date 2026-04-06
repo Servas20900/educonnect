@@ -1,9 +1,9 @@
 import { api } from "./authService";
 import { uploadDocumentoGenerico } from './repositorios';
 
-export const fetchHorario = async () => {
+export const fetchHorario = async (params = {}) => {
     try {
-        const response = await api.get('/api/v1/horario/Horarios/');
+        const response = await api.get('/api/v1/horario/Horarios/', { params });
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');
@@ -28,7 +28,7 @@ export const createHorario = async (data, archivoSeleccionado) => {
 
 export const updateHorario = async (data, id, archivoSeleccionado) => {
     try {
-        const response = await api.put(`/api/v1/horario/Horarios/${id}/`, data);
+        const response = await api.patch(`/api/v1/horario/Horarios/${id}/`, data);
         return response.data;
     } catch (error) {
         const payload = error.response?.data;

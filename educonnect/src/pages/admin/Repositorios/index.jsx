@@ -79,7 +79,8 @@ export default function RepositoriosDocumentales() {
     crearRepositorio,
     subirDocumento,
     actualizarDocumento,
-    eliminarDocumento,
+    archivarDocumento,
+    desarchivarDocumento,
   } = useRepositorios();
 
   const [repositorioActivo, setRepositorioActivo] = useState(null);
@@ -89,6 +90,7 @@ export default function RepositoriosDocumentales() {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [documentoModalOpen, setDocumentoModalOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [mostrandoArchivados, setMostrandoArchivados] = useState(false);
 
   const [repoForm, setRepoForm] = useState(defaultRepoForm);
   const [uploadForm, setUploadForm] = useState(defaultUploadForm);
@@ -116,6 +118,14 @@ export default function RepositoriosDocumentales() {
 
   const documentosFiltrados = useMemo(() => {
     return documentos.filter((doc) => {
+      const activo = doc?.es_version_actual !== false;
+      if (!isAdmin && !activo) {
+        return false;
+      }
+      if (isAdmin && mostrandoArchivados !== !activo) {
+        return false;
+      }
+
       const texto = search.toLowerCase();
       return (
         doc.nombre?.toLowerCase().includes(texto) ||
@@ -123,7 +133,7 @@ export default function RepositoriosDocumentales() {
         doc.nombre_cargado_por?.toLowerCase().includes(texto)
       );
     });
-  }, [documentos, search]);
+  }, [documentos, search, isAdmin, mostrandoArchivados]);
 
   const showSuccess = (message) => {
     setSuccessMessage(message);
@@ -139,7 +149,8 @@ export default function RepositoriosDocumentales() {
     try {
       setRepositorioActivo(repo);
       setSearch('');
-      await cargarDocumentosRepositorio(repo.id);
+      setMostrandoArchivados(false);
+      await cargarDocumentosRepositorio(repo.id, { archivadosOnly: false });
     } catch (error) {
       showError(error);
     }
@@ -148,6 +159,22 @@ export default function RepositoriosDocumentales() {
   const volverARepositorios = () => {
     setRepositorioActivo(null);
     setSearch('');
+    setMostrandoArchivados(false);
+  };
+
+  const alternarVistaArchivados = async () => {
+    if (!repositorioActivo) return;
+
+    const siguienteVistaArchivados = !mostrandoArchivados;
+    try {
+      setMostrandoArchivados(siguienteVistaArchivados);
+      await cargarDocumentosRepositorio(repositorioActivo.id, {
+        archivadosOnly: siguienteVistaArchivados,
+      });
+    } catch (error) {
+      setMostrandoArchivados(!siguienteVistaArchivados);
+      showError(error);
+    }
   };
 
   const abrirModalNuevoRepositorio = () => {
@@ -207,16 +234,21 @@ export default function RepositoriosDocumentales() {
     }
   };
 
-  const abrirConfirmEliminar = (doc) => {
+  const abrirConfirmArchivo = (doc) => {
     setDocumentoEnEdicion(doc);
     setConfirmDeleteOpen(true);
   };
 
-  const confirmarEliminarDocumento = async () => {
+  const confirmarCambiarEstadoDocumento = async () => {
     try {
-      await eliminarDocumento(repositorioActivo.id, documentoEnEdicion.id);
+      if (mostrandoArchivados) {
+        await desarchivarDocumento(repositorioActivo.id, documentoEnEdicion.id, { archivadosOnly: true });
+        showSuccess('Documento desarchivado correctamente');
+      } else {
+        await archivarDocumento(repositorioActivo.id, documentoEnEdicion.id, { archivadosOnly: false });
+        showSuccess('Documento archivado correctamente');
+      }
       setConfirmDeleteOpen(false);
-      showSuccess('Documento eliminado del repositorio');
     } catch (error) {
       showError(error);
     }
@@ -343,17 +375,19 @@ export default function RepositoriosDocumentales() {
           </button>
           {isAdmin ? (
             <>
+              {!mostrandoArchivados ? (
+                <button
+                  onClick={() => abrirModalEditarDocumento(row)}
+                  className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
+                >
+                  Editar
+                </button>
+              ) : null}
               <button
-                onClick={() => abrirModalEditarDocumento(row)}
-                className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
+                onClick={() => abrirConfirmArchivo(row)}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors ${mostrandoArchivados ? 'bg-[#0f6e56] hover:bg-[#085041]' : 'bg-[#0b2545] hover:bg-[#081a31]'}`}
               >
-                Editar
-              </button>
-              <button
-                onClick={() => abrirConfirmEliminar(row)}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
-              >
-                Eliminar
+                {mostrandoArchivados ? 'Desarchivar' : 'Archivar'}
               </button>
             </>
           ) : null}
@@ -397,13 +431,21 @@ export default function RepositoriosDocumentales() {
       {repositorioActivo ? (
         <>
           {isAdmin ? (
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
               <button
-                onClick={abrirModalSubir}
-                className="rounded-md bg-[#0b2545] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#185fa5]"
+                onClick={alternarVistaArchivados}
+                className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
               >
-                Subir documento
+                {mostrandoArchivados ? 'Ver activos' : 'Ver archivados'}
               </button>
+              {!mostrandoArchivados ? (
+                <button
+                  onClick={abrirModalSubir}
+                  className="rounded-md bg-[#0b2545] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#185fa5]"
+                >
+                  Subir documento
+                </button>
+              ) : null}
             </div>
           ) : null}
 
@@ -411,7 +453,7 @@ export default function RepositoriosDocumentales() {
             columns={columnasDocumentos}
             data={documentosFiltrados}
             loading={loadingDocumentos}
-            emptyMessage="No hay documentos en este repositorio"
+            emptyMessage={mostrandoArchivados ? 'No hay documentos archivados en este repositorio' : 'No hay documentos en este repositorio'}
           />
         </>
       ) : (
@@ -525,13 +567,13 @@ export default function RepositoriosDocumentales() {
 
       <ConfirmModal
         open={confirmDeleteOpen}
-        title="Eliminar documento"
-        message="Esta acción quitará el documento de la vista del repositorio."
-        confirmLabel="Eliminar"
-        onConfirm={confirmarEliminarDocumento}
+        title={mostrandoArchivados ? 'Desarchivar documento' : 'Archivar documento'}
+        message={mostrandoArchivados ? 'El documento volverá a la vista de documentos activos.' : 'El documento se moverá a la vista de archivados.'}
+        confirmLabel={mostrandoArchivados ? 'Desarchivar' : 'Archivar'}
+        onConfirm={confirmarCambiarEstadoDocumento}
         onCancel={() => setConfirmDeleteOpen(false)}
         loading={saving}
-        variant="danger"
+        variant={mostrandoArchivados ? 'info' : 'warning'}
       />
 
       {successMessage ? (

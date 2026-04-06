@@ -692,12 +692,18 @@ class HorariosIncapacidad(models.Model):
     docente = models.ForeignKey('PersonasDocente', models.SET_NULL , null=True )
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField()
+    tipo = models.CharField(max_length=30, default='incapacidad')
+    estado = models.CharField(max_length=20, default='aprobada')
     motivo = models.TextField()
     numero_documento = models.CharField(max_length=50)
-    documento_adjunto = models.CharField(max_length=255, blank=True, null=True)
+    documento_adjunto = models.CharField(max_length=500, blank=True, null=True)
     institucion_emisora = models.CharField(max_length=200)
     registrada_por = models.ForeignKey(AuthUsuario, models.SET_NULL , null=True )
     fecha_registro = models.DateTimeField()
+    fecha_creacion = models.DateField(auto_now_add=True)
+    revisada_por = models.ForeignKey(AuthUsuario, models.SET_NULL , related_name='horariosincapacidad_revisada_por_set', blank=True, null=True)
+    fecha_revision = models.DateTimeField(blank=True, null=True)
+    comentario_revision = models.TextField(blank=True, null=True)
 
     class Meta:
         managed = True

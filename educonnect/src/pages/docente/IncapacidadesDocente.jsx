@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Upload, Plus, Trash2, Edit2, Download, Search, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import {
-  createIncapacidad,
-  fetchCatalogoDocentes,
-  fetchIncapacidades,
-  updateIncapacidad,
-} from '../../api/incapacidades';
+import { createIncapacidad, fetchIncapacidades, updateIncapacidad } from '../../api/incapacidades';
 
 const defaultForm = {
-  docente: '',
   tipo: 'incapacidad',
   fecha_inicio: '',
   fecha_fin: '',
@@ -18,12 +11,7 @@ const defaultForm = {
   archivo: null,
 };
 
-const defaultFiltros = {
-  tipo: '',
-  docenteId: '',
-  fechaDesde: '',
-  fechaHasta: '',
-};
+
 
 const tipoLabel = {
   incapacidad: 'Incapacidad',
@@ -114,46 +102,22 @@ function DropZone({ archivo, onArchivoChange }) {
   );
 }
 
-export default function Incapacidades() {
+export default function IncapacidadesDocente() {
   const [items, setItems] = useState([]);
-  const [docentes, setDocentes] = useState([]);
-  const [filtros, setFiltros] = useState(defaultFiltros);
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [alert, setAlert] = useState({ text: '', type: 'info' });
-
-  const onChangeFiltro = (key, value) => {
-    setFiltros((prev) => ({ ...prev, [key]: value }));
-  };
 
   const onChangeForm = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const onDocenteChange = (docenteId) => {
-    const docenteSeleccionado = docentes.find((item) => String(item.id) === String(docenteId));
-    setForm((prev) => ({
-      ...prev,
-      docente: docenteId,
-      numero_documento: docenteSeleccionado?.identificacion || '',
-    }));
-  };
-
-  const cargarDocentes = async () => {
-    try {
-      const data = await fetchCatalogoDocentes();
-      setDocentes(Array.isArray(data) ? data : []);
-    } catch (error) {
-      const msg = error?.detail || error?.message || 'No se pudo cargar docentes';
-      setAlert({ text: msg, type: 'err' });
-    }
-  };
-
-  const cargarIncapacidades = async (filtrosActivos = filtros) => {
+  const cargarIncapacidades = async () => {
     try {
       setLoading(true);
-      const data = await fetchIncapacidades(filtrosActivos);
+      const data = await fetchIncapacidades();
       setItems(Array.isArray(data) ? data : []);
     } catch (error) {
       const msg = error?.detail || error?.message || 'No se pudo cargar incapacidades';
@@ -164,22 +128,26 @@ export default function Incapacidades() {
   };
 
   useEffect(() => {
-    cargarDocentes();
-    cargarIncapacidades(defaultFiltros);
+    cargarIncapacidades();
   }, []);
 
   const limpiarFormulario = () => {
     setForm(defaultForm);
+    setEditingId(null);
   };
 
-  const registrar = async () => {
-    if (!form.docente || !form.fecha_inicio || !form.fecha_fin || !form.motivo || !form.numero_documento || !form.institucion_emisora) {
+  const validarFormulario = () => {
+    if (!form.fecha_inicio || !form.fecha_fin || !form.motivo || !form.numero_documento || !form.institucion_emisora) {
       setAlert({ text: 'Completa todos los campos obligatorios del formulario', type: 'err' });
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const guardar = async () => {
+    if (!validarFormulario()) return;
 
     const payload = new FormData();
-    payload.append('docente', form.docente);
     payload.append('tipo', form.tipo);
     payload.append('fecha_inicio', form.fecha_inicio);
     payload.append('fecha_fin', form.fecha_fin);
@@ -190,24 +158,42 @@ export default function Incapacidades() {
 
     try {
       setSubmitting(true);
-      await createIncapacidad(payload);
-      setAlert({ text: 'Incapacidad registrada', type: 'ok' });
+      if (editingId) {
+        await updateIncapacidad(editingId, payload);
+        setAlert({ text: 'Incapacidad actualizada', type: 'ok' });
+      } else {
+        await createIncapacidad(payload);
+        setAlert({ text: 'Incapacidad registrada', type: 'ok' });
+      }
       limpiarFormulario();
       await cargarIncapacidades();
     } catch (error) {
-      const msg = error?.detail || error?.message || 'No se pudo registrar';
+      const msg = error?.detail || error?.message || 'No se pudo guardar';
       setAlert({ text: typeof msg === 'string' ? msg : JSON.stringify(msg), type: 'err' });
     } finally {
       setSubmitting(false);
     }
   };
 
+  const editar = (item) => {
+    setEditingId(item.id);
+    setForm({
+      tipo: item.tipo || 'incapacidad',
+      fecha_inicio: item.fecha_inicio || '',
+      fecha_fin: item.fecha_fin || '',
+      motivo: item.motivo || '',
+      numero_documento: item.numero_documento || '',
+      institucion_emisora: item.institucion_emisora || '',
+      archivo: null,
+    });
+  };
+
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-6">
         <header className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
-          <h1 className="text-2xl font-bold text-slate-800">Bitacora de Incapacidades</h1>
-          <p className="text-sm text-slate-500 mt-1">Registro y seguimiento de incapacidades del personal docente y administrativo.</p>
+          <h1 className="text-2xl font-bold text-slate-800">Mis incapacidades</h1>
+          <p className="text-sm text-slate-500 mt-1">Registra incapacidades y consulta su historial.</p>
         </header>
 
         {alert.text ? (
@@ -217,7 +203,7 @@ export default function Incapacidades() {
         ) : null}
 
         <section className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Nuevo registro</h2>
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">{editingId ? 'Editar registro' : 'Nuevo registro'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field label="Fecha creacion">
               <input
@@ -226,21 +212,6 @@ export default function Incapacidades() {
                 disabled
                 className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm"
               />
-            </Field>
-
-            <Field label="Docente">
-              <select
-                value={form.docente}
-                onChange={(e) => onDocenteChange(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">Seleccionar docente</option>
-                {docentes.map((docente) => (
-                  <option key={docente.id} value={docente.id}>
-                    {docente.nombre}
-                  </option>
-                ))}
-              </select>
             </Field>
 
             <Field label="Tipo">
@@ -276,8 +247,8 @@ export default function Incapacidades() {
             <Field label="Numero documento">
               <input
                 value={form.numero_documento}
-                readOnly
-                className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm"
+                onChange={(e) => onChangeForm('numero_documento', e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
               />
             </Field>
 
@@ -289,6 +260,10 @@ export default function Incapacidades() {
               />
             </Field>
 
+            <Field label="Archivo adjunto">
+              <DropZone archivo={form.archivo} onArchivoChange={(file) => onChangeForm('archivo', file)} />
+            </Field>
+
             <div className="lg:col-span-3">
               <Field label="Motivo">
                 <textarea
@@ -297,12 +272,6 @@ export default function Incapacidades() {
                   rows={3}
                   className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
                 />
-              </Field>
-            </div>
-
-            <div className="lg:col-span-3">
-              <Field label="Archivo adjunto">
-                <DropZone archivo={form.archivo} onArchivoChange={(file) => onChangeForm('archivo', file)} />
               </Field>
             </div>
           </div>
@@ -317,79 +286,24 @@ export default function Incapacidades() {
             </button>
             <button
               type="button"
-              onClick={registrar}
+              onClick={guardar}
               disabled={submitting}
               className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {submitting ? 'Guardando...' : 'Registrar'}
+              {submitting ? 'Guardando...' : editingId ? 'Actualizar' : 'Registrar'}
             </button>
           </div>
         </section>
 
         <section className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
-          <div className="flex flex-wrap items-end gap-3 mb-4">
-            <Field label="Tipo">
-              <select
-                value={filtros.tipo}
-                onChange={(e) => onChangeFiltro('tipo', e.target.value)}
-                className="w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">Todos</option>
-                <option value="incapacidad">Incapacidad</option>
-                <option value="justificante">Justificante</option>
-                <option value="permiso">Permiso</option>
-              </select>
-            </Field>
-
-            <Field label="Docente">
-              <select
-                value={filtros.docenteId}
-                onChange={(e) => onChangeFiltro('docenteId', e.target.value)}
-                className="w-64 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">Todos</option>
-                {docentes.map((docente) => (
-                  <option key={docente.id} value={docente.id}>
-                    {docente.nombre}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
-            <Field label="Creacion desde">
-              <input
-                type="date"
-                value={filtros.fechaDesde}
-                onChange={(e) => onChangeFiltro('fechaDesde', e.target.value)}
-                className="w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              />
-            </Field>
-
-            <Field label="Creacion hasta">
-              <input
-                type="date"
-                value={filtros.fechaHasta}
-                onChange={(e) => onChangeFiltro('fechaHasta', e.target.value)}
-                className="w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              />
-            </Field>
-
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-800">Historial</h2>
             <button
               type="button"
-              onClick={() => cargarIncapacidades()}
-              className="h-10 rounded-lg border border-slate-900 bg-slate-900 px-4 text-sm font-semibold text-white"
+              onClick={cargarIncapacidades}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
             >
-              Filtrar
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setFiltros(defaultFiltros);
-                cargarIncapacidades(defaultFiltros);
-              }}
-              className="h-10 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700"
-            >
-              Limpiar
+              Refrescar
             </button>
           </div>
 
@@ -398,17 +312,17 @@ export default function Incapacidades() {
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="px-4 py-3 text-left">Fecha creacion</th>
-                  <th className="px-4 py-3 text-left">Docente</th>
-                  <th className="px-4 py-3 text-left">Tipo</th>
                   <th className="px-4 py-3 text-left">Rango</th>
+                  <th className="px-4 py-3 text-left">Tipo</th>
                   <th className="px-4 py-3 text-left">Documento</th>
+                  <th className="px-4 py-3 text-right">Accion</th>
                 </tr>
               </thead>
               <tbody>
                 {!loading && items.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                      No hay registros para los filtros seleccionados.
+                      No hay incapacidades registradas.
                     </td>
                   </tr>
                 ) : null}
@@ -416,12 +330,8 @@ export default function Incapacidades() {
                 {items.map((item) => (
                   <tr key={item.id} className="border-t border-slate-100">
                     <td className="px-4 py-3 text-slate-700 font-semibold">{item.fecha_creacion}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-slate-800">{item.docente_nombre || 'Sin docente'}</div>
-                      <div className="text-xs text-slate-500">{item.numero_documento}</div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{tipoLabel[item.tipo] || item.tipo}</td>
                     <td className="px-4 py-3 text-xs text-slate-600">{item.fecha_inicio} al {item.fecha_fin}</td>
+                    <td className="px-4 py-3 text-slate-700">{tipoLabel[item.tipo] || item.tipo}</td>
                     <td className="px-4 py-3">
                       {item.documento_url ? (
                         <a href={item.documento_url} target="_blank" rel="noreferrer" className="text-blue-700 hover:text-blue-900 font-semibold">
@@ -430,6 +340,15 @@ export default function Incapacidades() {
                       ) : (
                         <span className="text-slate-500">Sin adjunto</span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => editar(item)}
+                        className="rounded-lg border border-slate-700 bg-slate-700 px-3 py-1 text-xs font-semibold text-white"
+                      >
+                        Editar
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -441,4 +360,3 @@ export default function Incapacidades() {
     </div>
   );
 }
-

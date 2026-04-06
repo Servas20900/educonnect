@@ -12,6 +12,14 @@ def _normalizar_nombre_rol(valor):
     limpio = ''.join(ch for ch in limpio if not unicodedata.combining(ch))
     return limpio.strip().lower()
 
+
+def _to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {'1', 'true', 't', 'yes', 'y', 'si'}
+
 class ViewHorariosHorario(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -20,6 +28,7 @@ class ViewHorariosHorario(viewsets.ModelViewSet):
             prioridad_estado=Case(
                 When(estado="Publicado", then=Value(1)),
                 When(estado="Borrador", then=Value(2)),
+                When(estado="Archivado", then=Value(3)),
                 When(estado="Inactivo", then=Value(3)),
                 default=Value(4),
                 output_field=IntegerField(),
@@ -38,12 +47,22 @@ class ViewHorariosHorario(viewsets.ModelViewSet):
         qs = self._base_queryset()
         user = self.request.user
 
+        estado = self.request.query_params.get('estado')
+        archivados_only = _to_bool(self.request.query_params.get('archivados_only'))
+        exclude_archivados = _to_bool(self.request.query_params.get('exclude_archivados'))
+
         if self._es_admin(user):
+            if archivados_only:
+                qs = qs.filter(estado='Archivado')
+            elif estado:
+                qs = qs.filter(estado=estado)
+            elif exclude_archivados:
+                qs = qs.exclude(estado='Archivado')
             return qs
 
         rol = obtener_rol_usuario(user)
         if rol == 'docente':
-            return qs.filter(docente=user).exclude(estado='Inactivo')
+            return qs.filter(docente=user).exclude(estado__in=['Inactivo', 'Archivado'])
 
         return qs.none()
 

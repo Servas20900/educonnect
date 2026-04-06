@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useHorarios } from './hooks/useHorarios';
 import FormularioHorario from './FormularioHorario';
 import {
@@ -37,6 +38,7 @@ const formatErrorMessage = (error) => {
 };
 
 export default function HorariosList() {
+  const navigate = useNavigate();
   const formRef = useRef(null);
 
   const {
@@ -49,7 +51,7 @@ export default function HorariosList() {
     loadingUsuarios,
     crearHorario,
     actualizarHorario,
-    eliminarHorario,
+    archivarHorario,
     subirDocumentoHorario,
   } = useHorarios();
 
@@ -64,7 +66,7 @@ export default function HorariosList() {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    cargarHorarios();
+    cargarHorarios({ exclude_archivados: true });
     cargarUsuarios();
   }, []);
 
@@ -90,7 +92,10 @@ export default function HorariosList() {
     setCurrentHorario(null);
   };
 
-  const handleOpenConfirm = (horario) => {
+  const handleOpenConfirm = (horario, event) => {
+    if (event?.currentTarget?.blur) {
+      event.currentTarget.blur();
+    }
     setConfirmModal({
       open: true,
       horario,
@@ -100,8 +105,8 @@ export default function HorariosList() {
   const handleConfirmAction = async () => {
     const { horario } = confirmModal;
     try {
-      await eliminarHorario(horario.id);
-      setSuccessMessage('Horario eliminado con éxito');
+      await archivarHorario(horario.id);
+      setSuccessMessage('Horario archivado con éxito');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       setErrorMessage(formatErrorMessage(error));
@@ -207,10 +212,10 @@ export default function HorariosList() {
             Editar
           </button>
           <button
-            onClick={() => handleOpenConfirm(row)}
+            onClick={(event) => handleOpenConfirm(row, event)}
             className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
           >
-            Eliminar
+            Archivar
           </button>
         </div>
       ),
@@ -228,6 +233,16 @@ export default function HorariosList() {
           icon: '+',
         }}
       />
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => navigate('/horarios-archivados')}
+          className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
+        >
+          Ver horarios archivados
+        </button>
+      </div>
 
       <SearchFilter
         value={searchValue}
@@ -267,10 +282,10 @@ export default function HorariosList() {
 
       <ConfirmModal
         open={confirmModal.open}
-        title="Eliminar Horario"
-        message="Este horario será eliminado del sistema permanentemente."
-        variant="danger"
-        confirmLabel="Eliminar"
+        title="Archivar Horario"
+        message="Este horario se moverá a la vista de archivados."
+        variant="warning"
+        confirmLabel="Archivar"
         onConfirm={handleConfirmAction}
         onCancel={() =>
           setConfirmModal({ open: false, horario: null })

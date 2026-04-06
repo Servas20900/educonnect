@@ -363,11 +363,28 @@ class ModuloViewSet(viewsets.ViewSet):
         current_role = roles[0] if roles else 'usuario'
 
         route_permissions = self._config_value_or_default('route_permissions')
-        # Compatibilidad defensiva: el panel /horarios es de administracion,
-        # por lo que se fuerza aqui aunque exista una configuracion antigua en DB.
         route_permissions['horarios'] = ['administrador']
-        # Compatibilidad defensiva: documentos institucionales para administracion y docentes.
         route_permissions['documentos'] = ['administrador', 'docente']
+        route_permissions['docente-incapacidades'] = ['administrador', 'docente']
+
+        navigation = self._config_value_or_default('navigation')
+        if isinstance(navigation, dict):
+            for group in navigation.get('items', []):
+                if group.get('id') != 'docente':
+                    continue
+                for child in group.get('children', []):
+                    if child.get('id') != 'docente-items':
+                        continue
+                    children = child.get('children', [])
+                    existe = any(item.get('id') == 'docente-incapacidades' for item in children)
+                    if not existe:
+                        children.append({
+                            'id': 'docente-incapacidades',
+                            'title': 'Incapacidades',
+                            'type': 'item',
+                            'url': '/docente/incapacidades',
+                        })
+
         allowed_permission_keys = [
             key for key, allowed_roles in route_permissions.items()
             if set(allowed_roles).intersection(set(roles))
@@ -379,7 +396,7 @@ class ModuloViewSet(viewsets.ViewSet):
                 'current_role': current_role,
                 'roles': roles,
             },
-            'navigation': self._config_value_or_default('navigation'),
+            'navigation': navigation,
             'route_permissions': route_permissions,
             'allowed_permission_keys': allowed_permission_keys,
             'catalogs': self._config_value_or_default('catalogs'),

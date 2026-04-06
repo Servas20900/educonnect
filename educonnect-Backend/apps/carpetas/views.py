@@ -39,6 +39,14 @@ def _normalizar_roles(valor_roles):
     return {rol for rol in roles if rol}
 
 
+def _to_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {'1', 'true', 't', 'yes', 'y', 'si'}
+
+
 def _es_admin(user):
     if getattr(user, 'is_superuser', False) or getattr(user, 'is_staff', False):
         return True
@@ -241,11 +249,23 @@ class DocumentosPorObjetoView(APIView):
 
         try:
             ct = ContentType.objects.get(model=model_name.lower())
+            include_archivados = _to_bool(request.query_params.get('include_archivados'))
+            archivados_only = _to_bool(request.query_params.get('archivados_only'))
+
+            # Docentes y otros no admin solo deben ver documentos activos.
+            if not _es_admin(request.user):
+                include_archivados = False
+                archivados_only = False
+
             documentos = DocumentosDocumento.objects.filter(
                 content_type=ct,
                 object_id=object_id,
-                es_version_actual=True
             ).order_by('-fecha_carga')
+
+            if archivados_only:
+                documentos = documentos.filter(es_version_actual=False)
+            elif not include_archivados:
+                documentos = documentos.filter(es_version_actual=True)
             
             serializer = DocumentoReadSerializer(documentos, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -283,8 +303,15 @@ class DocumentoRepositorioDetailView(APIView):
             DocumentosDocumento,
             id=documento_id,
             repositorio_id=repositorio_id,
-            es_version_actual=True,
         )
+
+        if 'archivado' in request.data:
+            archivado = _to_bool(request.data.get('archivado'))
+            documento.es_version_actual = not archivado
+            documento.fecha_modificacion = timezone.now()
+            documento.save(update_fields=['es_version_actual', 'fecha_modificacion'])
+            return Response(DocumentoReadSerializer(documento).data)
+
         serializer = DocumentoUpdateSerializer(documento, data=request.data, partial=True)
 
         if serializer.is_valid():
@@ -309,7 +336,7 @@ class DocumentoRepositorioDetailView(APIView):
         documento.save(update_fields=['es_version_actual', 'fecha_modificacion'])
 
         return Response(
-            {"message": "Documento eliminado del repositorio."},
+            {"message": "Documento archivado correctamente."},
             status=status.HTTP_200_OK,
         )
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus, Trash2, Eye, EyeOff, Archive, RotateCcw, Search, AlertCircle } from 'lucide-react';
 import { useCirculares } from './hooks/useCirculares';
 import FormularioCircular from './FormularioCircular';
 import {

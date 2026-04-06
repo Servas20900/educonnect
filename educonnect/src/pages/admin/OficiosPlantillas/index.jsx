@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Plus, Edit2, Trash2, FileText, AlertCircle, Search } from 'lucide-react';
 import { useOficiosPlantillas } from "./useOficiosPlantillas";
 import FormularioPlantilla from "./FormularioPlantilla";
 
