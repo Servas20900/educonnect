@@ -139,6 +139,87 @@ export const createActa = async (data) => {
     }
 };
 
+export const updateActa = async (id, data) => {
+    try {
+        const response = await api.patch(`api/v1/comites/actas/${id}/`, data);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al actualizar acta');
+    }
+};
+
+export const archiveActa = async (id) => {
+    try {
+        const response = await api.patch(`api/v1/comites/actas/${id}/archivar/`);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al archivar acta');
+    }
+};
+
+export const unarchiveActa = async (id) => {
+    try {
+        const response = await api.patch(`api/v1/comites/actas/${id}/desarchivar/`);
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al desarchivar acta');
+    }
+};
+
+export const uploadActaArchivo = async (id, archivo) => {
+    try {
+        const formData = new FormData();
+        formData.append('file', archivo);
+        const response = await api.post(`api/v1/comites/actas/${id}/compartir/`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al subir archivo de acta');
+    }
+};
+
+export const downloadActaArchivo = async (actaId) => {
+    try {
+        if (!actaId) {
+            throw new Error('La acta no tiene un archivo para descargar');
+        }
+
+        const response = await api.get(`api/v1/comites/actas/${actaId}/descargar/`, {
+            responseType: 'blob',
+        });
+        return response;
+    } catch (error) {
+        const normalizedError = new Error('No se pudo descargar el archivo del acta');
+        const payload = error.response?.data;
+
+        if (payload instanceof Blob) {
+            try {
+                const text = await payload.text();
+                if (text) {
+                    try {
+                        const parsed = JSON.parse(text);
+                        normalizedError.message = parsed?.error || parsed?.detail || normalizedError.message;
+                        normalizedError.details = parsed;
+                        throw normalizedError;
+                    } catch {
+                        const cleanedText = String(text).trim();
+                        normalizedError.message = cleanedText || normalizedError.message;
+                        normalizedError.details = { error: cleanedText || 'Respuesta inválida al descargar archivo' };
+                        throw normalizedError;
+                    }
+                }
+            } catch {
+                normalizedError.details = { error: 'Respuesta inválida al descargar archivo' };
+                throw normalizedError;
+            }
+        }
+
+        normalizedError.details = payload || null;
+        throw normalizedError;
+    }
+};
+
 // ==================== REPORTES ====================
 
 export const fetchReportesComite = async (params = {}) => {

@@ -9,6 +9,7 @@ from apps.databaseModels.comunicaciones.circulares.serializers import (
     ReadSerializerComunicacionesCircular,
     WriteSerializerComunicacionesCircular,
 )
+from datetime import timedelta
 
 
 class ReadSerializerComunicacionesComunicado(serializers.ModelSerializer):
@@ -109,7 +110,8 @@ class WriteSerializerComunicacionesComunicado(serializers.ModelSerializer):
         return normalizados
 
     def validate_fecha_vigencia(self, value):
-        if value and value < timezone.now():
+        # Allow a small tolerance window because HTML datetime-local rounds to minutes.
+        if value and value < (timezone.now() - timedelta(minutes=1)):
             raise serializers.ValidationError('La fecha de vigencia no puede estar en el pasado.')
         return value
 

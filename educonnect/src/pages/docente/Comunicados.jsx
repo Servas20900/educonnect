@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createComunicado, fetchComunicados, hideComunicado } from '../../api/comunicadosService';
+import {
+  createComunicado,
+  fetchComunicados,
+  hideComunicado,
+  setComunicadoVisible,
+  updateComunicado,
+} from '../../api/comunicadosService';
 
 const initialForm = {
   titulo: '',
   contenido: '',
-  tipo_comunicado: 'aviso',
-  destinatarios: ['estudiantes'],
   fecha_vigencia: ''
 };
 
@@ -25,14 +29,34 @@ const formatDestinatarios = (destinatarios = []) => {
   return destinatarios.map((item) => labels[item] || item).join(', ');
 };
 
+const extractApiErrorMessage = (error) => {
+  const payload = error?.response?.data || error;
+  if (!payload) return 'No se pudo procesar el comunicado. Verifica los datos.';
+
+  if (typeof payload === 'string') return payload;
+  if (typeof payload.detail === 'string') return payload.detail;
+  if (typeof payload.message === 'string') return payload.message;
+
+  const firstKey = Object.keys(payload)[0];
+  if (firstKey) {
+    const firstValue = payload[firstKey];
+    if (Array.isArray(firstValue) && firstValue.length > 0) return String(firstValue[0]);
+    if (typeof firstValue === 'string') return firstValue;
+  }
+
+  return 'No se pudo procesar el comunicado. Verifica los datos.';
+};
+
 export default function Comunicados() {
   const [comunicados, setComunicados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [mensaje, setMensaje] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(initialForm);
+  const [editingId, setEditingId] = useState(null);
 
   const cargarComunicados = async () => {
     setLoading(true);
@@ -56,49 +80,96 @@ export default function Comunicados() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleDestinatarioChange = (destinatario) => {
-    setForm((prev) => {
-      const alreadySelected = prev.destinatarios.includes(destinatario);
-      const next = alreadySelected
-        ? prev.destinatarios.filter((item) => item !== destinatario)
-        : [...prev.destinatarios, destinatario];
-
-      return {
-        ...prev,
-        destinatarios: next
-      };
-    });
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (form.destinatarios.length === 0) {
-      setError('Selecciona al menos un destinatario.');
-      return;
-    }
 
     setSubmitting(true);
     setError('');
+    setMensaje('');
     try {
-      await createComunicado({
+      const normalizedFecha = form.fecha_vigencia ? new Date(form.fecha_vigencia) : null;
+      if (form.fecha_vigencia && Number.isNaN(normalizedFecha.getTime())) {
+        setError('La fecha de vigencia no tiene un formato válido.');
+        setSubmitting(false);
+        return;
+      }
+
+      const payload = {
         ...form,
-        fecha_vigencia: form.fecha_vigencia || null
-      });
+        tipo_comunicado: 'aviso',
+        destinatarios: ['estudiantes', 'encargados'],
+        fecha_vigencia: normalizedFecha ? normalizedFecha.toISOString() : null
+      };
+
+      if (editingId) {
+        await updateComunicado(editingId, payload);
+        setMensaje('Comunicado actualizado correctamente.');
+      } else {
+        await createComunicado(payload);
+        setMensaje('Comunicado creado correctamente.');
+      }
+
       setForm(initialForm);
+      setEditingId(null);
       await cargarComunicados();
-    } catch {
-      setError('No se pudo crear el comunicado. Verifica los datos.');
+    } catch (err) {
+      const detail = extractApiErrorMessage(err);
+      setError(editingId
+        ? `No se pudo actualizar el comunicado. ${detail}`
+        : `No se pudo crear el comunicado. ${detail}`
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleEditar = (comunicado) => {
+    setEditingId(comunicado.id);
+    setError('');
+    setMensaje('Editando comunicado seleccionado.');
+    setForm({
+      titulo: comunicado.titulo || '',
+      contenido: comunicado.contenido || '',
+      fecha_vigencia: comunicado.fecha_vigencia
+        ? new Date(comunicado.fecha_vigencia).toISOString().slice(0, 16)
+        : ''
+    });
+  };
+
+  const handleCancelarEdicion = () => {
+    setEditingId(null);
+    setForm(initialForm);
+    setMensaje('');
+    setError('');
+  };
+
   const handleOcultar = async (id) => {
+    const ok = window.confirm('¿Seguro que deseas eliminar este comunicado? Se ocultará para los destinatarios.');
+    if (!ok) return;
+
+    setError('');
+    setMensaje('');
     try {
       await hideComunicado(id);
+      if (editingId === id) {
+        handleCancelarEdicion();
+      }
+      setMensaje('Comunicado eliminado correctamente.');
       await cargarComunicados();
     } catch {
-      setError('No se pudo ocultar el comunicado.');
+      setError('No se pudo eliminar el comunicado.');
+    }
+  };
+
+  const handleToggleVisible = async (id, visible) => {
+    setError('');
+    setMensaje('');
+    try {
+      await setComunicadoVisible(id, visible);
+      setMensaje(visible ? 'Comunicado publicado.' : 'Comunicado despublicado.');
+      await cargarComunicados();
+    } catch {
+      setError('No se pudo cambiar la visibilidad del comunicado.');
     }
   };
 
@@ -120,6 +191,21 @@ export default function Comunicados() {
       </div>
 
       <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-gray-700">
+            {editingId ? 'Editar comunicado' : 'Nuevo comunicado'}
+          </h3>
+          {editingId && (
+            <button
+              type="button"
+              onClick={handleCancelarEdicion}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar edición
+            </button>
+          )}
+        </div>
+
         <div className="grid gap-3 md:grid-cols-2">
           <input
             name="titulo"
@@ -129,16 +215,9 @@ export default function Comunicados() {
             placeholder="Título"
             required
           />
-          <select
-            name="tipo_comunicado"
-            value={form.tipo_comunicado}
-            onChange={handleFieldChange}
-            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
-          >
-            <option value="aviso">Aviso</option>
-            <option value="tarea">Tarea</option>
-            <option value="cambio">Cambio</option>
-          </select>
+          <div className="w-full rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+            Tipo: Aviso (fijo)
+          </div>
         </div>
 
         <textarea
@@ -151,23 +230,8 @@ export default function Comunicados() {
           required
         />
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={form.destinatarios.includes('estudiantes')}
-              onChange={() => handleDestinatarioChange('estudiantes')}
-            />
-            Estudiantes
-          </label>
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              checked={form.destinatarios.includes('encargados')}
-              onChange={() => handleDestinatarioChange('encargados')}
-            />
-            Encargados
-          </label>
+        <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+          Destinatarios automáticos: Estudiantes y Encargados
         </div>
 
         <input
@@ -181,11 +245,17 @@ export default function Comunicados() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700 disabled:opacity-60"
+          className="rounded-lg bg-[#185fa5] px-4 py-2 text-sm font-medium text-white shadow hover:bg-[#378add] disabled:opacity-60"
         >
-          {submitting ? 'Enviando...' : 'Emitir comunicado'}
+          {submitting ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Emitir comunicado'}
         </button>
       </form>
+
+      {mensaje && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+          {mensaje}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -246,16 +316,35 @@ export default function Comunicados() {
                       </span>
                     </td>
                     <td className="px-3 py-2 space-x-2">
+                      <button
+                        className="text-[#185fa5] hover:text-[#0b2545]"
+                        onClick={() => handleEditar(comunicado)}
+                      >
+                        Editar
+                      </button>
+
                       {comunicado.visible ? (
                         <button
-                          className="text-red-600 hover:text-red-800"
-                          onClick={() => handleOcultar(comunicado.id)}
+                          className="text-amber-700 hover:text-amber-900"
+                          onClick={() => handleToggleVisible(comunicado.id, false)}
                         >
-                          Ocultar
+                          Despublicar
                         </button>
                       ) : (
-                        <span className="text-gray-400">—</span>
+                        <button
+                          className="text-emerald-700 hover:text-emerald-900"
+                          onClick={() => handleToggleVisible(comunicado.id, true)}
+                        >
+                          Publicar
+                        </button>
                       )}
+
+                      <button
+                        className="text-red-600 hover:text-red-800"
+                        onClick={() => handleOcultar(comunicado.id)}
+                      >
+                        Eliminar
+                      </button>
                     </td>
                   </tr>
                 ))

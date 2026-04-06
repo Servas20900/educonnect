@@ -6,11 +6,16 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.files.base import ContentFile
 from django.utils import timezone
+from django.db.models import Q
 from io import BytesIO
 import uuid
 
 from .models import Exportacion
 from apps.databaseModels.models import (
+    AcademicoDocenteGrupo,
+    AcademicoGrupo,
+    EvaluacionesCalificacion,
+    EvaluacionesEvaluacion,
     PersonasDocente,
     PersonasEstudiante,
     AcademicoMatricula,
@@ -63,6 +68,47 @@ class ViewExportaciones(viewsets.ModelViewSet):
         wb.save(output)
         output.seek(0)
         return output.getvalue()
+
+    def _docente_candidate_ids(self):
+        user = self.request.user
+        candidate_ids = set()
+        persona_id = getattr(user, 'persona_id', None)
+        if persona_id:
+            candidate_ids.add(persona_id)
+        if getattr(user, 'id', None):
+            candidate_ids.add(user.id)
+        return list(candidate_ids)
+
+    def _docente_ids_for_user(self):
+        candidate_ids = self._docente_candidate_ids()
+        if not candidate_ids:
+            return []
+
+        docentes_ids = list(
+            PersonasDocente.objects.filter(persona_id__in=candidate_ids).values_list('persona_id', flat=True)
+        )
+        return docentes_ids or candidate_ids
+
+    def _grupo_docente_or_none(self, docente_ids, grupo_id):
+        if not docente_ids:
+            return None
+
+        return (
+            AcademicoGrupo.objects.filter(
+                Q(docente_guia_id__in=docente_ids)
+                | Q(academicodocentegrupo__docente_id__in=docente_ids, academicodocentegrupo__activo=True),
+                id=grupo_id,
+                estado__iexact='activo',
+            )
+            .distinct()
+            .first()
+        )
+
+    def _nombre_estudiante(self, estudiante):
+        persona = getattr(estudiante, 'persona', None)
+        if not persona:
+            return 'N/A'
+        return f"{persona.nombre} {persona.primer_apellido} {persona.segundo_apellido or ''}".strip()
 
     def _save_generated_export(self, base_name, formato, content, extension):
         exportacion = Exportacion.objects.create(
@@ -128,6 +174,76 @@ class ViewExportaciones(viewsets.ModelViewSet):
                 estudiante.fecha_ingreso.isoformat() if estudiante.fecha_ingreso else '',
             ])
         return headers, rows
+
+    def _planilla_grupo_xlsx(self, grupo_id, allow_any_group=False):
+        docente_ids = self._docente_ids_for_user()
+        if allow_any_group:
+            grupo = AcademicoGrupo.objects.filter(id=grupo_id, estado__iexact='activo').first()
+        else:
+            grupo = self._grupo_docente_or_none(docente_ids, grupo_id)
+        if not grupo:
+            return None, None, None
+
+        evaluaciones = list(
+            EvaluacionesEvaluacion.objects.filter(
+                docente_grupo__grupo_id=grupo_id,
+                docente_grupo__docente_id__in=docente_ids,
+                docente_grupo__activo=True,
+            ).order_by('fecha_evaluacion', 'id')
+        )
+
+        matriculas = list(
+            AcademicoMatricula.objects.select_related('estudiante__persona').filter(
+                grupo_id=grupo_id,
+                estado__iexact='activo',
+            )
+        )
+
+        estudiantes = [m.estudiante for m in matriculas if getattr(m, 'estudiante', None)]
+        if not estudiantes:
+            return grupo, evaluaciones, []
+
+        calificaciones = EvaluacionesCalificacion.objects.filter(
+            evaluacion__in=evaluaciones,
+            estudiante__in=estudiantes,
+        ).select_related('evaluacion', 'estudiante')
+
+        calificaciones_map = {}
+        for calificacion in calificaciones:
+            calificaciones_map[(calificacion.estudiante_id, calificacion.evaluacion_id)] = calificacion
+
+        headers = ['Codigo', 'Estudiante']
+        headers.extend([evaluacion.nombre for evaluacion in evaluaciones])
+        headers.extend(['Promedio ponderado', 'Total evaluaciones'])
+
+        rows = []
+        for estudiante in estudiantes:
+            row = [
+                estudiante.codigo_estudiante,
+                self._nombre_estudiante(estudiante),
+            ]
+
+            total_pesado = 0
+            total_valor = 0
+            for evaluacion in evaluaciones:
+                calificacion = calificaciones_map.get((estudiante.pk, evaluacion.id))
+                nota = calificacion.nota if calificacion else None
+                if nota is None:
+                    row.append('')
+                    continue
+
+                row.append(float(nota))
+                nota_maxima = evaluacion.nota_maxima or 0
+                valor = evaluacion.valor_porcentual or 0
+                if nota_maxima:
+                    total_pesado += (float(nota) / float(nota_maxima)) * float(valor)
+                    total_valor += float(valor)
+
+            row.append(round(total_pesado, 2) if total_valor else '')
+            row.append(len(evaluaciones))
+            rows.append(row)
+
+        return grupo, headers, rows
 
     def get_queryset(self):
         return Exportacion.objects.filter(docente=self.request.user).order_by("-actualizado")
@@ -280,4 +396,36 @@ class ViewExportaciones(viewsets.ModelViewSet):
         # nombre sugerido
         filename = exp.archivo.name.split("/")[-1]
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+    @action(detail=False, methods=['get'], url_path='planilla/(?P<grupo_id>[0-9]+)')
+    def planilla(self, request, grupo_id=None):
+        allow_any_group = self._is_admin()
+
+        try:
+            grupo, headers, rows = self._planilla_grupo_xlsx(grupo_id, allow_any_group=allow_any_group)
+        except Exception as exc:
+            return Response(
+                {'detail': f'No se pudo generar la planilla: {exc}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        if not grupo:
+            return Response({'detail': 'Grupo no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if headers is None:
+            return Response({'detail': 'No se pudo preparar la planilla.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            content = self._build_xlsx(headers, rows)
+        except ImportError as exc:
+            return Response(
+                {'detail': f'Dependencia faltante para exportación: {exc}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        filename = f'planilla_{grupo.codigo_grupo or grupo.id}.xlsx'
+        response = FileResponse(BytesIO(content), as_attachment=True)
+        response['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
