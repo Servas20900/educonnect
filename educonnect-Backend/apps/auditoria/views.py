@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Count, Max
 from django.utils import timezone
+from django.db.models import Q
 from apps.databaseModels.models import AuthAuditoriaLog
 from .serializers import ReadSerializerAuthAuditoriaLog
 
@@ -19,6 +20,46 @@ class ViewAuthAuditoriaLog(viewsets.ReadOnlyModelViewSet):
     search_fields = ['usuario__email', 'accion', 'modulo', 'descripcion']
     ordering_fields = ['fecha_hora', 'accion', 'modulo']
     ordering = ['-fecha_hora']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        params = self.request.query_params
+
+        usuario_id = params.get('usuario_id')
+        usuario_query = (params.get('usuario') or '').strip()
+        modulo = (params.get('modulo') or '').strip()
+        accion = (params.get('accion') or '').strip()
+        resultado = (params.get('resultado') or '').strip()
+        fecha_inicio = (params.get('fecha_inicio') or params.get('fecha_desde') or '').strip()
+        fecha_fin = (params.get('fecha_fin') or params.get('fecha_hasta') or '').strip()
+
+        if usuario_id:
+            queryset = queryset.filter(usuario_id=usuario_id)
+
+        if usuario_query:
+            queryset = queryset.filter(
+                Q(usuario__email__icontains=usuario_query)
+                | Q(usuario__username__icontains=usuario_query)
+                | Q(usuario__persona__nombre__icontains=usuario_query)
+                | Q(usuario__persona__primer_apellido__icontains=usuario_query)
+            )
+
+        if modulo:
+            queryset = queryset.filter(modulo__icontains=modulo)
+
+        if accion:
+            queryset = queryset.filter(accion__icontains=accion)
+
+        if resultado:
+            queryset = queryset.filter(resultado__iexact=resultado)
+
+        if fecha_inicio:
+            queryset = queryset.filter(fecha_hora__gte=fecha_inicio)
+
+        if fecha_fin:
+            queryset = queryset.filter(fecha_hora__lte=fecha_fin)
+
+        return queryset
 
 
 def _email_usuario(valor_usuario):
