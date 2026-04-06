@@ -42,9 +42,7 @@ DEFAULT_NAVIGATION = {
                         {"id": "comunicados", "title": "Comunicados", "type": "item", "url": "/docente/comunicados"},
                         {"id": "circulares", "title": "Circulares", "type": "item", "url": "/docente/circulares"},
                         {"id": "documentos", "title": "Documentos", "type": "item", "url": "/documentos"},
-                        {"id": "docente-horario", "title": "Horario", "type": "item", "url": "/docente/horario"},
-                        {"id": "docente-incapacidades", "title": "Incapacidades", "type": "item", "url": "/docente/incapacidades"},
-                        {"id": "exportaciones", "title": "Exportaciones", "type": "item", "url": "/docente/exportaciones"}
+                        {"id": "docente-horario", "title": "Horario", "type": "item", "url": "/docente/horario"}
                     ]
                 }
             ]
@@ -70,15 +68,14 @@ DEFAULT_NAVIGATION = {
             "id": "auxiliares",
             "title": "Auxiliares",
             "type": "group",
-            "allowed_roles": ["administrador"],
+            "allowed_roles": ["administrador", "auxiliares", "auxiliar"],
             "children": [
                 {
                     "id": "auxiliares-items",
                     "type": "collapse",
                     "children": [
                         {"id": "informes-economicos", "title": "Informes", "type": "item", "url": "/auxiliares/informes"},
-                        {"id": "reglamentos", "title": "Reglamentos", "type": "item", "url": "/auxiliares/reglamentos"},
-                        {"id": "reportes-cumplimiento", "title": "Cumplimiento", "type": "item", "url": "/auxiliares/cumplimiento"}
+                        {"id": "reglamentos", "title": "Reglamentos", "type": "item", "url": "/auxiliares/reglamentos"}
                     ]
                 }
             ]
@@ -121,14 +118,11 @@ DEFAULT_ROUTE_PERMISSIONS = {
     "comunicados": ["administrador", "docente"],
     "docente-circulares": ["administrador", "docente"],
     "docente-horario": ["administrador", "docente"],
-    "docente-incapacidades": ["administrador", "docente"],
-    "exportaciones": ["administrador", "docente"],
     "comite-actas": ["administrador", "comite"],
     "comite-reuniones": ["administrador", "comite"],
     "comite-roles": ["administrador", "comite"],
-    "auxiliares-informes": ["administrador"],
-    "auxiliares-reglamentos": ["administrador"],
-    "auxiliares-cumplimiento": ["administrador"],
+    "auxiliares-informes": ["administrador", "auxiliares", "auxiliar"],
+    "auxiliares-reglamentos": ["administrador", "auxiliares", "auxiliar"],
     "estudiante-comunicados": ["administrador", "estudiante"]
 }
 
@@ -187,6 +181,11 @@ DEFAULT_CATALOGS = {
     "filtro_estado_usuario": [
         {"value": "activo", "label": "Activos"},
         {"value": "inactivo", "label": "Inactivos"}
+    ],
+    "auxiliares_tipos_informe": [
+        {"value": "economico", "label": "Economico"},
+        {"value": "pat", "label": "PAT"},
+        {"value": "reglamento", "label": "Reglamento"}
     ]
 }
 

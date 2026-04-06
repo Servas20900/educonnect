@@ -1,6 +1,29 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/';
+const normalizeApiBaseUrl = (rawValue) => {
+    const fallback = 'http://localhost:8000/';
+    const value = String(rawValue || '').trim();
+
+    if (!value) return fallback;
+
+    let normalized = value;
+
+    if (normalized.startsWith(':')) {
+        normalized = `http://localhost${normalized}`;
+    } else if (normalized.startsWith('/')) {
+        normalized = `${window.location.origin}${normalized}`;
+    } else if (!/^https?:\/\//i.test(normalized)) {
+        normalized = `http://${normalized}`;
+    }
+
+    if (!normalized.endsWith('/')) {
+        normalized = `${normalized}/`;
+    }
+
+    return normalized;
+};
+
+const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/');
 
 export const api = axios.create({
     baseURL: API_BASE_URL,

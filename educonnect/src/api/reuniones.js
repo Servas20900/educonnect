@@ -1,8 +1,10 @@
 import { api } from './authService';
 
-export const getReuniones = async () => {
+export const getReuniones = async (params = {}) => {
     try {
-        const response = await api.get('api/v1/reuniones/reuniones/');
+        const query = new URLSearchParams(params).toString();
+        const url = query ? `api/v1/reuniones/reuniones/?${query}` : 'api/v1/reuniones/reuniones/';
+        const response = await api.get(url);
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error al obtener reuniones');
@@ -20,7 +22,7 @@ export const crearReunion = async (reunionData) => {
 
 export const actualizarReunion = async (id, updateData) => {
     try {
-        const response = await api.patch(`api/v1/reuniones/reuniones//${id}/`, updateData);
+        const response = await api.patch(`api/v1/reuniones/reuniones/${id}/`, updateData);
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error al actualizar la reunión');

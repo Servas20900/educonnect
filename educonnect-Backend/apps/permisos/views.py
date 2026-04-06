@@ -299,7 +299,7 @@ class ModuloViewSet(viewsets.ViewSet):
                 'submodulos': [
                     'Dashboard', 'Estudiantes', 'Evaluaciones', 'Calificaciones',
                     'Promedios', 'Planeamientos', 'Comunicados', 'Asistencia',
-                    'Exportaciones', 'Estudiantes en Riesgo'
+                    'Exportación de Notas', 'Estudiantes en Riesgo'
                 ]
             },
             {
@@ -313,8 +313,7 @@ class ModuloViewSet(viewsets.ViewSet):
                 'nombre': 'Órganos Auxiliares',
                 'grupo': 'Auxiliares',
                 'submodulos': [
-                    'Informes Económicos', 'Reglamentos',
-                    'Informes PAT', 'Reportes Cumplimiento'
+                    'Informes Económicos', 'Reglamentos', 'Informes PAT'
                 ]
             },
             {
@@ -365,7 +364,8 @@ class ModuloViewSet(viewsets.ViewSet):
         route_permissions = self._config_value_or_default('route_permissions')
         route_permissions['horarios'] = ['administrador']
         route_permissions['documentos'] = ['administrador', 'docente']
-        route_permissions['docente-incapacidades'] = ['administrador', 'docente']
+        route_permissions.pop('docente-incapacidades', None)
+        route_permissions.pop('auxiliares-cumplimiento', None)
 
         navigation = self._config_value_or_default('navigation')
         if isinstance(navigation, dict):
@@ -374,21 +374,30 @@ class ModuloViewSet(viewsets.ViewSet):
                     # Normaliza configuraciones antiguas para que el modulo Comite
                     # solo aparezca a usuarios con rol comite o administrador.
                     group['allowed_roles'] = ['administrador', 'comite']
+                if group.get('id') == 'docente':
+                    for child in group.get('children', []):
+                        if child.get('id') != 'docente-items':
+                            continue
+                        child['children'] = [
+                            item for item in child.get('children', [])
+                            if item.get('id') not in {'docente-incapacidades', 'incapacidades'}
+                        ]
+                if group.get('id') == 'auxiliares':
+                    # Garantiza visibilidad del modulo Auxiliares para roles vigentes y legado.
+                    group['allowed_roles'] = ['administrador', 'auxiliares', 'auxiliar']
+                    for child in group.get('children', []):
+                        if child.get('id') != 'auxiliares-items':
+                            continue
+                        child['children'] = [
+                            item for item in child.get('children', [])
+                            if item.get('id') != 'reportes-cumplimiento'
+                        ]
 
-                if group.get('id') != 'docente':
-                    continue
-                for child in group.get('children', []):
-                    if child.get('id') != 'docente-items':
-                        continue
-                    children = child.get('children', [])
-                    existe = any(item.get('id') == 'docente-incapacidades' for item in children)
-                    if not existe:
-                        children.append({
-                            'id': 'docente-incapacidades',
-                            'title': 'Incapacidades',
-                            'type': 'item',
-                            'url': '/docente/incapacidades',
-                        })
+        for key in ('auxiliares-informes', 'auxiliares-reglamentos'):
+            existing_roles = route_permissions.get(key, [])
+            normalized_roles = {str(role).strip().lower() for role in existing_roles if role}
+            normalized_roles.update({'administrador', 'auxiliares', 'auxiliar'})
+            route_permissions[key] = sorted(normalized_roles)
 
         allowed_permission_keys = [
             key for key, allowed_roles in route_permissions.items()

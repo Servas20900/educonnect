@@ -1,8 +1,14 @@
-﻿export default function Reglamentos() {
+﻿import InformesEconomicos from './informesEconomicos';
+
+export default function Reglamentos() {
   return (
-    <div>
-      <h1>Reglamentos</h1>
-      <p>Módulo en construcción.</p>
-    </div>
+    <InformesEconomicos
+      moduleTitle="Reglamentos Auxiliares"
+      moduleSubtitle="Registrar, visualizar, descargar y archivar reglamentos"
+      createLabel="Nuevo Reglamento"
+      fixedCategoria="reglamento"
+      showCategoriaFilter={false}
+      searchPlaceholder="Buscar reglamentos por titulo o responsable"
+    />
   );
 }

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   fetchGruposDocente,
   fetchAsistenciaDiaria,
@@ -6,12 +7,37 @@ import {
   cerrarAsistenciaDiaria,
   fetchHistorialAsistencia,
 } from "../../api/asistenciaService";
+import { PageHeader } from "../../components/ui";
+
+const getTodayISO = () => new Date().toISOString().slice(0, 10);
+
+const isWeekendDate = (dateString) => {
+  if (!dateString) return false;
+  const day = new Date(`${dateString}T00:00:00`).getDay();
+  return day === 0 || day === 6;
+};
+
+const isPastDate = (dateString) => {
+  if (!dateString) return false;
+  return dateString < getTodayISO();
+};
+
+const isInvalidAttendanceDate = (dateString) => isPastDate(dateString) || isWeekendDate(dateString);
+
+const getNextValidDate = () => {
+  const date = new Date();
+  while (date.getDay() === 0 || date.getDay() === 6) {
+    date.setDate(date.getDate() + 1);
+  }
+  return date.toISOString().slice(0, 10);
+};
 
 export default function RegistroAsistencia() {
+  const navigate = useNavigate();
   const [grupoId, setGrupoId] = useState("");
   const [grupos, setGrupos] = useState([]);
 
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
+  const [fecha, setFecha] = useState(getNextValidDate());
 
   const [listaEstudiantes, setListaEstudiantes] = useState([]);
   const [historial, setHistorial] = useState([]);
@@ -45,6 +71,14 @@ export default function RegistroAsistencia() {
 
   const loadAsistencia = async () => {
     if (!grupoId || !fecha) return;
+
+    if (isInvalidAttendanceDate(fecha)) {
+      setError("Solo se permite registrar asistencia para hoy o fechas futuras en días hábiles.");
+      setListaEstudiantes([]);
+      setResumen({ presentes: 0, ausentes: 0, tardias: 0, justificadas: 0, total: 0 });
+      setCerrado(false);
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -89,6 +123,47 @@ export default function RegistroAsistencia() {
       loadHistorial();
     }
   }, [grupoId, fecha]);
+
+  const historialPorDia = useMemo(() => {
+    const grouped = {};
+
+    historial.forEach((item) => {
+      const key = item.fecha;
+      if (!grouped[key]) {
+        grouped[key] = {
+          fecha: key,
+          presentes: 0,
+          ausentes: 0,
+          tardias: 0,
+          justificadas: 0,
+          total: 0,
+        };
+      }
+
+      grouped[key].total += 1;
+      if (item.estado === "presente") grouped[key].presentes += 1;
+      if (item.estado === "ausente") grouped[key].ausentes += 1;
+      if (item.estado === "tardia") grouped[key].tardias += 1;
+      if (item.justificada) grouped[key].justificadas += 1;
+    });
+
+    return Object.values(grouped).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+  }, [historial]);
+
+  const handleFechaChange = (value) => {
+    if (isPastDate(value)) {
+      setError("No se permite seleccionar fechas anteriores a hoy.");
+      return;
+    }
+
+    if (isWeekendDate(value)) {
+      setError("No se permite registrar asistencia en sábado o domingo.");
+      return;
+    }
+
+    setError("");
+    setFecha(value);
+  };
 
   const handleEstadoChange = (estudianteId, nuevoEstado) => {
     if (cerrado) return;
@@ -138,6 +213,11 @@ export default function RegistroAsistencia() {
   };
 
   const handleGuardar = async () => {
+    if (isInvalidAttendanceDate(fecha)) {
+      setError("Solo se permite registrar asistencia para hoy o fechas futuras en días hábiles.");
+      return;
+    }
+
     setGuardando(true);
     setMensaje("");
     setError("");
@@ -171,6 +251,11 @@ export default function RegistroAsistencia() {
   };
 
   const handleCerrar = async () => {
+    if (isInvalidAttendanceDate(fecha)) {
+      setError("Solo se permite cerrar asistencia para hoy o fechas futuras en días hábiles.");
+      return;
+    }
+
     const ok = window.confirm("¿Deseas cerrar el registro diario? Luego no podrá editarse.");
     if (!ok) return;
 
@@ -186,11 +271,29 @@ export default function RegistroAsistencia() {
     }
   };
 
+  const handleVolver = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/docente/estudiantes');
+  };
+
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md mt-8 space-y-6">
-      <h2 className="text-2xl font-semibold text-gray-700 border-b pb-2">
-        Registro de Asistencia (Diaria)
-      </h2>
+    <div className="space-y-6 p-8 bg-gray-50 min-h-screen">
+      <PageHeader
+        title="Asistencia"
+        subtitle="Registra asistencia diaria por grupo en días hábiles."
+      />
+
+      <div>
+        <button
+          onClick={handleVolver}
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+        >
+          Volver
+        </button>
+      </div>
 
       {mensaje && (
         <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">
@@ -204,25 +307,77 @@ export default function RegistroAsistencia() {
         </div>
       )}
 
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm space-y-4">
+        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+          <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
+            <select
+              value={grupoId}
+              onChange={(e) => setGrupoId(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm bg-white"
+            >
+              {grupos.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label || `${g.nombre} (${g.codigo_grupo || g.id})`}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="date"
+              value={fecha}
+              min={getTodayISO()}
+              onChange={(e) => handleFechaChange(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+            />
+
+            {cerrado && (
+              <span className="rounded-full px-3 py-1 text-xs font-semibold bg-slate-100 text-slate-700">
+                Registro cerrado
+              </span>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleGuardar}
+              disabled={guardando || cerrado}
+              className="px-4 py-2 text-sm font-medium rounded-md text-white bg-[#185fa5] hover:bg-[#378add] disabled:opacity-50"
+            >
+              {guardando ? "Guardando..." : "Guardar Asistencia"}
+            </button>
+
+            <button
+              onClick={handleCerrar}
+              disabled={cerrado || !grupoId}
+              className="px-4 py-2 text-sm font-medium rounded-md text-white bg-slate-600 hover:bg-slate-700 disabled:opacity-50"
+            >
+              Finalizar Registro Diario
+            </button>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-500">Solo se permite seleccionar días hábiles (lunes a viernes) desde hoy en adelante.</p>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="rounded-lg bg-green-50 p-3 border border-green-100">
-          <p className="text-xs text-green-700 font-semibold uppercase">Presentes</p>
-          <p className="text-2xl font-bold text-green-800">{resumen.presentes}</p>
+        <div className="rounded-lg bg-blue-50 p-3 border border-blue-100">
+          <p className="text-xs text-blue-700 font-semibold uppercase">Presentes</p>
+          <p className="text-2xl font-bold text-blue-900">{resumen.presentes}</p>
         </div>
 
-        <div className="rounded-lg bg-red-50 p-3 border border-red-100">
-          <p className="text-xs text-red-700 font-semibold uppercase">Ausentes</p>
-          <p className="text-2xl font-bold text-red-800">{resumen.ausentes}</p>
+        <div className="rounded-lg bg-slate-100 p-3 border border-slate-200">
+          <p className="text-xs text-slate-700 font-semibold uppercase">Ausentes</p>
+          <p className="text-2xl font-bold text-slate-900">{resumen.ausentes}</p>
         </div>
 
-        <div className="rounded-lg bg-yellow-50 p-3 border border-yellow-100">
-          <p className="text-xs text-yellow-700 font-semibold uppercase">Tardías</p>
-          <p className="text-2xl font-bold text-yellow-800">{resumen.tardias}</p>
+        <div className="rounded-lg bg-blue-50 p-3 border border-blue-100">
+          <p className="text-xs text-blue-700 font-semibold uppercase">Tardías</p>
+          <p className="text-2xl font-bold text-blue-900">{resumen.tardias}</p>
         </div>
 
         <div className="rounded-lg bg-blue-50 p-3 border border-blue-100">
           <p className="text-xs text-blue-700 font-semibold uppercase">Justificadas</p>
-          <p className="text-2xl font-bold text-blue-800">{resumen.justificadas}</p>
+          <p className="text-2xl font-bold text-blue-900">{resumen.justificadas}</p>
         </div>
 
         <div className="rounded-lg bg-gray-50 p-3 border border-gray-100">
@@ -231,54 +386,7 @@ export default function RegistroAsistencia() {
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="flex flex-col md:flex-row gap-3 items-center w-full">
-          <select
-            value={grupoId}
-            onChange={(e) => setGrupoId(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm bg-white"
-          >
-            {grupos.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.nombre}
-              </option>
-            ))}
-          </select>
-
-          <input
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-          />
-
-          {cerrado && (
-            <span className="rounded-full px-3 py-1 text-xs font-semibold bg-slate-100 text-slate-700">
-              Registro cerrado
-            </span>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={handleGuardar}
-            disabled={guardando || cerrado}
-            className="px-4 py-2 text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {guardando ? "Guardando..." : "Guardar Asistencia"}
-          </button>
-
-          <button
-            onClick={handleCerrar}
-            disabled={cerrado || !grupoId}
-            className="px-4 py-2 text-sm font-medium rounded-md text-white bg-slate-600 hover:bg-slate-700 disabled:opacity-50"
-          >
-            Finalizar Registro Diario
-          </button>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>
@@ -309,6 +417,7 @@ export default function RegistroAsistencia() {
                 <tr key={estudiante.estudiante_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {estudiante.nombre}
+                    <p className="text-xs text-gray-500">{estudiante.codigo_estudiante || "Sin código"}</p>
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -320,10 +429,10 @@ export default function RegistroAsistencia() {
                           value="presente"
                           checked={estudiante.estado === "presente"}
                           onChange={() => handleEstadoChange(estudiante.estudiante_id, "presente")}
-                          className="form-radio text-green-600 h-4 w-4"
+                          className="form-radio text-[#185fa5] h-4 w-4"
                           disabled={cerrado}
                         />
-                        <span className="ml-2 text-green-600">Presente</span>
+                        <span className="ml-2 text-[#185fa5]">Presente</span>
                       </label>
 
                       <label className="inline-flex items-center">
@@ -333,10 +442,10 @@ export default function RegistroAsistencia() {
                           value="ausente"
                           checked={estudiante.estado === "ausente"}
                           onChange={() => handleEstadoChange(estudiante.estudiante_id, "ausente")}
-                          className="form-radio text-red-600 h-4 w-4"
+                          className="form-radio text-slate-600 h-4 w-4"
                           disabled={cerrado}
                         />
-                        <span className="ml-2 text-red-600">Ausente</span>
+                        <span className="ml-2 text-slate-700">Ausente</span>
                       </label>
 
                       <label className="inline-flex items-center">
@@ -346,10 +455,10 @@ export default function RegistroAsistencia() {
                           value="tardia"
                           checked={estudiante.estado === "tardia"}
                           onChange={() => handleEstadoChange(estudiante.estudiante_id, "tardia")}
-                          className="form-radio text-yellow-600 h-4 w-4"
+                          className="form-radio text-[#185fa5] h-4 w-4"
                           disabled={cerrado}
                         />
-                        <span className="ml-2 text-yellow-600">Tardía</span>
+                        <span className="ml-2 text-[#185fa5]">Tardía</span>
                       </label>
                     </div>
                   </td>
@@ -397,7 +506,44 @@ export default function RegistroAsistencia() {
         </table>
       </div>
 
-      <div className="pt-6 border-t">
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm space-y-4">
+        <h3 className="text-lg font-semibold text-gray-800">Resumen de Registros por Día</h3>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Presentes</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ausentes</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tardías</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Justificadas</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {historialPorDia.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-4 py-6 text-center text-sm text-gray-500">No hay registros diarios aún.</td>
+                </tr>
+              ) : (
+                historialPorDia.map((item) => (
+                  <tr key={item.fecha}>
+                    <td className="px-4 py-3 text-sm text-gray-700">{item.fecha}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{item.presentes}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{item.ausentes}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{item.tardias}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{item.justificadas}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900 font-medium">{item.total}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <h3 className="text-xl font-semibold text-gray-700 mb-4">
           Historial de Asistencia
         </h3>

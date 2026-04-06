@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
+  fetchGruposDocente,
   fetchEstudiantesCatalogo,
   fetchEstudiantesPorGrupo,
   agregarEstudianteAGrupo,
@@ -7,14 +9,14 @@ import {
   removerEstudianteDeGrupo,
 } from "../../api/registroEstudiantesService";
 
+const DOCENTE_GRUPO_STORAGE_KEY = "docente_estudiantes_hub_grupo_id";
+
 export default function RegistroEstudiantes() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const queryGrupoId = searchParams.get("grupo");
   const [grupoId, setGrupoId] = useState("");
-  const [grupos, setGrupos] = useState([
-    // TODO: cambiar por fetch real de grupos del docente
-    { id: 1, nombre: "Grupo 1" },
-    { id: 2, nombre: "Grupo 2" },
-    { id: 3, nombre: "Grupo 3" },
-  ]);
+  const [grupos, setGrupos] = useState([]);
 
   const [catalogoEstudiantes, setCatalogoEstudiantes] = useState([]);
   const [estudiantesGrupo, setEstudiantesGrupo] = useState([]);
@@ -39,6 +41,41 @@ export default function RegistroEstudiantes() {
     }
   };
 
+  const loadGrupos = async () => {
+    try {
+      const data = await fetchGruposDocente();
+      const list = Array.isArray(data) ? data : data.results || [];
+      setGrupos(list);
+
+      const persistedGrupoId = localStorage.getItem(DOCENTE_GRUPO_STORAGE_KEY);
+
+      if (queryGrupoId && list.some((item) => String(item.id) === String(queryGrupoId))) {
+        setGrupoId(String(queryGrupoId));
+        return;
+      }
+
+      if (persistedGrupoId && list.some((item) => String(item.id) === String(persistedGrupoId))) {
+        setGrupoId(String(persistedGrupoId));
+        return;
+      }
+
+      if (list.length > 0) {
+        setGrupoId((prev) => {
+          if (prev && list.some((item) => String(item.id) === String(prev))) {
+            return prev;
+          }
+          return String(list[0].id);
+        });
+      } else {
+        setGrupoId("");
+      }
+    } catch {
+      setError("No se pudieron cargar los grupos del docente.");
+      setGrupos([]);
+      setGrupoId("");
+    }
+  };
+
   const loadEstudiantesGrupo = async () => {
     if (!grupoId) {
       setEstudiantesGrupo([]);
@@ -59,8 +96,20 @@ export default function RegistroEstudiantes() {
   };
 
   useEffect(() => {
+    loadGrupos();
     loadCatalogo();
   }, []);
+
+  useEffect(() => {
+    if (!queryGrupoId) return;
+    if (!grupos.some((item) => String(item.id) === String(queryGrupoId))) return;
+    setGrupoId(String(queryGrupoId));
+  }, [queryGrupoId, grupos]);
+
+  useEffect(() => {
+    if (!grupoId) return;
+    localStorage.setItem(DOCENTE_GRUPO_STORAGE_KEY, String(grupoId));
+  }, [grupoId]);
 
   useEffect(() => {
     loadEstudiantesGrupo();
@@ -171,10 +220,24 @@ export default function RegistroEstudiantes() {
     }
   };
 
+  const handleVolver = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate("/docente/estudiantes");
+  };
+
   return (
     <div className="space-y-6 p-8 bg-gray-50 min-h-screen">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
+          <button
+            onClick={handleVolver}
+            className="mb-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Volver
+          </button>
           <h2 className="text-2xl font-bold">Lista de Estudiantes</h2>
           <p className="text-sm text-gray-500">
             Gestiona los estudiantes asignados a tu grupo o clase.
@@ -187,13 +250,6 @@ export default function RegistroEstudiantes() {
             className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             Recargar
-          </button>
-
-          <button
-            onClick={() => setModalAgregar(true)}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700"
-          >
-            Agregar estudiante
           </button>
         </div>
       </div>
@@ -220,7 +276,7 @@ export default function RegistroEstudiantes() {
             <option value="">Seleccionar grupo/clase</option>
             {grupos.map((g) => (
               <option key={g.id} value={g.id}>
-                {g.nombre}
+                {g.label || `${g.nombre} (${g.codigo_grupo || g.id})`}
               </option>
             ))}
           </select>
@@ -238,12 +294,12 @@ export default function RegistroEstudiantes() {
             type="file"
             accept=".csv,.xlsx,.xls"
             onChange={(e) => setArchivoImportacion(e.target.files?.[0] || null)}
-            className="block w-full text-sm text-gray-500 md:w-auto file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+            className="block w-full text-sm text-gray-500 md:w-auto file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-[#185fa5] hover:file:bg-[#e6f1fb]"
           />
 
           <button
             onClick={handleImportar}
-            className="rounded-lg border border-indigo-200 px-4 py-2 text-sm text-indigo-700 hover:bg-indigo-50"
+            className="rounded-lg border border-[#185fa5] px-4 py-2 text-sm text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
           >
             Importar lista
           </button>
@@ -257,14 +313,13 @@ export default function RegistroEstudiantes() {
                 <th className="px-3 py-2">Código</th>
                 <th className="px-3 py-2">Estado</th>
                 <th className="px-3 py-2">Email</th>
-                <th className="px-3 py-2">Acciones</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-gray-100">
               {loading && (
                 <tr>
-                  <td colSpan="5" className="px-3 py-6 text-center text-sm text-gray-500">
+                  <td colSpan="4" className="px-3 py-6 text-center text-sm text-gray-500">
                     Cargando estudiantes...
                   </td>
                 </tr>
@@ -272,7 +327,7 @@ export default function RegistroEstudiantes() {
 
               {!loading && !grupoId && (
                 <tr>
-                  <td colSpan="5" className="px-3 py-6 text-center text-sm text-gray-500">
+                  <td colSpan="4" className="px-3 py-6 text-center text-sm text-gray-500">
                     Selecciona una clase para ver la lista de estudiantes.
                   </td>
                 </tr>
@@ -280,7 +335,7 @@ export default function RegistroEstudiantes() {
 
               {!loading && grupoId && filtered.length === 0 && (
                 <tr>
-                  <td colSpan="5" className="px-3 py-6 text-center text-sm text-gray-500">
+                  <td colSpan="4" className="px-3 py-6 text-center text-sm text-gray-500">
                     No hay estudiantes registrados en esta clase.
                   </td>
                 </tr>
@@ -307,14 +362,6 @@ export default function RegistroEstudiantes() {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-gray-700">{e.email || "N/A"}</td>
-                    <td className="px-3 py-2">
-                      <button
-                        onClick={() => handleRemover(e.matricula_id)}
-                        className="text-red-600 hover:text-red-800 font-medium"
-                      >
-                        Quitar
-                      </button>
-                    </td>
                   </tr>
                 ))}
             </tbody>
@@ -345,7 +392,7 @@ export default function RegistroEstudiantes() {
                 <select
                   value={selectedPersonaId}
                   onChange={(e) => setSelectedPersonaId(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 bg-white focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 bg-white focus:ring-2 focus:ring-[#378add]"
                 >
                   <option value="">Seleccionar estudiante</option>
                   {estudiantesDisponibles.map((est) => {
@@ -373,7 +420,7 @@ export default function RegistroEstudiantes() {
                 <button
                   type="button"
                   onClick={handleAgregar}
-                  className="px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700"
+                  className="px-5 py-2.5 rounded-lg bg-[#185fa5] text-white font-semibold hover:bg-[#378add]"
                 >
                   Agregar
                 </button>

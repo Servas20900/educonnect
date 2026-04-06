@@ -2,14 +2,26 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db.models import Count, Q
 
 from apps.databaseModels.models import (
     AcademicoDocenteGrupo,
     AcademicoGrado,
     AcademicoGrupo,
     AcademicoMatricula,
+    PersonasDocente,
 )
 from .serializers import AcademicoGradoSerializer, AcademicoGrupoSerializer
+
+
+def _docente_candidate_ids(user):
+    candidate_ids = set()
+    persona_id = getattr(user, 'persona_id', None)
+    if persona_id:
+        candidate_ids.add(persona_id)
+    if getattr(user, 'id', None):
+        candidate_ids.add(user.id)
+    return list(candidate_ids)
 
 
 class AcademicoGradoViewSet(viewsets.ReadOnlyModelViewSet):
@@ -25,7 +37,7 @@ class AcademicoGrupoViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs = AcademicoGrupo.objects.filter(estado='Activo').select_related(
+        qs = AcademicoGrupo.objects.filter(estado__iexact='activo').select_related(
             'grado', 'seccion'
         )
         grado_id = self.request.query_params.get('grado_id')
@@ -35,31 +47,42 @@ class AcademicoGrupoViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='por-docente')
     def por_docente(self, request):
-        """
-        Devuelve los grupos activos asignados al docente autenticado.
-        Usado por el home del modulo docente para mostrar sus grupos.
-        GET /grupos/por-docente/
-        """
-        docente_id = (
-            request.query_params.get('docente_id')
-            or getattr(getattr(request.user, 'persona', None), 'id', None)
-        )
-        if not docente_id:
-            return Response(
-                {'error': 'No se pudo determinar el docente.'},
-                status=status.HTTP_400_BAD_REQUEST,
+        try:
+            candidate_ids = _docente_candidate_ids(request.user)
+            if not candidate_ids:
+                return Response([], status=status.HTTP_200_OK)
+
+            docentes_ids = list(
+                PersonasDocente.objects.filter(persona_id__in=candidate_ids).values_list('persona_id', flat=True)
             )
+            if not docentes_ids:
+                docentes_ids = candidate_ids
 
-        grupo_ids = AcademicoDocenteGrupo.objects.filter(
-            docente__persona_id=docente_id
-        ).values_list('grupo_id', flat=True)
+            grupos = AcademicoGrupo.objects.filter(
+                Q(docente_guia_id__in=docentes_ids)
+                | Q(academicodocentegrupo__docente_id__in=docentes_ids, academicodocentegrupo__activo=True),
+                estado__iexact='activo',
+            ).select_related('grado', 'seccion').annotate(
+                total_estudiantes=Count('academicomatricula', filter=Q(academicomatricula__estado='activo'))
+            ).order_by('grado__numero_grado', 'seccion__nombre', 'nombre').distinct()
 
-        grupos = AcademicoGrupo.objects.filter(
-            id__in=grupo_ids, estado='Activo'
-        ).select_related('grado', 'seccion')
+            data = []
+            for grupo in grupos:
+                data.append(
+                    {
+                        'id': grupo.id,
+                        'nombre': grupo.nombre,
+                        'codigo_grupo': grupo.codigo_grupo,
+                        'grado_nombre': getattr(grupo.grado, 'nombre', None),
+                        'seccion_nombre': getattr(grupo.seccion, 'nombre', None),
+                        'label': f"{grupo.nombre} ({grupo.codigo_grupo})",
+                        'total_estudiantes': grupo.total_estudiantes,
+                    }
+                )
 
-        serializer = self.get_serializer(grupos, many=True)
-        return Response(serializer.data)
+            return Response(data, status=status.HTTP_200_OK)
+        except Exception:
+            return Response([], status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'], url_path='estudiantes')
     def estudiantes(self, request, pk=None):

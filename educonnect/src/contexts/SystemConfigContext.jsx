@@ -107,13 +107,22 @@ export function SystemConfigProvider({ children }) {
           });
         }
 
+        const cleanedItems = docenteItems.filter(
+          (item) => item.id !== 'academico'
+            && item.id !== 'asistencia'
+            && item.id !== 'riesgo'
+            && item.id !== 'incapacidades'
+            && item.id !== 'docente-incapacidades'
+            && item.id !== 'exportaciones'
+        );
+
         return {
           ...group,
           children: [
             {
               ...docenteSection,
               children: [
-                ...docenteItems,
+                ...cleanedItems,
                 ...fallbackItems,
               ],
             },

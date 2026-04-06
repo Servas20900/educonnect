@@ -180,6 +180,64 @@ class ViewEstudiantes(viewsets.ReadOnlyModelViewSet):
             )
 
         return queryset.distinct()
+
+
+def _get_docente_from_user(user):
+    candidate_ids = _get_docente_candidate_ids(user)
+    if not candidate_ids:
+        return None
+    return PersonasDocente.objects.filter(persona_id__in=candidate_ids).first()
+
+
+def _get_docente_candidate_ids(user):
+    candidate_ids = set()
+    persona_id = getattr(user, 'persona_id', None)
+    if persona_id:
+        candidate_ids.add(persona_id)
+    if getattr(user, 'id', None):
+        candidate_ids.add(user.id)
+    return list(candidate_ids)
+
+
+def _get_docente_ids_from_user(user):
+    candidate_ids = _get_docente_candidate_ids(user)
+    if not candidate_ids:
+        return []
+    docentes_ids = list(
+        PersonasDocente.objects.filter(persona_id__in=candidate_ids).values_list('persona_id', flat=True)
+    )
+    return docentes_ids or candidate_ids
+
+
+def _docente_can_access_grupo(docente, grupo_id):
+    if not docente:
+        return False
+    return AcademicoGrupo.objects.filter(
+        Q(docente_guia=docente)
+        | Q(academicodocentegrupo__docente=docente, academicodocentegrupo__activo=True),
+        id=grupo_id,
+        estado__iexact='activo',
+    ).distinct().exists()
+
+
+def _docente_ids_can_access_grupo(docente_ids, grupo_id):
+    if not docente_ids:
+        return False
+    return AcademicoGrupo.objects.filter(
+        Q(docente_guia_id__in=docente_ids)
+        | Q(academicodocentegrupo__docente_id__in=docente_ids, academicodocentegrupo__activo=True),
+        id=grupo_id,
+        estado__iexact='activo',
+    ).distinct().exists()
+
+
+def _resolve_grupo_for_docente(request, grupo_id):
+    docente_ids = _get_docente_ids_from_user(request.user)
+    if not docente_ids:
+        return None
+    if not _docente_ids_can_access_grupo(docente_ids, grupo_id):
+        return None
+    return AcademicoGrupo.objects.filter(id=grupo_id).first()
     
 class GrupoEstudiantesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -188,10 +246,17 @@ class GrupoEstudiantesView(APIView):
         """
         Lista los estudiantes matriculados en un grupo
         """
+        grupo = _resolve_grupo_for_docente(request, grupo_id)
+        if not grupo:
+            return Response(
+                {"detail": "Grupo no disponible para este docente."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
         matriculas = AcademicoMatricula.objects.select_related(
             "estudiante__persona",
             "grupo"
-        ).filter(grupo_id=grupo_id, estado="activo")
+        ).filter(grupo=grupo, estado__iexact="activo")
 
         data = []
         for m in matriculas:
@@ -227,11 +292,10 @@ class GrupoEstudiantesView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            grupo = AcademicoGrupo.objects.get(id=grupo_id)
-        except AcademicoGrupo.DoesNotExist:
+        grupo = _resolve_grupo_for_docente(request, grupo_id)
+        if not grupo:
             return Response(
-                {"detail": "Grupo no encontrado."},
+                {"detail": "Grupo no disponible para este docente."},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -290,11 +354,10 @@ class GrupoEstudiantesImportView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            grupo = AcademicoGrupo.objects.get(id=grupo_id)
-        except AcademicoGrupo.DoesNotExist:
+        grupo = _resolve_grupo_for_docente(request, grupo_id)
+        if not grupo:
             return Response(
-                {"detail": "Grupo no encontrado."},
+                {"detail": "Grupo no disponible para este docente."},
                 status=status.HTTP_404_NOT_FOUND
             )
 
@@ -374,6 +437,13 @@ class GrupoEstudianteRemoveView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        grupo = getattr(matricula, 'grupo', None)
+        if not grupo or not _resolve_grupo_for_docente(request, grupo.id):
+            return Response(
+                {"detail": "No tienes permisos para modificar este grupo."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         matricula.estado = "inactivo"
         matricula.save()
 
@@ -386,13 +456,27 @@ class GruposDocenteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        grupos = AcademicoGrupo.objects.filter(docente=request.user)
+        persona_id = getattr(request.user, 'persona_id', None)
+        if not persona_id:
+            return Response([], status=status.HTTP_200_OK)
+
+        docente = PersonasDocente.objects.filter(persona_id=persona_id).first()
+        if not docente:
+            return Response([], status=status.HTTP_200_OK)
+
+        grupos = AcademicoGrupo.objects.filter(
+            Q(docente_guia=docente)
+            | Q(academicodocentegrupo__docente=docente, academicodocentegrupo__activo=True),
+            estado__iexact='activo',
+        ).order_by('grado__numero_grado', 'seccion__nombre', 'nombre').distinct()
 
         data = []
         for g in grupos:
             data.append({
                 "id": g.id,
-                "nombre": getattr(g, "nombre", f"Grupo {g.id}")
+                "nombre": g.nombre,
+                "codigo_grupo": g.codigo_grupo,
+                "label": f"{g.nombre} ({g.codigo_grupo})"
             })
 
         return Response(data, status=status.HTTP_200_OK)

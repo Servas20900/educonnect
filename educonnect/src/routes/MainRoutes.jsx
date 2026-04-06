@@ -35,16 +35,21 @@ const UsuariosGradosGrupos = Loadable(lazy(() => import('../pages/admin/Usuarios
 const UsuariosGrupoEstudiantes = Loadable(lazy(() => import('../pages/admin/Usuarios/GradosGrupos/GrupoEstudiantes')));
 
 // Docente
-const DocenteEstudiantes = Loadable(lazy(() => import('../pages/docente/RegistroEstudiantes')));
-const Academico          = Loadable(lazy(() => import('../pages/docente/Evaluaciones')));
+const DocenteEstudiantesHub = Loadable(lazy(() => import('../pages/docente/EstudiantesHub')));
+const DocenteEstudiantesListado = Loadable(lazy(() => import('../pages/docente/RegistroEstudiantes')));
+const AcademicoHub = Loadable(lazy(() => import('../pages/docente/academico/AcademicoHub')));
+const EvaluacionesListado = Loadable(lazy(() => import('../pages/docente/academico/EvaluacionesListado')));
+const CalificacionesEditable = Loadable(lazy(() => import('../pages/docente/academico/CalificacionesEditable')));
+const CalificacionesEstudiante = Loadable(lazy(() => import('../pages/docente/academico/CalificacionesEstudiante')));
+const Promedios = Loadable(lazy(() => import('../pages/docente/academico/Promedios')));
+const Exportar = Loadable(lazy(() => import('../pages/docente/academico/Exportar')));
 const Asistencia         = Loadable(lazy(() => import('../pages/docente/RegistroAsistencia')));
 const Riesgo             = Loadable(lazy(() => import('../pages/docente/RiesgoEstudiantes')));
 const Planeamientos      = Loadable(lazy(() => import('../pages/docente/Planeamientos')));
 const Comunicados        = Loadable(lazy(() => import('../pages/docente/Comunicados')));
 const CircularesDocente  = Loadable(lazy(() => import('../pages/docente/CircularesDocente')));
 const HorarioDocente     = Loadable(lazy(() => import('../pages/docente/HorarioDocente')));
-const Exportaciones      = Loadable(lazy(() => import('../pages/docente/Exportaciones')));
-const IncapacidadesDocente = Loadable(lazy(() => import('../pages/docente/IncapacidadesDocente')));
+const EstudiantesExportaciones = Loadable(lazy(() => import('../pages/docente/estudiantes/Exportaciones')));
 
 // Comité
 const Actas        = Loadable(lazy(() => import('../pages/comite/CrearActa')));
@@ -54,7 +59,6 @@ const RolesComite  = Loadable(lazy(() => import('../pages/comite/RolesComite')))
 // Auxiliares
 const Informes      = Loadable(lazy(() => import('../pages/auxiliares/informesEconomicos')));
 const Reglamentos   = Loadable(lazy(() => import('../pages/auxiliares/Reglamentos')));
-const Cumplimiento  = Loadable(lazy(() => import('../pages/auxiliares/ReportesCumplimiento')));
 
 // Estudiante
 const EstudianteComunicados = Loadable(lazy(() => import('../pages/estudiante/Notificaciones')));
@@ -127,16 +131,26 @@ const AppRoutes = {
     {
       path: 'docente',
       children: [
-        { path: 'estudiantes',  element: <Guard permissionKey="docente-estudiantes"><DocenteEstudiantes /></Guard> },
-        { path: 'academico',    element: <Guard permissionKey="academico"><Academico /></Guard> },
+        { path: 'estudiantes',  element: <Guard permissionKey="docente-estudiantes"><DocenteEstudiantesHub /></Guard> },
+        { path: 'estudiantes/listado',  element: <Guard permissionKey="docente-estudiantes"><DocenteEstudiantesListado /></Guard> },
+        { path: 'estudiantes/exportaciones', element: <Guard permissionKey="docente-estudiantes"><EstudiantesExportaciones /></Guard> },
+        {
+          path: 'academico',
+          children: [
+            { index: true, element: <Guard permissionKey="academico"><AcademicoHub /></Guard> },
+            { path: 'evaluaciones', element: <Guard permissionKey="academico"><EvaluacionesListado /></Guard> },
+            { path: 'calificaciones', element: <Guard permissionKey="academico"><CalificacionesEditable /></Guard> },
+            { path: 'calificaciones/estudiante/:estudianteId', element: <Guard permissionKey="academico"><CalificacionesEstudiante /></Guard> },
+            { path: 'promedios', element: <Guard permissionKey="academico"><Promedios /></Guard> },
+            { path: 'exportar', element: <Guard permissionKey="academico"><Exportar /></Guard> },
+          ],
+        },
         { path: 'asistencia',   element: <Guard permissionKey="asistencia"><Asistencia /></Guard> },
         { path: 'riesgo',       element: <Guard permissionKey="riesgo"><Riesgo /></Guard> },
         { path: 'planeamientos',element: <Guard permissionKey="planeamientos"><Planeamientos /></Guard> },
         { path: 'comunicados',  element: <Guard permissionKey="comunicados"><Comunicados /></Guard> },
         { path: 'circulares',   element: <Guard permissionKey="docente-circulares"><CircularesDocente /></Guard> },
         { path: 'horario',      element: <Guard permissionKey="docente-horario"><HorarioDocente /></Guard> },
-        { path: 'incapacidades',element: <Guard permissionKey="docente-incapacidades"><IncapacidadesDocente /></Guard> },
-        { path: 'exportaciones',element: <Guard permissionKey="exportaciones"><Exportaciones /></Guard> },
       ],
     },
 
@@ -156,7 +170,6 @@ const AppRoutes = {
       children: [
         { path: 'informes',     element: <Guard permissionKey="auxiliares-informes"><Informes /></Guard> },
         { path: 'reglamentos',  element: <Guard permissionKey="auxiliares-reglamentos"><Reglamentos /></Guard> },
-        { path: 'cumplimiento', element: <Guard permissionKey="auxiliares-cumplimiento"><Cumplimiento /></Guard> },
       ],
     },
 

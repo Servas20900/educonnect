@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.contenttypes.models import ContentType
 from apps.databaseModels.models import (
     ComitesComite,
     ComitesMiembro,
@@ -8,6 +9,7 @@ from apps.databaseModels.models import (
     PersonasDocente,
     AuthRol,
     AuthUsuarioRol,
+    DocumentosDocumento,
 )
 from django.utils import timezone
 from django.db import transaction
@@ -252,6 +254,28 @@ class ComitesComiteCreateSerializer(serializers.ModelSerializer):
 
 class ComitesActaSerializer(serializers.ModelSerializer):
     elaborada_por_username = serializers.ReadOnlyField(source='elaborada_por.username')
+    archivo_url = serializers.SerializerMethodField()
+    archivo_nombre = serializers.SerializerMethodField()
+
+    def _last_file(self, obj):
+        content_type = ContentType.objects.get_for_model(ComitesActa)
+        return (
+            DocumentosDocumento.objects.filter(
+                content_type=content_type,
+                object_id=obj.id,
+                es_version_actual=True,
+            )
+            .order_by('-fecha_carga')
+            .first()
+        )
+
+    def get_archivo_url(self, obj):
+        documento = self._last_file(obj)
+        return documento.ruta_archivo if documento else None
+
+    def get_archivo_nombre(self, obj):
+        documento = self._last_file(obj)
+        return documento.nombre if documento else None
 
     class Meta:
         model = ComitesActa
@@ -265,6 +289,8 @@ class ComitesActaSerializer(serializers.ModelSerializer):
             'estado',
             'elaborada_por',
             'elaborada_por_username',
+            'archivo_url',
+            'archivo_nombre',
             'aprobada_por',
             'fecha_elaboracion',
             'fecha_aprobacion',

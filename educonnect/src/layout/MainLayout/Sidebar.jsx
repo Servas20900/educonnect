@@ -37,7 +37,6 @@ const ICON_MAP = {
   'roles-comite':         IconUsers,
   'informes-economicos':  IconReportAnalytics,
   reglamentos:            IconFileText,
-  'reportes-cumplimiento':IconChartBar,
   'estudiante-comunicados': IconMessageCircle,
   'docente-estudiantes':  IconUsers,
   'docente-horario':      IconCalendar,
@@ -113,7 +112,14 @@ function SidebarContent({ drawerOpen }) {
 
   const grouped = filteredGroups.map((group) => ({
     title: group.title,
-    items: (group.children || []).flatMap((c) => c.children || []),
+    items: (group.children || [])
+      .flatMap((c) => c.children || [])
+      .filter((item) => item.id !== 'academico'
+        && item.id !== 'asistencia'
+        && item.id !== 'riesgo'
+        && item.id !== 'incapacidades'
+        && item.id !== 'docente-incapacidades'
+        && item.id !== 'exportaciones'),
   }));
 
   const handleNav = (url) => {

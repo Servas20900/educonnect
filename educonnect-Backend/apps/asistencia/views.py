@@ -1,5 +1,6 @@
 import json
 from datetime import date
+from django.db.models import Q
 
 from rest_framework.views import APIView
 from rest_framework import permissions, status
@@ -7,21 +8,96 @@ from rest_framework.response import Response
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 
 from .models import AsistenciaRegistro, AsistenciaDetalle
-from apps.databaseModels.models import AcademicoMatricula, PersonasEstudiante, AcademicoGrupo
+from apps.databaseModels.models import AcademicoMatricula, PersonasEstudiante, AcademicoGrupo, PersonasDocente
+
+
+def _parse_date_or_none(raw_date):
+    if not raw_date:
+        return None
+    try:
+        return date.fromisoformat(str(raw_date))
+    except ValueError:
+        return None
+
+
+def _is_invalid_attendance_date(target_date):
+    if not target_date:
+        return True
+    if target_date < date.today():
+        return True
+    if target_date.weekday() >= 5:
+        return True
+    return False
+
+
+def _docente_candidate_ids(user):
+    candidate_ids = set()
+    persona_id = getattr(user, "persona_id", None)
+    if persona_id:
+        candidate_ids.add(persona_id)
+    if getattr(user, "id", None):
+        candidate_ids.add(user.id)
+    return list(candidate_ids)
+
+
+def _get_docente_ids_for_user(user):
+    candidate_ids = _docente_candidate_ids(user)
+    if not candidate_ids:
+        return []
+    docentes_ids = list(
+        PersonasDocente.objects.filter(persona_id__in=candidate_ids).values_list("persona_id", flat=True)
+    )
+    return docentes_ids or candidate_ids
+
+
+def _get_docente_for_user(user):
+    persona_id = getattr(user, "persona_id", None)
+    if not persona_id:
+        return None
+    return PersonasDocente.objects.filter(persona_id=persona_id).first()
+
+
+def _get_grupo_docente_or_none(docente_ids, grupo_id):
+    if not docente_ids:
+        return None
+
+    return (
+        AcademicoGrupo.objects.filter(
+            Q(docente_guia_id__in=docente_ids)
+            | Q(academicodocentegrupo__docente_id__in=docente_ids, academicodocentegrupo__activo=True),
+            id=grupo_id,
+            estado__iexact="activo",
+        )
+        .distinct()
+        .first()
+    )
 
 
 class GruposDocenteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        grupos = AcademicoGrupo.objects.filter(docente_guia_id=request.user.id)
+        docente_ids = _get_docente_ids_for_user(request.user)
+        if not docente_ids:
+            return Response([], status=status.HTTP_200_OK)
+
+        grupos = (
+            AcademicoGrupo.objects.filter(
+                Q(docente_guia_id__in=docente_ids)
+                | Q(academicodocentegrupo__docente_id__in=docente_ids, academicodocentegrupo__activo=True),
+                estado__iexact="activo",
+            )
+            .order_by("grado__numero_grado", "seccion__nombre", "nombre")
+            .distinct()
+        )
 
         data = []
         for g in grupos:
-            nombre = getattr(g, "nombre", None) or getattr(g, "descripcion", None) or f"Grupo {g.id}"
             data.append({
                 "id": g.id,
-                "nombre": nombre
+                "nombre": g.nombre,
+                "codigo_grupo": g.codigo_grupo,
+                "label": f"{g.nombre} ({g.codigo_grupo})",
             })
 
         return Response(data, status=status.HTTP_200_OK)
@@ -33,17 +109,23 @@ class AsistenciaDiariaView(APIView):
 
     def get(self, request, grupo_id):
         fecha = request.query_params.get("fecha") or str(date.today())
+        fecha_obj = _parse_date_or_none(fecha)
+        if _is_invalid_attendance_date(fecha_obj):
+            return Response(
+                {"detail": "Solo se permite registrar asistencia para hoy o fechas futuras en días hábiles."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        try:
-            grupo = AcademicoGrupo.objects.get(id=grupo_id, docente_guia_id=request.user.id)
-        except AcademicoGrupo.DoesNotExist:
+        docente_ids = _get_docente_ids_for_user(request.user)
+        grupo = _get_grupo_docente_or_none(docente_ids, grupo_id)
+        if not grupo:
             return Response({"detail": "Grupo no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
         matriculas = AcademicoMatricula.objects.select_related(
             "estudiante__persona"
         ).filter(
             grupo=grupo,
-            estado="activo"
+            estado__iexact="activo"
         )
 
         registro = AsistenciaRegistro.objects.filter(
@@ -62,11 +144,13 @@ class AsistenciaDiariaView(APIView):
         data = []
         for m in matriculas:
             estudiante = m.estudiante
+            if not estudiante:
+                continue
             persona = getattr(estudiante, "persona", None)
-            detalle = detalles_map.get(estudiante.id)
+            detalle = detalles_map.get(estudiante.pk)
 
             data.append({
-                "estudiante_id": estudiante.id,
+                "estudiante_id": estudiante.pk,
                 "persona_id": persona.id if persona else None,
                 "nombre": f"{persona.nombre} {persona.primer_apellido} {persona.segundo_apellido or ''}".strip() if persona else "N/A",
                 "codigo_estudiante": getattr(estudiante, "codigo_estudiante", "N/A"),
@@ -102,12 +186,19 @@ class AsistenciaDiariaView(APIView):
         if not fecha:
             return Response({"detail": "fecha es requerida."}, status=status.HTTP_400_BAD_REQUEST)
 
+        fecha_obj = _parse_date_or_none(fecha)
+        if _is_invalid_attendance_date(fecha_obj):
+            return Response(
+                {"detail": "Solo se permite registrar asistencia para hoy o fechas futuras en días hábiles."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if not asistencias_raw:
             return Response({"detail": "asistencias es requerido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            grupo = AcademicoGrupo.objects.get(id=grupo_id, docente_guia_id=request.user.id)
-        except AcademicoGrupo.DoesNotExist:
+        docente_ids = _get_docente_ids_for_user(request.user)
+        grupo = _get_grupo_docente_or_none(docente_ids, grupo_id)
+        if not grupo:
             return Response({"detail": "Grupo no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
@@ -134,7 +225,7 @@ class AsistenciaDiariaView(APIView):
             observacion = item.get("observacion", "")
 
             try:
-                estudiante = PersonasEstudiante.objects.get(id=estudiante_id)
+                estudiante = PersonasEstudiante.objects.get(pk=estudiante_id)
             except PersonasEstudiante.DoesNotExist:
                 continue
 
@@ -173,9 +264,16 @@ class CerrarAsistenciaView(APIView):
         if not fecha:
             return Response({"detail": "fecha es requerida."}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            grupo = AcademicoGrupo.objects.get(id=grupo_id, docente_guia_id=request.user.id)
-        except AcademicoGrupo.DoesNotExist:
+        fecha_obj = _parse_date_or_none(fecha)
+        if _is_invalid_attendance_date(fecha_obj):
+            return Response(
+                {"detail": "Solo se permite cerrar asistencia para hoy o fechas futuras en días hábiles."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        docente_ids = _get_docente_ids_for_user(request.user)
+        grupo = _get_grupo_docente_or_none(docente_ids, grupo_id)
+        if not grupo:
             return Response({"detail": "Grupo no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
@@ -193,9 +291,9 @@ class HistorialAsistenciaView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, grupo_id):
-        try:
-            grupo = AcademicoGrupo.objects.get(id=grupo_id, docente_guia_id=request.user.id)
-        except AcademicoGrupo.DoesNotExist:
+        docente_ids = _get_docente_ids_for_user(request.user)
+        grupo = _get_grupo_docente_or_none(docente_ids, grupo_id)
+        if not grupo:
             return Response({"detail": "Grupo no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
         registros = AsistenciaRegistro.objects.filter(
@@ -209,7 +307,7 @@ class HistorialAsistenciaView(APIView):
                 data.append({
                     "registro_id": registro.id,
                     "fecha": registro.fecha,
-                    "estudiante_id": d.estudiante.id,
+                    "estudiante_id": d.estudiante_id,
                     "nombre": f"{persona.nombre} {persona.primer_apellido} {persona.segundo_apellido or ''}".strip() if persona else "N/A",
                     "estado": d.estado,
                     "justificada": d.justificada,
