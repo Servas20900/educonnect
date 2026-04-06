@@ -1,99 +1,157 @@
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
-    fetchRepositorios,
-    fetchItemsByObject,
-    uploadDocumentoGenerico,
-    createRepositorio,
-    updateRepositorio
+  fetchRepositorios,
+  fetchItemsByObject,
+  uploadDocumentoGenerico,
+  createRepositorio,
+  updateRepositorio,
+  updateDocumentoRepositorio,
+  deleteDocumentoRepositorio,
 } from '../../../api/repositorios';
-
 import { fetchRoles } from '../../../api/permisosService';
+
+const MODELO_REPOSITORIO = 'documentosrepositorio';
+
 export function useRepositorios() {
-    const [repositorios, setRepositorios] = useState([]);
-    const [roles, setRoles] = useState([]);
-    const [documentos, setDocumentos] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [uploading, setUploading] = useState(false);
-    const [error, setError] = useState(null);
+  const [repositorios, setRepositorios] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [documentos, setDocumentos] = useState([]);
+  const [loadingRepositorios, setLoadingRepositorios] = useState(false);
+  const [loadingDocumentos, setLoadingDocumentos] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
-    const cargarRepositorios = useCallback(async () => {
-        setLoading(true);
-        try {
-            const data = await fetchRepositorios();
-            setRepositorios(data);
-        } catch (err) {
-            setError(err.message || 'Error al cargar carpetas');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    const cargarDocumentos = async (modelName, objectId) => {
-        setLoading(true);
-        try {
-            const data = await fetchItemsByObject(modelName, objectId);
-            setDocumentos(data);
-        } catch (err) {
-            setError(err.message || 'Error al cargar documentos');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const nuevoRepositorio = async (repoData) => {
-        try {
-            const response = await createRepositorio(repoData);
-            await cargarRepositorios();
-            return { success: true, data: response };
-        } catch (err) {
-            return { success: false, error: err };
-        }
-    };
-
-    const subirArchivo = async (modelName, objectId, archivo, descripcion) => {
-        setUploading(true);
-        try {
-            const nuevoDoc = await uploadDocumentoGenerico(modelName, objectId, archivo, descripcion);
-            setDocumentos(prev => [nuevoDoc, ...prev]);
-            return { success: true };
-        } catch (err) {
-            console.error("Error en hook:", err);
-            return { success: false, error: err };
-        } finally {
-            setUploading(false);
-        }
-    };
-    const editarRepositorio = async (id, data) => {
-        try {
-            await updateRepositorio(id, data);
-            await cargarRepositorios(); 
-            return { success: true };
-        } catch (err) {
-            return { success: false, error: err };
-        }
-    };
-
-    const cargarRoles = async ()=>{
-        try {
-            const roles =await fetchRoles();
-            setRoles(roles)
-            return { success: true };
-        } catch (error) {
-            return { success: false, error: error };
-        }
+  const cargarRepositorios = useCallback(async () => {
+    setLoadingRepositorios(true);
+    setError(null);
+    try {
+      const data = await fetchRepositorios();
+      setRepositorios(Array.isArray(data) ? data : []);
+      return data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoadingRepositorios(false);
     }
-    return {
-        repositorios,
-        documentos,
-        loading,
-        uploading,
-        error,
-        cargarRepositorios,
-        cargarDocumentos,
-        subirArchivo,
-        nuevoRepositorio,
-        editarRepositorio,
-        cargarRoles,
-        roles
-    };
+  }, []);
+
+  const cargarDocumentosRepositorio = useCallback(async (repositorioId) => {
+    setLoadingDocumentos(true);
+    setError(null);
+    try {
+      const data = await fetchItemsByObject(MODELO_REPOSITORIO, repositorioId);
+      setDocumentos(Array.isArray(data) ? data : []);
+      return data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setLoadingDocumentos(false);
+    }
+  }, []);
+
+  const cargarRoles = useCallback(async () => {
+    try {
+      const data = await fetchRoles();
+      setRoles(Array.isArray(data) ? data : []);
+      return data;
+    } catch (err) {
+      setError(err);
+      throw err;
+    }
+  }, []);
+
+  const crearRepositorio = useCallback(async (repoData) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await createRepositorio(repoData);
+      await cargarRepositorios();
+      return response;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [cargarRepositorios]);
+
+  const actualizarRepositorioPermisos = useCallback(async (repositorioId, data) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await updateRepositorio(repositorioId, data);
+      await cargarRepositorios();
+      return response;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [cargarRepositorios]);
+
+  const subirDocumento = useCallback(async (repositorioId, archivo, descripcion = '') => {
+    setSaving(true);
+    setError(null);
+    try {
+      const nuevo = await uploadDocumentoGenerico(MODELO_REPOSITORIO, repositorioId, archivo, descripcion);
+      await cargarDocumentosRepositorio(repositorioId);
+      return nuevo;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [cargarDocumentosRepositorio]);
+
+  const actualizarDocumento = useCallback(async (repositorioId, documentoId, data) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const actualizado = await updateDocumentoRepositorio(repositorioId, documentoId, data);
+      await cargarDocumentosRepositorio(repositorioId);
+      return actualizado;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [cargarDocumentosRepositorio]);
+
+  const eliminarDocumento = useCallback(async (repositorioId, documentoId) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await deleteDocumentoRepositorio(repositorioId, documentoId);
+      await cargarDocumentosRepositorio(repositorioId);
+      return result;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [cargarDocumentosRepositorio]);
+
+  return {
+    repositorios,
+    documentos,
+    roles,
+    loadingRepositorios,
+    loadingDocumentos,
+    saving,
+    error,
+    cargarRepositorios,
+    cargarDocumentosRepositorio,
+    cargarRoles,
+    crearRepositorio,
+    actualizarRepositorioPermisos,
+    subirDocumento,
+    actualizarDocumento,
+    eliminarDocumento,
+  };
 }

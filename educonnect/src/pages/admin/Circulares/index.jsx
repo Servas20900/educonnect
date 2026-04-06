@@ -270,13 +270,13 @@ export default function CircularesList() {
       />
 
       {successMessage && (
-        <div className="fixed bottom-4 right-4 rounded-md bg-green-50 p-4 text-sm text-green-700 border border-green-200">
+        <div className="fixed bottom-4 right-4 z-[1300] rounded-md bg-green-50 p-4 text-sm text-green-700 border border-green-200">
           {successMessage}
         </div>
       )}
 
       {errorMessage && (
-        <div className="fixed bottom-4 left-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {errorMessage}
         </div>
       )}

@@ -1,93 +1,294 @@
-import React from 'react';
-import FormularioHorario from './FormularioHorario';
-import RevisionHorarios from './RevisionHorarios';
+import { useEffect, useRef, useState } from 'react';
 import { useHorarios } from './hooks/useHorarios';
-import { useEffect, useState } from 'react';
-import Toast from '../../../components/ui/Toast';
+import FormularioHorario from './FormularioHorario';
+import {
+  PageHeader,
+  SearchFilter,
+  DataTable,
+  ConfirmModal,
+  FormModal,
+} from '../../../components/ui';
 
+const formatErrorMessage = (error) => {
+  if (!error) return 'Ocurrió un error inesperado';
 
-export default function Horarios() {
-  const { cargarHorario, HorarioExistentes, loading, error, uploading, errorUploading, crearHorario, actualizarHorario, eliminarHorario, cargarUsuario, loadingUsers, errorUsers, usuarios, cargarGrupos, loadingGrupos, errorGrupos, grupos, cargarAsignaturas, loadingAsignaturas, errorAsignaturas, asignaturas
+  if (typeof error?.message === 'string' && error.message.trim()) {
+    return error.message;
+  }
+
+  if (typeof error?.detail === 'string' && error.detail.trim()) {
+    return error.detail;
+  }
+
+  if (error?.details && typeof error.details === 'object') {
+    const firstEntry = Object.entries(error.details)[0];
+    if (firstEntry) {
+      const [field, value] = firstEntry;
+      if (Array.isArray(value) && value.length > 0) {
+        return `${field}: ${value[0]}`;
+      }
+      if (typeof value === 'string') {
+        return `${field}: ${value}`;
+      }
+    }
+  }
+
+  return 'No fue posible completar la acción';
+};
+
+export default function HorariosList() {
+  const formRef = useRef(null);
+
+  const {
+    cargarHorarios,
+    cargarUsuarios,
+    horariosExistentes,
+    loading,
+    uploading,
+    usuarios,
+    loadingUsuarios,
+    crearHorario,
+    actualizarHorario,
+    eliminarHorario,
+    subirDocumentoHorario,
   } = useHorarios();
-  const [form, setForm] = useState(false);
-  const [object, setObject] = useState({});
-  const [information, setInformation] = useState("");
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [currentHorario, setCurrentHorario] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    horario: null,
+  });
+  const [searchValue, setSearchValue] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    cargarHorario();
-    cargarUsuario();
-    cargarGrupos();
-    cargarAsignaturas();
-  }, [cargarHorario, cargarUsuario, cargarAsignaturas, cargarGrupos]);
+    cargarHorarios();
+    cargarUsuarios();
+  }, []);
 
-  const handleModalForm = () => {
-    setForm(!form);
-    setObject({})
+  const filteredHorarios = horariosExistentes.filter((horario) => {
+    const matchesSearch =
+      horario.nombre?.toLowerCase().includes(searchValue.toLowerCase()) ||
+      horario.docente_info?.nombre?.toLowerCase().includes(searchValue.toLowerCase());
+    return matchesSearch;
+  });
+
+  const handleNewHorario = () => {
+    setCurrentHorario(null);
+    setFormOpen(true);
   };
 
-  const onEdit = (horario) => {
-    setObject(horario);
-    setForm(true);
+  const handleEditHorario = (horario) => {
+    setCurrentHorario(horario);
+    setFormOpen(true);
   };
 
-  if (loading) return <div className="p-10 text-center">Cargando circulares...</div>;
-  if (error) return <div className="p-10 text-center text-red-500">Error al cargar datos.</div>;
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setCurrentHorario(null);
+  };
 
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      {form && (
-        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
-          <FormularioHorario
-            uploading={uploading}
-            errorUploading={errorUploading}
-            crearHorario={crearHorario}
-            handleModalForm={handleModalForm}
-            object={object}
-            actualizarHorario={actualizarHorario}
-            setInformation={setInformation}
-            usuarios={usuarios}
-            grupos={grupos}
-            asignaturas={asignaturas}
-          />
-          
-        </section>
-      )}
+  const handleOpenConfirm = (horario) => {
+    setConfirmModal({
+      open: true,
+      horario,
+    });
+  };
 
-      <section className="bg-white p-6 rounded-lg shadow-md">
+  const handleConfirmAction = async () => {
+    const { horario } = confirmModal;
+    try {
+      await eliminarHorario(horario.id);
+      setSuccessMessage('Horario eliminado con éxito');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      setErrorMessage(formatErrorMessage(error));
+      setTimeout(() => setErrorMessage(''), 4000);
+    } finally {
+      setConfirmModal({ open: false, horario: null });
+    }
+  };
 
-        <div className='flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-gray-100'>
-          <h2 className="text-3xl font-bold text-gray-800 ">
-            Horarios
-          </h2>
-          <button
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            onClick={handleModalForm}
+  const handleFormSubmit = async (data, archivo) => {
+    try {
+      let resultado = null;
+      if (currentHorario?.id) {
+        resultado = await actualizarHorario(data, currentHorario.id, null);
+      } else {
+        resultado = await crearHorario(data, null);
+      }
+
+      const horarioId = resultado?.sendingData?.id || currentHorario?.id;
+      if (archivo && horarioId) {
+        await subirDocumentoHorario(
+          horarioId,
+          archivo,
+          `Horario ${data?.nombre || ''}`.trim()
+        );
+      }
+
+      setSuccessMessage(
+        currentHorario
+          ? 'Horario actualizado con éxito'
+          : 'Horario creado con éxito'
+      );
+
+      handleCloseForm();
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      setErrorMessage(formatErrorMessage(error));
+      setTimeout(() => setErrorMessage(''), 4000);
+    }
+  };
+
+  const handleModalSubmit = async (event) => {
+    event.preventDefault();
+    if (formRef.current?.submit) {
+      await formRef.current.submit();
+    }
+  };
+
+  const tableColumns = [
+    {
+      key: 'nombre',
+      label: 'Nombre del Horario',
+      render: (row) => (
+        <div className="font-medium text-slate-900">{row.nombre}</div>
+      ),
+    },
+    {
+      key: 'docente',
+      label: 'Docente Asignado',
+      render: (row) => (
+        <span className="text-slate-600">
+          {row.docente_info?.nombre || 'No asignado'}
+        </span>
+      ),
+    },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (row) => (
+        <span className="text-slate-600">{row.estado || 'Borrador'}</span>
+      ),
+    },
+    {
+      key: 'documento',
+      label: 'Documento',
+      render: (row) => {
+        const documento = row.documento_adjunto;
+        if (!documento?.url_descarga) {
+          return <span className="text-gray-400">Sin documento</span>;
+        }
+
+        return (
+          <a
+            href={documento.url_descarga}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#185fa5] hover:underline text-sm"
           >
-            <span className="mr-2">+</span> Crear Horario
+            Descargar
+          </a>
+        );
+      },
+    },
+    {
+      key: 'acciones',
+      label: 'Acciones',
+      render: (row) => (
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => handleEditHorario(row)}
+            className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#378add]"
+          >
+            Editar
+          </button>
+          <button
+            onClick={() => handleOpenConfirm(row)}
+            className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
+          >
+            Eliminar
           </button>
         </div>
-        {HorarioExistentes.length > 0 ? (
-          <RevisionHorarios
-            horarios={HorarioExistentes}
-            deleteHorario={eliminarHorario}
-            onEdit={onEdit}
-            actualizarHorario={actualizarHorario}
-          />
-        ) : (
-          <div className="flex flex-col items-center py-16">
-            <div className="text-gray-300 mb-4 text-6xl">📄</div>
-            <h2 className="text-xl font-medium text-gray-500">No hay horarios a revisar</h2>
-            <p className="text-gray-400">Los horarios que crees aparecerán aquí.</p>
-          </div>
-        )}
-      </section>
-      {information !== "" && (
-        <Toast
-          information={information}
-          setInformation={setInformation}
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Horarios"
+        subtitle="Sube y asigna horarios a docentes"
+        action={{
+          label: 'Nuevo Horario',
+          onClick: handleNewHorario,
+          icon: '+',
+        }}
+      />
+
+      <SearchFilter
+        value={searchValue}
+        onChange={setSearchValue}
+        placeholder="Buscar por nombre o docente..."
+      />
+
+      <DataTable
+        columns={tableColumns}
+        data={filteredHorarios}
+        loading={loading}
+        emptyMessage="No hay horarios cargados"
+        emptyAction={{
+          label: 'Crear nuevo horario',
+          onClick: handleNewHorario,
+        }}
+      />
+
+      <FormModal
+        open={formOpen}
+        onClose={handleCloseForm}
+        onSubmit={handleModalSubmit}
+        title={currentHorario ? 'Editar Horario' : 'Nuevo Horario'}
+        submitLabel={uploading ? 'Procesando...' : currentHorario ? 'Actualizar Horario' : 'Subir Horario'}
+        loading={uploading}
+        maxWidth="md"
+      >
+        <FormularioHorario
+          ref={formRef}
+          horario={currentHorario}
+          onSubmitHorario={handleFormSubmit}
+          uploading={uploading}
+          usuarios={usuarios}
+          loadingUsuarios={loadingUsuarios}
         />
+      </FormModal>
+
+      <ConfirmModal
+        open={confirmModal.open}
+        title="Eliminar Horario"
+        message="Este horario será eliminado del sistema permanentemente."
+        variant="danger"
+        confirmLabel="Eliminar"
+        onConfirm={handleConfirmAction}
+        onCancel={() =>
+          setConfirmModal({ open: false, horario: null })
+        }
+        loading={uploading}
+      />
+
+      {successMessage && (
+        <div className="fixed bottom-4 right-4 z-[1300] rounded-md bg-green-50 p-4 text-sm text-green-700 border border-green-200">
+          {successMessage}
+        </div>
       )}
 
+      {errorMessage && (
+        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
     </div>
   );
-};
+}

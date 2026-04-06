@@ -40,6 +40,7 @@ const ICON_MAP = {
   'reportes-cumplimiento':IconChartBar,
   'estudiante-comunicados': IconMessageCircle,
   'docente-estudiantes':  IconUsers,
+  'docente-horario':      IconCalendar,
   perfil:                 IconUser,
 };
 

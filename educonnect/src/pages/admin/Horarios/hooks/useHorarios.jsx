@@ -1,67 +1,18 @@
-import { fetchHorario, createHorario, updateHorario, deleteHorario } from "../../../../api/horario";
-import { useState, useCallback } from 'react';
-import {fetchUsuarios} from "../../../../api/permisosService"
-import {fetchGrupos} from "../../../../api/grupos"
-import {fetchAsignatura} from "../../../../api/asignatura"
+import { fetchHorario, createHorario, updateHorario, deleteHorario, uploadHorarioDocumento } from "../../../../api/horario";
+import { useState } from 'react';
+import { fetchUsuarios } from '../../../../api/permisosService';
 
 export function useHorarios() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [HorarioExistentes, setData] = useState([]);
+    const [horariosExistentes, setData] = useState([]);
     const [uploading, setUploading] = useState(false);
     const [errorUploading, setErrorUploading] = useState(null);
+    const [usuarios, setUsuarios] = useState([]);
+    const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+    const [errorUsuarios, setErrorUsuarios] = useState(null);
 
-    const [loadingUsers,setLoadingUsers]=useState()
-    const [errorUsers, setErrorUsers] = useState(null);
-    const [usuarios, setUsuarios] = useState(null);
-
-    const cargarUsuario = useCallback(async () => {
-        setLoadingUsers(true);
-        setErrorUsers(null);
-        try {
-            const receivedData = await fetchUsuarios();
-            setUsuarios(Array.isArray(receivedData) ? receivedData : []);
-        } catch (err) {
-            setErrorUsers(err);
-        } finally {
-            setLoadingUsers(false);
-        }
-    }, []);
-
-    const [loadingGrupos,setLoadingGrupos]=useState()
-    const [errorGrupos, setErrorGrupos] = useState(null);
-    const [grupos, setGrupos] = useState(null);
-
-    const cargarGrupos = useCallback(async () => {
-        setLoadingGrupos(true);
-        setErrorGrupos(null);
-        try {
-            const receivedData = await fetchGrupos();
-            setGrupos(Array.isArray(receivedData) ? receivedData : []);
-        } catch (err) {
-            setErrorGrupos(err);
-        } finally {
-            setLoadingGrupos(false);
-        }
-    }, []);
-    const [loadingAsignaturas,setLoadingAsignaturas]=useState()
-    const [errorAsignaturas, setErrorAsignaturas] = useState(null);
-    const [asignaturas, setAsignaturas] = useState(null);
-
-    const cargarAsignaturas = useCallback(async () => {
-        setLoadingAsignaturas(true);
-        setErrorAsignaturas(null);
-        try {
-            const receivedData = await fetchAsignatura();
-            setAsignaturas(Array.isArray(receivedData) ? receivedData : []);
-        } catch (err) {
-            setErrorAsignaturas(err);
-        } finally {
-            setLoadingAsignaturas(false);
-        }
-    }, []);
-
-    const cargarHorario = useCallback(async () => {
+    const cargarHorarios = async () => {
         setLoading(true);
         setError(null);
         try {
@@ -72,73 +23,85 @@ export function useHorarios() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    };
 
-    const crearHorario = async (data) => {
+    const cargarUsuarios = async () => {
+        setLoadingUsuarios(true);
+        setErrorUsuarios(null);
+        try {
+            const receivedData = await fetchUsuarios();
+            setUsuarios(Array.isArray(receivedData) ? receivedData : []);
+        } catch (err) {
+            setErrorUsuarios(err);
+        } finally {
+            setLoadingUsuarios(false);
+        }
+    };
+
+    const crearHorario = async (data, archivoSeleccionado) => {
         setUploading(true);
         setErrorUploading(null);
         try {
-            const sendingData = await createHorario(data);
-            await cargarHorario();
+            const sendingData = await createHorario(data, archivoSeleccionado);
+            await cargarHorarios();
             return { success: true, sendingData };
         } catch (err) {
             setErrorUploading(err);
-            return { success: false, error: err };
+            throw err;
         } finally {
             setUploading(false);
         }
     }
 
-    const actualizarHorario = async (data, id) => {
+    const actualizarHorario = async (data, id, archivoSeleccionado) => {
         setUploading(true);
-        setError(null);
+        setErrorUploading(null);
         try {
-            const sendingData = await updateHorario(data, id);
-            await cargarHorario();
+            const sendingData = await updateHorario(data, id, archivoSeleccionado);
+            await cargarHorarios();
             return { success: true, sendingData };
         } catch (err) {
             setErrorUploading(err);
-            return { success: false, error: err };
+            throw err;
         } finally {
             setUploading(false);
         }
     }
+
     const eliminarHorario = async (id) => {
         setUploading(true);
-        setError(null);
+        setErrorUploading(null);
         try {
             const sendingData = await deleteHorario(id);
-            await cargarHorario();
+            await cargarHorarios();
             return { success: true, sendingData };
         } catch (err) {
             setErrorUploading(err);
-            return { success: false, error: err };
+            throw err;
         } finally {
             setUploading(false);
         }
+    }
+
+    const subirDocumentoHorario = async (horarioId, archivo, descripcion = 'Documento de horario') => {
+        if (!archivo || !horarioId) return null;
+        return uploadHorarioDocumento(horarioId, archivo, descripcion);
     }
 
     return {
-        cargarHorario,
-        HorarioExistentes,
+        cargarHorarios,
+        cargarUsuarios,
+        horariosExistentes,
         loading,
         error,
         uploading,
         errorUploading,
+        usuarios,
+        loadingUsuarios,
+        errorUsuarios,
         crearHorario,
         actualizarHorario,
         eliminarHorario,
-        cargarUsuario,
-        loadingUsers,
-        errorUsers,
-        usuarios,
-        cargarGrupos,
-        loadingGrupos,
-        errorGrupos,
-        grupos,
-        cargarAsignaturas,
-        loadingAsignaturas,
-        errorAsignaturas,
-        asignaturas
+        subirDocumentoHorario,
     };
 }

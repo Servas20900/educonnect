@@ -61,9 +61,61 @@ export function SystemConfigProvider({ children }) {
     (currentRole) => {
       const groups = state.bootstrap?.navigation?.items || [];
       if (!currentRole) return [];
-      return groups.filter((group) => {
+      const filteredGroups = groups.filter((group) => {
         const allowedRoles = group.allowed_roles || [];
         return allowedRoles.length === 0 || allowedRoles.includes(currentRole);
+      });
+
+      // Fallback defensivo: asegura items clave de docente aunque la configuracion
+      // en DB aun no haya sido actualizada.
+      return filteredGroups.map((group) => {
+        if (group.id !== 'docente') return group;
+
+        const children = Array.isArray(group.children) ? group.children : [];
+        if (children.length === 0) return group;
+
+        const docenteSection = children[0];
+        const docenteItems = Array.isArray(docenteSection.children)
+          ? docenteSection.children
+          : [];
+
+        const existsHorario = docenteItems.some((item) => item.id === 'docente-horario');
+        const existsDocumentos = docenteItems.some((item) => item.id === 'documentos');
+
+        if (existsHorario && existsDocumentos) return group;
+
+        const fallbackItems = [];
+        if (!existsDocumentos) {
+          fallbackItems.push({
+            id: 'documentos',
+            title: 'Documentos',
+            type: 'item',
+            url: '/documentos',
+          });
+        }
+
+        if (!existsHorario) {
+          fallbackItems.push({
+            id: 'docente-horario',
+            title: 'Horario',
+            type: 'item',
+            url: '/docente/horario',
+          });
+        }
+
+        return {
+          ...group,
+          children: [
+            {
+              ...docenteSection,
+              children: [
+                ...docenteItems,
+                ...fallbackItems,
+              ],
+            },
+            ...children.slice(1),
+          ],
+        };
       });
     },
     [state.bootstrap]

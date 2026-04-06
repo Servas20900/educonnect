@@ -40,6 +40,8 @@ DEFAULT_NAVIGATION = {
                         {"id": "planeamientos", "title": "Planeamientos", "type": "item", "url": "/docente/planeamientos"},
                         {"id": "comunicados", "title": "Comunicados", "type": "item", "url": "/docente/comunicados"},
                         {"id": "circulares", "title": "Circulares", "type": "item", "url": "/docente/circulares"},
+                        {"id": "documentos", "title": "Documentos", "type": "item", "url": "/documentos"},
+                        {"id": "docente-horario", "title": "Horario", "type": "item", "url": "/docente/horario"},
                         {"id": "exportaciones", "title": "Exportaciones", "type": "item", "url": "/docente/exportaciones"}
                     ]
                 }
@@ -102,8 +104,8 @@ DEFAULT_ROUTE_PERMISSIONS = {
     "perfil": ["administrador", "docente", "estudiante", "comite"],
     "circulares": ["administrador"],
     "circulares-archivadas": ["administrador"],
-    "horarios": ["administrador", "docente"],
-    "documentos": ["administrador", "docente", "comite"],
+    "horarios": ["administrador"],
+    "documentos": ["administrador", "docente"],
     "incapacidades": ["administrador"],
     "usuarios": ["administrador"],
     "reportes": ["administrador"],
@@ -116,6 +118,7 @@ DEFAULT_ROUTE_PERMISSIONS = {
     "planeamientos": ["administrador", "docente"],
     "comunicados": ["administrador", "docente"],
     "docente-circulares": ["administrador", "docente"],
+    "docente-horario": ["administrador", "docente"],
     "exportaciones": ["administrador", "docente"],
     "comite-actas": ["administrador", "comite"],
     "comite-reuniones": ["administrador", "comite"],
