@@ -1,11 +1,18 @@
 import { api } from './authService';
 
+const normalizeError = (error, fallbackMessage) => {
+    if (error?.response?.data) {
+        throw error.response.data;
+    }
+    throw new Error(fallbackMessage);
+};
+
 export const fetchRepositorios = async () => {
     try {
         const response = await api.get('api/v1/documentos/repositorios/');
         return response.data;
     } catch (error) {
-        throw error.response ? error.response.data : new Error('Error al cargar carpetas');
+        normalizeError(error, 'Error al cargar carpetas');
     }
 };
 
@@ -14,7 +21,7 @@ export const fetchItemsByObject = async (modelName, objectId) => {
         const response = await api.get(`api/v1/documentos/items/${modelName.toLowerCase()}/${objectId}/`);
         return response.data;
     } catch (error) {
-        throw error.response ? error.response.data : new Error('Error al cargar documentos');
+        normalizeError(error, 'Error al cargar documentos');
     }
 };
 
@@ -30,7 +37,7 @@ export const uploadDocumentoGenerico = async (modelName, objectId, archivo, desc
         );
         return response.data;
     } catch (error) {
-        throw error.response ? error.response.data : new Error('Error en la subida');
+        normalizeError(error, 'Error en la subida');
     }
 };
 
@@ -39,7 +46,7 @@ export const createRepositorio = async (repoData) => {
         const response = await api.post('api/v1/documentos/repositorios/', repoData);
         return response.data;
     } catch (error) {
-        throw error.response ? error.response.data : new Error('Error al crear el repositorio');
+        normalizeError(error, 'Error al crear el repositorio');
     }
 };
 
@@ -48,6 +55,43 @@ export const updateRepositorio = async (id, data) => {
         const response = await api.patch(`api/v1/documentos/repositorios/${id}/`, data);
         return response.data;
     } catch (error) {
-        throw error.response ? error.response.data : new Error('Error al actualizar');
+        normalizeError(error, 'Error al actualizar');
+    }
+};
+
+export const updateDocumentoRepositorio = async (repositorioId, documentoId, data) => {
+    try {
+        const response = await api.patch(
+            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/`,
+            data
+        );
+        return response.data;
+    } catch (error) {
+        normalizeError(error, 'Error al actualizar el documento');
+    }
+};
+
+export const deleteDocumentoRepositorio = async (repositorioId, documentoId) => {
+    try {
+        const response = await api.delete(
+            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/`
+        );
+        return response.data;
+    } catch (error) {
+        normalizeError(error, 'Error al eliminar el documento');
+    }
+};
+
+export const downloadDocumentoRepositorioArchivo = async (repositorioId, documentoId) => {
+    try {
+        const response = await api.get(
+            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/descargar/`,
+            { responseType: 'blob' }
+        );
+        return response;
+    } catch (error) {
+        const normalizedError = new Error('No se pudo descargar el documento');
+        normalizedError.details = error?.response?.data || null;
+        throw normalizedError;
     }
 };

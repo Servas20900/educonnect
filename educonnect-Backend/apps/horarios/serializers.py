@@ -1,7 +1,8 @@
 from django.db import transaction
 from django.db.models import Q
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
-from apps.databaseModels.models import HorariosAprobacion,HorariosDetalle,HorariosHorario 
+from apps.databaseModels.models import HorariosAprobacion,HorariosDetalle,HorariosHorario, DocumentosDocumento
 from .services import HorarioNotificationService
 
 class HorariosDetalleReadSerializer(serializers.ModelSerializer):
@@ -19,13 +20,16 @@ class ReadSerializerHorariosHorario(serializers.ModelSerializer):
     detalles = HorariosDetalleReadSerializer(many=True, read_only=True, source='horariosdetalle_set')
     aprobaciones = HorariosAprobacionReadSerializer(many=True, read_only=True, source='horariosaprobacion_set')
     docente_info = serializers.SerializerMethodField()
+    documento_adjunto = serializers.SerializerMethodField()
+
     class Meta:
         model = HorariosHorario
         fields = [
-            'id', 'nombre', 'grupo', 'docente_info', 'tipo_horario', 
+            'id', 'nombre', 'grupo', 'docente', 'docente_info', 'tipo_horario', 
             'version', 'estado', 'fecha_vigencia_inicio', 
-            'fecha_vigencia_fin', 'notas', 'detalles', 'aprobaciones'
+            'fecha_vigencia_fin', 'notas', 'detalles', 'aprobaciones', 'documento_adjunto'
         ]
+
     def get_docente_info(self, obj):
         if obj.docente:
             persona = getattr(obj.docente, 'persona', None)
@@ -34,6 +38,29 @@ class ReadSerializerHorariosHorario(serializers.ModelSerializer):
                 "nombre": f"{persona.nombre} {persona.primer_apellido}" if persona else obj.docente.username
             }
         return None
+
+    def get_documento_adjunto(self, obj):
+        ct = ContentType.objects.get_for_model(HorariosHorario)
+        documento = DocumentosDocumento.objects.filter(
+            content_type=ct,
+            object_id=obj.id,
+            es_version_actual=True,
+        ).order_by('-fecha_carga').first()
+
+        if not documento:
+            return None
+
+        ruta = documento.ruta_archivo or ''
+        partes = ruta.split('/upload/')
+        url_descarga = f"{partes[0]}/upload/fl_attachment/{partes[1]}" if len(partes) == 2 else ruta
+
+        return {
+            'id': documento.id,
+            'nombre': documento.nombre,
+            'url_descarga': url_descarga,
+            'ruta_archivo': ruta,
+            'fecha_carga': documento.fecha_carga,
+        }
 
 class HorariosDetalleWriteSerializer(serializers.ModelSerializer):
     class Meta:

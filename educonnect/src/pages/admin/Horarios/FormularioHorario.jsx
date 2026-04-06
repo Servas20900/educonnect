@@ -1,193 +1,186 @@
-import { useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
-import CustomSelect from "../../../components/ui/CustomSelect";
+import { forwardRef, useEffect, useImperativeHandle } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import CustomSelect from '../../../components/ui/CustomSelect';
+import { FileUpload } from '../../../components/ui';
 
-const FormularioHorario = ({ 
-    uploading, 
-    crearHorario, 
-    handleModalForm, 
-    object, 
-    actualizarHorario, 
-    usuarios, 
-    grupos, 
-    asignaturas 
-}) => {
-    const [docentesOptions, setDocentesOptions] = useState([]);
-    const [gruposOptions, setGruposOptions] = useState([]);
-    const [asignaturaOptions, setAsignaturaOptions] = useState([]);
+const getDefaultValues = (horario) => ({
+  nombre: horario?.nombre || '',
+  notas: horario?.notas || '',
+  docente: horario?.docente || '',
+  archivo: null,
+  version: horario?.version || 1,
+});
 
-    const { register, handleSubmit, control, formState: { errors }, watch } = useForm({
-        defaultValues: {
-            nombre: object?.nombre || "",
-            tipo_horario: object?.tipo_horario || "Presencial",
-            estado: object?.estado || "Borrador",
-            notas: object?.notas || "",
-            grupo: object?.grupo || "",
-            docente: object?.docente_info?.id || "",
-            version: object?.version || 1,
-            dia_semana: object?.detalles?.[0]?.dia_semana || "Lunes",
-            hora_inicio: object?.detalles?.[0]?.hora_inicio || "", 
-            hora_fin: object?.detalles?.[0]?.hora_fin || "",
-            aula: object?.detalles?.[0]?.aula || "",
-            asignatura: object?.detalles?.[0]?.asignatura || "",
-        }
-    });
+const FormularioHorario = forwardRef(function FormularioHorario(
+  {
+    horario,
+    onSubmitHorario,
+    uploading,
+    usuarios,
+    loadingUsuarios,
+  },
+  ref
+) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    control,
+    reset,
+    watch,
+    setValue,
+  } = useForm({
+    defaultValues: getDefaultValues(horario),
+  });
 
-    useEffect(() => {
-        if (usuarios) {
-            const docentes = usuarios
-                .filter(u => u.rol?.nombre === "docente")
-                .map(u => ({
-                    value: u.id,
-                    label: u.persona ? `${u.persona.nombre} ${u.persona.primer_apellido}` : u.username
-                }));
-            setDocentesOptions(docentes);
-        }
-        if (grupos) setGruposOptions(grupos.map(g => ({ value: g.id, label: g.label })));
-        if (asignaturas) setAsignaturaOptions(asignaturas.map(a => ({ value: a.id, label: a.label })));
-    }, [usuarios, grupos, asignaturas]);
+  const archivoNuevo = watch('archivo');
 
-    const onSubmitHandler = (data) => {
-        const { dia_semana, hora_inicio, hora_fin, aula, asignatura, ...cabecera } = data;
-        const dataFinal = {
-            ...cabecera,
-            version: object?.id ? (parseInt(object.version) + 1) : 1,
-            detalles: [{
-                dia_semana,
-                hora_inicio,
-                hora_fin,
-                aula,
-                asignatura: parseInt(asignatura),
-                docente: parseInt(cabecera.docente)
-            }]
-        };
-        object?.id ? actualizarHorario(dataFinal, object.id) : crearHorario(dataFinal);
+  useEffect(() => {
+    reset(getDefaultValues(horario));
+  }, [horario, reset]);
+
+  const submitForm = handleSubmit(async (data) => {
+    const payload = {
+      nombre: data.nombre.trim(),
+      notas: data.notas.trim(),
+      docente: data.docente ? parseInt(data.docente) : null,
+      tipo_horario: 'Presencial',
+      estado: 'Borrador',
+      version: parseInt(data.version) || 1,
+      grupo: null,
+      fecha_vigencia_inicio: null,
+      fecha_vigencia_fin: null,
+      detalles: [],
     };
 
-    // Estilo unificado de inputs basado en tu FormularioCircular
-    const inputClasses = (error) => `
-        w-full rounded-md border px-3 py-2 text-slate-900 transition-all outline-none text-sm
-        ${error 
-            ? "border-red-500 focus:ring-2 focus:ring-red-100" 
-            : "border-slate-300 focus:border-[#185fa5] focus:ring-2 focus:ring-[#e6f1fb]"
-        }
-    `;
+    await onSubmitHorario(payload, data.archivo || null);
+  });
 
-    return (
-        <form onSubmit={handleSubmit(onSubmitHandler)} className="space-y-6">
-            {/* SECCIÓN: DATOS GENERALES */}
-            <div className="space-y-4">
-                <div className="border-b border-slate-100 pb-2">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Información General</h3>
-                </div>
+  useImperativeHandle(ref, () => ({
+    submit: submitForm,
+  }));
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <label className="block text-sm font-semibold text-slate-700">Nombre del Horario</label>
-                        <input
-                            type="text"
-                            className={inputClasses(errors.nombre)}
-                            placeholder="Ej: Horario 10-1 Matemáticas"
-                            {...register("nombre", { required: "El nombre es obligatorio" })}
-                        />
-                        {errors.nombre && <p className="text-xs text-red-500 font-medium">{errors.nombre.message}</p>}
-                    </div>
+  const docentesOptions = (usuarios || [])
+    .filter((usuario) => {
+      const rolNombre = String(usuario?.rol?.nombre || '').toLowerCase();
+      return rolNombre === 'docente';
+    })
+    .map((usuario) => {
+      const persona = usuario?.persona;
+      const nombreCompleto = persona
+        ? [persona.nombre, persona.primer_apellido, persona.segundo_apellido]
+            .filter(Boolean)
+            .join(' ')
+        : usuario?.username || `Usuario ${usuario.id}`;
 
-                    <div className="space-y-1">
-                        <label className="block text-sm font-semibold text-slate-700">Modalidad</label>
-                        <select className={inputClasses()} {...register("tipo_horario")}>
-                            <option value="Presencial">Presencial</option>
-                            <option value="Virtual">Virtual</option>
-                        </select>
-                    </div>
+      return {
+        value: usuario.id,
+        label: nombreCompleto,
+      };
+    });
 
-                    <div className="space-y-1">
-                        <label className="block text-sm font-semibold text-slate-700">Docente Principal</label>
-                        <CustomSelect
-                            name="docente"
-                            control={control}
-                            options={docentesOptions}
-                            placeholder="Seleccionar docente..."
-                            rules={{ required: "Requerido" }}
-                        />
-                    </div>
+  return (
+    <div className="space-y-5">
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">
+          Nombre del Horario <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          className={`w-full rounded-md border ${
+            errors.nombre ? "border-red-500" : "border-slate-300"
+          } px-3 py-2 text-slate-900 focus:border-[#185fa5] focus:outline-none focus:ring-2 focus:ring-[#e6f1fb]`}
+          placeholder="Ej: Horario Nivel 10°"
+          {...register('nombre', {
+            required: 'El nombre es obligatorio',
+            minLength: { value: 3, message: 'Debe tener al menos 3 caracteres' },
+          })}
+        />
+        {errors.nombre && (
+          <p className="mt-1 text-xs text-red-500 font-medium">
+            {errors.nombre.message}
+          </p>
+        )}
+      </div>
 
-                    <div className="space-y-1">
-                        <label className="block text-sm font-semibold text-slate-700">Grupo Asignado</label>
-                        <CustomSelect
-                            name="grupo"
-                            control={control}
-                            options={gruposOptions}
-                            placeholder="Seleccionar grupo..."
-                            rules={{ required: "Requerido" }}
-                        />
-                    </div>
-                </div>
-            </div>
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">
+          Docente Asignado <span className="text-red-500">*</span>
+        </label>
+        <CustomSelect
+          name="docente"
+          control={control}
+          options={docentesOptions}
+          placeholder={loadingUsuarios ? 'Cargando docentes...' : 'Escribe para buscar docente...'}
+          rules={{ required: 'Debes asignar un docente' }}
+          isDisabled={loadingUsuarios}
+          isClearable
+        />
+        {errors.docente && (
+          <p className="mt-1 text-xs text-red-500 font-medium">
+            {errors.docente.message}
+          </p>
+        )}
+      </div>
 
-            {/* SECCIÓN: DETALLES DEL BLOQUE */}
-            <div className="space-y-4 pt-2">
-                <div className="border-b border-slate-100 pb-2">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Detalle de la Lección</h3>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                        <label className="block text-sm font-semibold text-slate-700">Día</label>
-                        <select className={inputClasses()} {...register("dia_semana")}>
-                            {["Lunes", "Martes", "Miercoles", "Jueves", "Viernes"].map(d => (
-                                <option key={d} value={d}>{d}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="block text-sm font-semibold text-slate-700">Hora Inicio</label>
-                        <input type="time" className={inputClasses()} {...register("hora_inicio", { required: true })} />
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="block text-sm font-semibold text-slate-700">Hora Fin</label>
-                        <input type="time" className={inputClasses()} {...register("hora_fin", { required: true })} />
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="block text-sm font-semibold text-slate-700">Aula</label>
-                        <input type="text" className={inputClasses()} placeholder="Ej: Laboratorio 1" {...register("aula")} />
-                    </div>
-
-                    <div className="md:col-span-2 space-y-1">
-                        <label className="block text-sm font-semibold text-slate-700">Asignatura</label>
-                        <CustomSelect
-                            name="asignatura"
-                            control={control}
-                            options={asignaturaOptions}
-                            placeholder="Seleccionar materia..."
-                            rules={{ required: "Requerido" }}
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* BOTONES DE ACCIÓN */}
-            <div className="flex justify-end gap-3 pt-6 border-t border-slate-200">
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">
+          Documento del Horario <span className="text-red-500">*</span>
+        </label>
+        <Controller
+          name="archivo"
+          control={control}
+          rules={{
+            required: !horario ? 'Debes subir un documento de horario' : false,
+          }}
+          render={({ field }) => (
+            <>
+              <FileUpload
+                onFile={(file) => field.onChange(file)}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
+                label="Subir archivo"
+                hint="PDF, Word, Excel o CSV"
+                currentFile={field.value?.name || ''}
+                disabled={uploading}
+              />
+              {archivoNuevo && (
                 <button
-                    type="button"
-                    onClick={handleModalForm}
-                    className="px-4 py-2 rounded-md border border-slate-300 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
+                  type="button"
+                  className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                  onClick={() => setValue('archivo', null)}
                 >
-                    Cancelar
+                  Quitar archivo
                 </button>
-                <button
-                    type="submit"
-                    disabled={uploading}
-                    className="px-6 py-2 rounded-md bg-[#185fa5] text-sm font-medium text-white hover:bg-[#0b2545] transition-colors disabled:opacity-50"
-                >
-                    {uploading ? "Guardando..." : object?.id ? "Actualizar Horario" : "Guardar Horario"}
-                </button>
-            </div>
-        </form>
-    );
-};
+              )}
+            </>
+          )}
+        />
+        {errors.archivo && (
+          <p className="mt-1 text-xs text-red-500 font-medium">
+            {errors.archivo.message}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-slate-700 mb-2">
+          Notas (Opcional)
+        </label>
+        <textarea
+          rows="3"
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-slate-900 focus:border-[#185fa5] focus:outline-none focus:ring-2 focus:ring-[#e6f1fb]"
+          {...register('notas')}
+          placeholder="Notas o descripción del horario"
+        />
+      </div>
+
+      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+        <p>
+          <span className="font-semibold">Nota:</span> El horario será visible solo para el docente asignado
+        </p>
+      </div>
+    </div>
+  );
+});
 
 export default FormularioHorario;

@@ -363,6 +363,11 @@ class ModuloViewSet(viewsets.ViewSet):
         current_role = roles[0] if roles else 'usuario'
 
         route_permissions = self._config_value_or_default('route_permissions')
+        # Compatibilidad defensiva: el panel /horarios es de administracion,
+        # por lo que se fuerza aqui aunque exista una configuracion antigua en DB.
+        route_permissions['horarios'] = ['administrador']
+        # Compatibilidad defensiva: documentos institucionales para administracion y docentes.
+        route_permissions['documentos'] = ['administrador', 'docente']
         allowed_permission_keys = [
             key for key, allowed_roles in route_permissions.items()
             if set(allowed_roles).intersection(set(roles))

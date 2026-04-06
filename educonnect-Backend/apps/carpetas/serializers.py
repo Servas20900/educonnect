@@ -61,3 +61,9 @@ class RepositorioSerializer(serializers.ModelSerializer):
             es_version_actual=True
         ).count()
 
+
+class DocumentoUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DocumentosDocumento
+        fields = ['nombre', 'descripcion']
+

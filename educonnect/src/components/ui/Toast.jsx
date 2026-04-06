@@ -4,7 +4,7 @@ export default function Toast({ information, setInformation }) {
   const isSuccess = information.toLowerCase().includes('xito');
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 animate-bounce">
+    <div className="fixed bottom-5 right-5 z-[1300] animate-bounce">
       <div
         className={`flex items-center rounded-lg border-l-4 p-4 shadow-xl transition-all duration-300 ${
           isSuccess

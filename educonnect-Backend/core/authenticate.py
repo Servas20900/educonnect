@@ -1,4 +1,5 @@
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.conf import settings
 
 class AutenticacionCustomJWT(JWTAuthentication):
@@ -17,7 +18,11 @@ class AutenticacionCustomJWT(JWTAuthentication):
         if raw_token is None:
             return None
 
-        # Validamos el token obtenido
-        validated_token = self.get_validated_token(raw_token)
+        # Si la cookie/header tiene un token inválido o vencido, no rompemos
+        # endpoints AllowAny (session/refresh/login). DRF resolverá permisos.
+        try:
+            validated_token = self.get_validated_token(raw_token)
+        except (InvalidToken, TokenError):
+            return None
         
         return self.get_user(validated_token), validated_token

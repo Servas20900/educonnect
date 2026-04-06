@@ -18,7 +18,7 @@ const Perfil      = Loadable(lazy(() => import('../pages/profile/Perfil')));
 const Circulares        = Loadable(lazy(() => import('../pages/admin/Circulares')));
 const CircularesArchivadas = Loadable(lazy(() => import('../pages/admin/Circulares/Archivadas')));
 const Horarios          = Loadable(lazy(() => import('../pages/admin/Horarios')));
-const Documentos        = Loadable(lazy(() => import('../pages/admin/OficiosPlantillas')));
+const Documentos        = Loadable(lazy(() => import('../pages/admin/Repositorios')));
 const Incapacidades     = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
 const Usuarios          = Loadable(lazy(() => import('../pages/admin/GestionPermisosModulos')));
 const Reportes          = Loadable(lazy(() => import('../pages/admin/Reportes')));
@@ -33,6 +33,7 @@ const Riesgo             = Loadable(lazy(() => import('../pages/docente/RiesgoEs
 const Planeamientos      = Loadable(lazy(() => import('../pages/docente/Planeamientos')));
 const Comunicados        = Loadable(lazy(() => import('../pages/docente/Comunicados')));
 const CircularesDocente  = Loadable(lazy(() => import('../pages/docente/CircularesDocente')));
+const HorarioDocente     = Loadable(lazy(() => import('../pages/docente/HorarioDocente')));
 const Exportaciones      = Loadable(lazy(() => import('../pages/docente/Exportaciones')));
 
 // Comité
@@ -97,6 +98,7 @@ const AppRoutes = {
         { path: 'planeamientos',element: <Guard permissionKey="planeamientos"><Planeamientos /></Guard> },
         { path: 'comunicados',  element: <Guard permissionKey="comunicados"><Comunicados /></Guard> },
         { path: 'circulares',   element: <Guard permissionKey="docente-circulares"><CircularesDocente /></Guard> },
+        { path: 'horario',      element: <Guard permissionKey="docente-horario"><HorarioDocente /></Guard> },
         { path: 'exportaciones',element: <Guard permissionKey="exportaciones"><Exportaciones /></Guard> },
       ],
     },
