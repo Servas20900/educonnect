@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Users, Search, RefreshCw, AlertCircle, BookOpen } from 'lucide-react';
 import { fetchEstudiantes } from '../../api/estudiantesService';
 
 export default function Estudiantes() {

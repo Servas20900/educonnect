@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BarChart3, FileText, AlertTriangle, Clock, Download, Filter } from 'lucide-react';
 import {
   fetchAuditoriaLogs,
   fetchReporteUsoSistema,

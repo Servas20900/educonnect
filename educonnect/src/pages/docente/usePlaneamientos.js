@@ -24,12 +24,13 @@ export function usePlaneamientos() {
     }
   }, []);
 
-  const crear = async ({ titulo }, archivoSeleccionado) => {
+  const crear = async ({ titulo, detalle }, archivoSeleccionado) => {
     setUploading(true);
     setErrorUploading(null);
     try {
       const formData = new FormData();
       formData.append("titulo", titulo);
+      formData.append("detalle", detalle || "");
       if (archivoSeleccionado) formData.append("archivo", archivoSeleccionado);
 
       const res = await api.post(BASE, formData, {
@@ -78,26 +79,16 @@ export function usePlaneamientos() {
 
   const descargarArchivo = async (id, titulo = "planeamiento") => {
     try {
-      const res = await api.get(`${BASE}${id}/archivo/`, {
-        responseType: "blob",
-      });
+      const baseUrl = api.defaults.baseURL || "http://localhost:8000/";
+      const cleanBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+      const downloadUrl = `${cleanBase}${BASE}${id}/archivo/`;
 
-      const blobUrl = window.URL.createObjectURL(res.data);
       const a = document.createElement("a");
-      a.href = blobUrl;
-
-      const ct = res.headers?.["content-type"] || "";
-      const ext = ct.includes("pdf")
-        ? "pdf"
-        : ct.includes("word")
-          ? "docx"
-          : "bin";
-
-      a.download = `${titulo}.${ext}`;
+      a.href = downloadUrl;
+      a.download = `${titulo}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(blobUrl);
 
       return { success: true };
     } catch (e) {

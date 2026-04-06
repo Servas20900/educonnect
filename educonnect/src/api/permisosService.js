@@ -49,6 +49,17 @@ export const assignRoleToUser = async (userId, rolId) => {
     }
 };
 
+export const removeRoleFromUser = async (userId, rolId) => {
+    try {
+        const response = await api.post(`api/v1/permisos/usuarios/${userId}/remove_role/`, {
+            rol_id: rolId
+        });
+        return response.data;
+    } catch (error) {
+        throw error.response ? error.response.data : new Error('Error al remover rol');
+    }
+};
+
 // ==================== ROLES ====================
 
 export const fetchRoles = async (activosOnly = false) => {

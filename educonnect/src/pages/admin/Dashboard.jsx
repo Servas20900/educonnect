@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { TrendingUp, TrendingDown, Users, FileText, BarChart3, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { fetchCirculares } from '../../api/circulares';
 import { fetchGrupos } from '../../api/grupos';
 import { fetchUsuarios } from '../../api/permisosService';

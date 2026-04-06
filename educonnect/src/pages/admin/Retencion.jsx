@@ -1,3 +1,4 @@
+import { Shield, Trash2, AlertCircle, Clock, Database } from 'lucide-react';
 import useSystemConfig from '../../hooks/useSystemConfig';
 
 export default function Retencion() {
@@ -5,7 +6,14 @@ export default function Retencion() {
   const politicas = getCatalog('retencion_politicas', []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+      <div className="flex items-center gap-3 mb-8">
+        <Database className="w-8 h-8 text-blue-600" />
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Políticas de Retención</h1>
+          <p className="text-sm text-gray-600">Gestiona la retención y eliminación de datos</p>
+        </div>
+      </div>
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Retención y Archivo</h2>

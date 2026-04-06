@@ -9,6 +9,7 @@ from apps.databaseModels.models import (
     AuthRolPermiso,
     AuthUsuario,
     AuthUsuarioRol,
+    AcademicoGrado,
 )
 from apps.permisos.defaults import (
     DEFAULT_ACTIONS,
@@ -35,6 +36,7 @@ class Command(BaseCommand):
         permisos_map = self._seed_permisos()
         roles_map = self._seed_roles_y_permisos(permisos_map)
         self._seed_configuracion_sistema()
+        self._seed_grados()
 
         if not options.get('skip_admin'):
             self._seed_admin(roles_map)
@@ -111,6 +113,29 @@ class Command(BaseCommand):
             )
 
         self.stdout.write(self.style.SUCCESS('Configuracion funcional en DB actualizada.'))
+
+    def _seed_grados(self):
+        grados_base = [
+            ('Primero', 'primaria', 1),
+            ('Segundo', 'primaria', 2),
+            ('Tercero', 'primaria', 3),
+            ('Cuarto', 'primaria', 4),
+            ('Quinto', 'primaria', 5),
+            ('Sexto', 'primaria', 6),
+        ]
+
+        for nombre, nivel, numero_grado in grados_base:
+            AcademicoGrado.objects.update_or_create(
+                nivel=nivel,
+                numero_grado=numero_grado,
+                defaults={
+                    'nombre': nombre,
+                    'descripcion': f'Grado {nombre.lower()} de primaria',
+                    'activo': True,
+                },
+            )
+
+        self.stdout.write(self.style.SUCCESS('Grados académicos base listos.'))
 
     def _seed_admin(self, roles_map):
         admin_username = os.getenv('SEED_ADMIN_USER', 'admin')

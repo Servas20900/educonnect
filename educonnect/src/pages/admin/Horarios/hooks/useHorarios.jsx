@@ -11,12 +11,14 @@ export function useHorarios() {
     const [usuarios, setUsuarios] = useState([]);
     const [loadingUsuarios, setLoadingUsuarios] = useState(false);
     const [errorUsuarios, setErrorUsuarios] = useState(null);
+    const [lastQueryParams, setLastQueryParams] = useState({});
 
-    const cargarHorarios = async () => {
+    const cargarHorarios = async (params = {}) => {
         setLoading(true);
         setError(null);
+        setLastQueryParams(params || {});
         try {
-            const receivedData = await fetchHorario();
+            const receivedData = await fetchHorario(params);
             setData(Array.isArray(receivedData) ? receivedData : []);
         } catch (err) {
             setError(err);
@@ -43,7 +45,7 @@ export function useHorarios() {
         setErrorUploading(null);
         try {
             const sendingData = await createHorario(data, archivoSeleccionado);
-            await cargarHorarios();
+            await cargarHorarios(lastQueryParams);
             return { success: true, sendingData };
         } catch (err) {
             setErrorUploading(err);
@@ -58,7 +60,7 @@ export function useHorarios() {
         setErrorUploading(null);
         try {
             const sendingData = await updateHorario(data, id, archivoSeleccionado);
-            await cargarHorarios();
+            await cargarHorarios(lastQueryParams);
             return { success: true, sendingData };
         } catch (err) {
             setErrorUploading(err);
@@ -73,7 +75,7 @@ export function useHorarios() {
         setErrorUploading(null);
         try {
             const sendingData = await deleteHorario(id);
-            await cargarHorarios();
+            await cargarHorarios(lastQueryParams);
             return { success: true, sendingData };
         } catch (err) {
             setErrorUploading(err);
@@ -81,6 +83,14 @@ export function useHorarios() {
         } finally {
             setUploading(false);
         }
+    }
+
+    const archivarHorario = async (id) => {
+        return actualizarHorario({ estado: 'Archivado' }, id, null);
+    }
+
+    const desarchivarHorario = async (id, estadoDestino = 'Borrador') => {
+        return actualizarHorario({ estado: estadoDestino }, id, null);
     }
 
     const subirDocumentoHorario = async (horarioId, archivo, descripcion = 'Documento de horario') => {
@@ -102,6 +112,8 @@ export function useHorarios() {
         crearHorario,
         actualizarHorario,
         eliminarHorario,
+        archivarHorario,
+        desarchivarHorario,
         subirDocumentoHorario,
     };
 }

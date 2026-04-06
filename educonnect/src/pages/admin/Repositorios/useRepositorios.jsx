@@ -6,7 +6,8 @@ import {
   createRepositorio,
   updateRepositorio,
   updateDocumentoRepositorio,
-  deleteDocumentoRepositorio,
+  archivarDocumentoRepositorio,
+  desarchivarDocumentoRepositorio,
 } from '../../../api/repositorios';
 import { fetchRoles } from '../../../api/permisosService';
 
@@ -36,11 +37,11 @@ export function useRepositorios() {
     }
   }, []);
 
-  const cargarDocumentosRepositorio = useCallback(async (repositorioId) => {
+  const cargarDocumentosRepositorio = useCallback(async (repositorioId, options = {}) => {
     setLoadingDocumentos(true);
     setError(null);
     try {
-      const data = await fetchItemsByObject(MODELO_REPOSITORIO, repositorioId);
+      const data = await fetchItemsByObject(MODELO_REPOSITORIO, repositorioId, options);
       setDocumentos(Array.isArray(data) ? data : []);
       return data;
     } catch (err) {
@@ -122,12 +123,27 @@ export function useRepositorios() {
     }
   }, [cargarDocumentosRepositorio]);
 
-  const eliminarDocumento = useCallback(async (repositorioId, documentoId) => {
+  const archivarDocumento = useCallback(async (repositorioId, documentoId, options = {}) => {
     setSaving(true);
     setError(null);
     try {
-      const result = await deleteDocumentoRepositorio(repositorioId, documentoId);
-      await cargarDocumentosRepositorio(repositorioId);
+      const result = await archivarDocumentoRepositorio(repositorioId, documentoId);
+      await cargarDocumentosRepositorio(repositorioId, options);
+      return result;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [cargarDocumentosRepositorio]);
+
+  const desarchivarDocumento = useCallback(async (repositorioId, documentoId, options = {}) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await desarchivarDocumentoRepositorio(repositorioId, documentoId);
+      await cargarDocumentosRepositorio(repositorioId, options);
       return result;
     } catch (err) {
       setError(err);
@@ -152,6 +168,7 @@ export function useRepositorios() {
     actualizarRepositorioPermisos,
     subirDocumento,
     actualizarDocumento,
-    eliminarDocumento,
+    archivarDocumento,
+    desarchivarDocumento,
   };
 }

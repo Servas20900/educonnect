@@ -2,6 +2,7 @@ import PopUp from "../../../components/ui/PopUp";
 import { RenderVer } from "./RenderVer";
 import { useRevisionHorarios } from "./hooks/useRevisionHorarios";
 import { useState } from "react";
+import { Edit2, Trash2, Eye, CheckCircle, AlertCircle } from 'lucide-react';
 import Paginador from '../../../components/ui/Paginador'
 import useSystemConfig from '../../../hooks/useSystemConfig';
 const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }) => {
