@@ -33,14 +33,14 @@ function getBreadcrumb(pathname, navigation = []) {
 export default function Topbar() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { logout, username, role } = useAuth();
+  const { logout, username, role, roles } = useAuth();
   const { getNavigationForRole } = useSystemConfig();
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster?.isDashboardDrawerOpened;
   const downMD = useMediaQuery('(max-width:900px)');
   const [anchorEl, setAnchorEl] = useState(null);
 
-  const groups = getNavigationForRole(role);
+  const groups = getNavigationForRole(roles?.length ? roles : role);
   const { section, page } = getBreadcrumb(pathname, groups);
   const initials = username
     ? username.slice(0, 2).toUpperCase()

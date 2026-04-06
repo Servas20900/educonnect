@@ -3,10 +3,11 @@ import { createContext, useMemo, useState, useEffect, useCallback } from 'react'
 import { getSessionStatus, logoutUsuario } from '../api/authService';
 import Loader from '../components/ui/Loader';
 
-const initialAuthState = { role: null, isLoading: true, username: null };
+const initialAuthState = { role: null, roles: [], isLoading: true, username: null };
 
 export const AuthContext = createContext({
   role: null,
+  roles: [],
   username: null,
   isLoading: true,
   login: () => {},
@@ -23,14 +24,15 @@ export function AuthProvider({ children }) {
       if (response.isAuthenticated) {
         setAuthState({ 
           role: response.role, 
+          roles: Array.isArray(response.roles) ? response.roles : (response.role ? [response.role] : []),
           username: response.user,
           isLoading: false 
         });
       } else {
-        setAuthState({ role: null, username: null, isLoading: false });
+        setAuthState({ role: null, roles: [], username: null, isLoading: false });
       }
     } catch (error) {
-      setAuthState({ role: null, username: null, isLoading: false });
+      setAuthState({ role: null, roles: [], username: null, isLoading: false });
     }
   }, []);
 
@@ -43,12 +45,14 @@ export function AuthProvider({ children }) {
     if (typeof authData === 'string') {
       setAuthState({ 
         role: authData, 
+        roles: [authData],
         username: null, 
         isLoading: false 
       });
     } else {
       setAuthState({ 
         role: authData.role, 
+        roles: Array.isArray(authData.roles) ? authData.roles : (authData.role ? [authData.role] : []),
         username: authData.user,
         isLoading: false 
       });
@@ -57,12 +61,13 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     await logoutUsuario();
-    setAuthState({ role: null, username: null, isLoading: false });
+    setAuthState({ role: null, roles: [], username: null, isLoading: false });
   }, []);
 
   const value = useMemo(
     () => ({
       role: authState.role,
+      roles: authState.roles,
       username: authState.username,
       isLoading: authState.isLoading,
       login,

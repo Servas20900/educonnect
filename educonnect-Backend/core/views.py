@@ -10,24 +10,29 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from apps.databaseModels.models import AuthUsuarioRol
 from .serializers import CustomTokenObtainPairSerializer
 
-def obtener_rol_usuario(user):
+def obtener_roles_usuario(user):
     """
-    Obtiene el rol del usuario desde la BD.
-    Si tiene múltiples roles, devuelve el primero.
-    Si no tiene rol, crea un rol por defecto 'estudiante'.
+    Obtiene todos los roles del usuario desde la BD en formato lista.
+    Si no tiene rol, intenta crear rol por defecto 'estudiante'.
     """
     if user.is_superuser:
-        return 'administrador'
-    
-    usuario_rol = AuthUsuarioRol.objects.filter(usuario=user).select_related('rol').first()
-    if usuario_rol and usuario_rol.rol:
-        return usuario_rol.rol.nombre.lower()
-    
+        return ['administrador']
+
+    roles = list(
+        AuthUsuarioRol.objects.filter(usuario=user)
+        .select_related('rol')
+        .values_list('rol__nombre', flat=True)
+    )
+    roles = [r.lower() for r in roles if r]
+
+    if roles:
+        return roles
+
     # Si no tiene rol, intentar crear uno por defecto
     try:
         from apps.databaseModels.models import AuthRol
         from django.utils import timezone
-        
+
         rol_estudiante = AuthRol.objects.filter(nombre__iexact='estudiante').first()
         if rol_estudiante:
             AuthUsuarioRol.objects.create(
@@ -35,11 +40,20 @@ def obtener_rol_usuario(user):
                 rol=rol_estudiante,
                 fecha_asignacion=timezone.now()
             )
-            return 'estudiante'
-    except Exception as e:
+            return ['estudiante']
+    except Exception:
         pass
-    
-    return 'usuario'
+
+    return ['usuario']
+
+def obtener_rol_usuario(user):
+    """
+    Obtiene el rol del usuario desde la BD.
+    Si tiene múltiples roles, devuelve el primero.
+    Si no tiene rol, crea un rol por defecto 'estudiante'.
+    """
+    roles = obtener_roles_usuario(user)
+    return roles[0] if roles else 'usuario'
 
 class ObtencionTokens(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -65,7 +79,7 @@ class ObtencionTokens(TokenObtainPairView):
                 # Obtener el usuario desde la BD
                 from apps.databaseModels.models import AuthUsuario
                 user = AuthUsuario.objects.get(id=user_id)
-                rol = obtener_rol_usuario(user)
+                roles = obtener_roles_usuario(user)
                 
                 response.set_cookie(
                     key=settings.SIMPLE_JWT['AUTH_COOKIE'],
@@ -87,7 +101,8 @@ class ObtencionTokens(TokenObtainPairView):
                 
                 # Agregar información del usuario y rol a la respuesta
                 response.data['user'] = user.username
-                response.data['role'] = rol
+                response.data['role'] = roles[0] if roles else None
+                response.data['roles'] = roles
                 
                 # Mantener los tokens en la respuesta para que el frontend los pueda guardar
                 response.data['access'] = access_token
@@ -158,10 +173,11 @@ class SessionStatusView(APIView):
             return Response({"isAuthenticated": False}, status=status.HTTP_200_OK)
 
         user = request.user
-        rol = obtener_rol_usuario(user)
+        roles = obtener_roles_usuario(user)
 
         return Response({
             "isAuthenticated": True,
             "user": user.username,
-            "role": rol
+            "role": roles[0] if roles else None,
+            "roles": roles,
         })

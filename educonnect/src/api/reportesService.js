@@ -6,6 +6,7 @@ export const fetchAuditoriaLogs = async (filtros = {}) => {
         const params = new URLSearchParams();
         
         if (filtros.usuario_id) params.append('usuario_id', filtros.usuario_id);
+        if (filtros.usuario) params.append('usuario', filtros.usuario);
         if (filtros.modulo) params.append('modulo', filtros.modulo);
         if (filtros.accion) params.append('accion', filtros.accion);
         if (filtros.fecha_inicio) params.append('fecha_inicio', filtros.fecha_inicio);

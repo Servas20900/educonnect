@@ -18,7 +18,11 @@ export default function Login() {
     e.preventDefault();
     const result = await executeLogin(credentials);
     if (result.success) {
-      login({ role: result.data?.role, user: result.data?.user || credentials.username });
+      login({
+        role: result.data?.role,
+        roles: Array.isArray(result.data?.roles) ? result.data.roles : (result.data?.role ? [result.data.role] : []),
+        user: result.data?.user || credentials.username
+      });
       navigate('/dashboard', { replace: true });
     }
   };

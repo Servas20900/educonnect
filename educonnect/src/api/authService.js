@@ -156,7 +156,7 @@ export const getSessionStatus = async () => {
         const response = await api.get('api/auth/session/');
         return response.data;
     } catch (error) {
-        return { isAuthenticated: false };
+        return { isAuthenticated: false, roles: [] };
     }
 };
 

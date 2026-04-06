@@ -106,10 +106,10 @@ function NavItem({ item, open, onClick, active }) {
 function SidebarContent({ drawerOpen }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { role, logout } = useAuth();
+  const { role, roles, logout } = useAuth();
   const { getNavigationForRole, branding } = useSystemConfig();
 
-  const filteredGroups = getNavigationForRole(role);
+  const filteredGroups = getNavigationForRole(roles?.length ? roles : role);
 
   const grouped = filteredGroups.map((group) => ({
     title: group.title,

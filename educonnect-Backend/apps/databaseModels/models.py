@@ -345,7 +345,7 @@ class ComitesMiembro(models.Model):
     class Meta:
         managed = True
         db_table = 'comites_miembro'
-        unique_together = (('comite', 'persona', 'cargo'),)
+        unique_together = (('comite', 'persona'),)
 
 
 class ComitesOrganoAuxiliar(models.Model):
