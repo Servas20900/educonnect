@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Archive, RotateCcw, Trash2, AlertCircle, Clock, Search } from 'lucide-react';
 import { useHorarios } from './hooks/useHorarios';
+import { useNavigate } from 'react-router-dom';
 import {
   PageHeader,
   SearchFilter,
@@ -44,6 +45,7 @@ export default function HorariosArchivados() {
     desarchivarHorario,
   } = useHorarios();
 
+  const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
   const [confirmModal, setConfirmModal] = useState({
     open: false,
@@ -113,6 +115,16 @@ export default function HorariosArchivados() {
   return (
     <div className="space-y-6">
       <PageHeader title="Horarios Archivados" />
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => navigate('/horarios')}
+          className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
+        >
+          Ver horarios sin archivar
+        </button>
+      </div>
 
       <SearchFilter
         value={searchValue}

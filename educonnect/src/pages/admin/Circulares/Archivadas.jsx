@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Archive, RotateCcw, Trash2, AlertCircle, Search } from 'lucide-react';
 import { useCirculares } from './hooks/useCirculares';
+import { useNavigate } from 'react-router-dom';
 import {
   PageHeader,
   SearchFilter,
@@ -17,6 +18,8 @@ export default function CircularesArchivadas() {
     uploading,
     actualizarCircular,
   } = useCirculares();
+
+  const navigate = useNavigate();
 
   const [searchValue, setSearchValue] = useState('');
   const [confirmModal, setConfirmModal] = useState({
@@ -104,6 +107,16 @@ export default function CircularesArchivadas() {
   return (
     <div className="space-y-6">
       <PageHeader title="Circulares Archivadas" />
+      
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => navigate('/circulares')}
+          className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
+        >
+          Ver circulares sin archivar
+        </button>
+      </div>
 
       <SearchFilter
         value={searchValue}
