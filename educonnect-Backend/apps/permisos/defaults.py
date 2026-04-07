@@ -10,7 +10,7 @@ DEFAULT_NAVIGATION = {
                     "id": "admin-items",
                     "type": "collapse",
                     "children": [
-                        {"id": "dashboard", "title": "Dashboard", "type": "item", "url": "/dashboard"},
+                        {"id": "dashboard", "title": "Home", "type": "item", "url": "/dashboard"},
                         {"id": "usuarios", "title": "Usuarios", "type": "item", "url": "/usuarios"},
                         {"id": "comites", "title": "Comites", "type": "item", "url": "/comites"},
                         {"id": "circulares", "title": "Circulares", "type": "item", "url": "/circulares"},

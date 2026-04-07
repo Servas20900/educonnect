@@ -410,6 +410,9 @@ class ModuloViewSet(viewsets.ViewSet):
                         if child.get('id') != 'admin-items':
                             continue
                         child_items = child.get('children', [])
+                        for item in child_items:
+                            if item.get('id') == 'dashboard':
+                                item['title'] = 'Home'
                         child['children'] = sorted(
                             child_items,
                             key=lambda item: order_map.get(item.get('id'), len(admin_order) + 100),
