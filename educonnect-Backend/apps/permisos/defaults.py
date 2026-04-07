@@ -10,15 +10,15 @@ DEFAULT_NAVIGATION = {
                     "id": "admin-items",
                     "type": "collapse",
                     "children": [
-                        {"id": "dashboard", "title": "Dashboard", "type": "item", "url": "/dashboard"},
+                        {"id": "dashboard", "title": "Home", "type": "item", "url": "/dashboard"},
+                        {"id": "usuarios", "title": "Usuarios", "type": "item", "url": "/usuarios"},
+                        {"id": "comites", "title": "Comites", "type": "item", "url": "/comites"},
                         {"id": "circulares", "title": "Circulares", "type": "item", "url": "/circulares"},
                         {"id": "horarios", "title": "Horarios", "type": "item", "url": "/horarios"},
                         {"id": "documentos", "title": "Documentos", "type": "item", "url": "/documentos"},
-                        {"id": "incapacidades", "title": "Incapacidades", "type": "item", "url": "/incapacidades"},
                         {"id": "planeamientos-admin", "title": "Planeamientos", "type": "item", "url": "/planeamientos"},
-                        {"id": "usuarios", "title": "Usuarios", "type": "item", "url": "/usuarios"},
+                        {"id": "incapacidades", "title": "Incapacidades", "type": "item", "url": "/incapacidades"},
                         {"id": "reportes", "title": "Reportes", "type": "item", "url": "/reportes"},
-                        {"id": "comites", "title": "Comites", "type": "item", "url": "/comites"},
                         {"id": "backups", "title": "Backups", "type": "item", "url": "/backups"}
                     ]
                 }

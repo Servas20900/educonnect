@@ -5,6 +5,7 @@ import {
   uploadDocumentoGenerico,
   createRepositorio,
   updateRepositorio,
+  deleteRepositorio,
   updateDocumentoRepositorio,
   archivarDocumentoRepositorio,
   desarchivarDocumentoRepositorio,
@@ -93,6 +94,21 @@ export function useRepositorios() {
     }
   }, [cargarRepositorios]);
 
+  const eliminarRepositorio = useCallback(async (repositorioId) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await deleteRepositorio(repositorioId);
+      await cargarRepositorios();
+      return response;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [cargarRepositorios]);
+
   const subirDocumento = useCallback(async (repositorioId, archivo, descripcion = '') => {
     setSaving(true);
     setError(null);
@@ -166,6 +182,7 @@ export function useRepositorios() {
     cargarRoles,
     crearRepositorio,
     actualizarRepositorioPermisos,
+    eliminarRepositorio,
     subirDocumento,
     actualizarDocumento,
     archivarDocumento,

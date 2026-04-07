@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Eye, EyeOff, Archive, RotateCcw, Search, AlertCircle } from 'lucide-react';
 import { useCirculares } from './hooks/useCirculares';
 import FormularioCircular from './FormularioCircular';
 import {
   PageHeader,
+  ActiveArchiveToggle,
   SearchFilter,
   DataTable,
   ConfirmModal,
@@ -41,7 +41,6 @@ const formatErrorMessage = (error) => {
 };
 
 export default function CircularesList() {
-  const navigate = useNavigate();
   const formRef = useRef(null);
 
   const {
@@ -61,6 +60,7 @@ export default function CircularesList() {
   });
   const [searchValue, setSearchValue] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
+  const [viewMode, setViewMode] = useState('activos');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const { getCatalog } = useSystemConfig();
@@ -73,9 +73,15 @@ export default function CircularesList() {
     cargarCirculares();
   }, [cargarCirculares]);
 
-  const circularesVisibles = circularesExistentes.filter(
+  const circularesActivas = circularesExistentes.filter(
     (circular) => !['Inactivo', 'Archivado'].includes(circular.estado)
   );
+
+  const circularesArchivadas = circularesExistentes.filter(
+    (circular) => ['Inactivo', 'Archivado'].includes(circular.estado)
+  );
+
+  const circularesVisibles = viewMode === 'archivados' ? circularesArchivadas : circularesActivas;
 
   const filteredCirculares = circularesVisibles.filter((circular) => {
     const matchesSearch = circular.titulo
@@ -205,16 +211,14 @@ export default function CircularesList() {
         }}
       />
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => navigate('/circulares-archivadas')}
-          className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
-        >
-          Ver circulares archivadas
-        </button>
-      </div>
-      
+      <ActiveArchiveToggle
+        viewMode={viewMode}
+        onChange={setViewMode}
+        activeLabel="Activas"
+        archivedLabel="Archivadas"
+        activeCount={circularesActivas.length}
+        archivedCount={circularesArchivadas.length}
+      />
 
       <SearchFilter
         value={searchValue}

@@ -9,6 +9,7 @@ import {
 } from '../../api/comitesService';
 import {
   ConfirmModal,
+  ActiveArchiveToggle,
   FormModal,
   PageHeader,
   SearchFilter,
@@ -318,15 +319,14 @@ export default function CrearActa() {
         }}
       />
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setEstadoFiltro((prev) => (prev === 'archivadas' ? 'activas' : 'archivadas'))}
-          className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
-        >
-          {estadoFiltro === 'archivadas' ? 'Ver actas activas' : 'Ver actas archivadas'}
-        </button>
-      </div>
+      <ActiveArchiveToggle
+        viewMode={estadoFiltro === 'archivadas' ? 'archivados' : 'activos'}
+        onChange={(mode) => setEstadoFiltro(mode === 'archivados' ? 'archivadas' : 'activas')}
+        activeLabel="Actas Activas"
+        archivedLabel="Actas Archivadas"
+        activeCount={actas.filter((acta) => !isArchivada(acta.estado)).length}
+        archivedCount={actas.filter((acta) => isArchivada(acta.estado)).length}
+      />
 
       <SearchFilter
         value={searchValue}

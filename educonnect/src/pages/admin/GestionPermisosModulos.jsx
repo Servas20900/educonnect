@@ -7,6 +7,7 @@ import {
   EmptyState,
   FormModal,
   PageHeader,
+  ActiveArchiveToggle,
   SearchFilter,
   StatusBadge,
   TabsLayout,
@@ -292,6 +293,26 @@ export default function GestionPermisosModulos() {
 
   const usuariosTab = (
     <div className="space-y-4">
+      <ActiveArchiveToggle
+        viewMode={filtros.estado === 'inactivo' ? 'archivados' : 'activos'}
+        onChange={(mode) => {
+          setFiltros((prev) => ({
+            ...prev,
+            estado: mode === 'archivados' ? 'inactivo' : 'activo',
+          }))
+        }}
+        activeLabel="Activos"
+        archivedLabel="Inactivos"
+        activeCount={usuarios.filter((u) => {
+          const email = (u.email || '').toLowerCase()
+          return !email.endsWith('@est.mep.go.cr') && u.is_active
+        }).length}
+        archivedCount={usuarios.filter((u) => {
+          const email = (u.email || '').toLowerCase()
+          return !email.endsWith('@est.mep.go.cr') && !u.is_active
+        }).length}
+      />
+
       <SearchFilter
         value={busqueda}
         onChange={setBusqueda}

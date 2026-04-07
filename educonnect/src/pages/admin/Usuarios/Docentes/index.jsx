@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   PageHeader,
+  ActiveArchiveToggle,
   SearchFilter,
   DataTable,
   ConfirmModal,
@@ -224,29 +225,14 @@ export default function Docentes() {
         }}
       />
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('activos')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            activeTab === 'activos'
-              ? 'text-[#0b2545] border-b-2 border-[#0b2545]'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Docentes Activos
-        </button>
-        <button
-          onClick={() => setActiveTab('archivados')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            activeTab === 'archivados'
-              ? 'text-[#0b2545] border-b-2 border-[#0b2545]'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Docentes Archivados
-        </button>
-      </div>
+      <ActiveArchiveToggle
+        viewMode={activeTab}
+        onChange={setActiveTab}
+        activeLabel="Docentes Activos"
+        archivedLabel="Docentes Archivados"
+        activeCount={docentes.filter((d) => d.persona?.activo !== false && d.persona?.activo !== 'false').length}
+        archivedCount={docentes.filter((d) => d.persona?.activo === false || d.persona?.activo === 'true').length}
+      />
 
       <SearchFilter
         value={searchValue}

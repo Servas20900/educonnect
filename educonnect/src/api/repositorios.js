@@ -129,3 +129,12 @@ export const desarchivarDocumentoRepositorio = async (repositorioId, documentoId
         normalizeError(error, 'Error al desarchivar el documento');
     }
 };
+
+export const deleteRepositorio = async (id) => {
+    try {
+        const response = await api.delete(`api/v1/documentos/repositorios/${id}/`);
+        return response.data;
+    } catch (error) {
+        normalizeError(error, 'Error al eliminar el repositorio');
+    }
+};

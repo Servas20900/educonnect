@@ -290,6 +290,26 @@ class RepositorioDetailView(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self, request, pk):
+        error_admin = _validar_admin_o_403(request.user)
+        if error_admin:
+            return error_admin
+
+        repositorio = get_object_or_404(DocumentosRepositorio, pk=pk)
+        tiene_documentos_activos = DocumentosDocumento.objects.filter(
+            repositorio_id=pk,
+            es_version_actual=True,
+        ).exists()
+
+        if tiene_documentos_activos:
+            return Response(
+                {"error": "No se puede eliminar la carpeta porque contiene documentos activos."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        repositorio.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class DocumentoRepositorioDetailView(APIView):
     permission_classes = [IsAuthenticated]

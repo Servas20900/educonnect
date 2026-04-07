@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useHorarios } from './hooks/useHorarios';
 import FormularioHorario from './FormularioHorario';
 import {
   PageHeader,
+  ActiveArchiveToggle,
   SearchFilter,
   DataTable,
   ConfirmModal,
@@ -38,7 +38,6 @@ const formatErrorMessage = (error) => {
 };
 
 export default function HorariosList() {
-  const navigate = useNavigate();
   const formRef = useRef(null);
 
   const {
@@ -62,15 +61,20 @@ export default function HorariosList() {
     horario: null,
   });
   const [searchValue, setSearchValue] = useState('');
+  const [viewMode, setViewMode] = useState('activos');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    cargarHorarios({ exclude_archivados: true });
+    cargarHorarios({ include_archivados: true });
     cargarUsuarios();
   }, []);
 
-  const filteredHorarios = horariosExistentes.filter((horario) => {
+  const horariosActivos = horariosExistentes.filter((horario) => horario.estado !== 'Archivado');
+  const horariosArchivados = horariosExistentes.filter((horario) => horario.estado === 'Archivado');
+  const horariosEnVista = viewMode === 'archivados' ? horariosArchivados : horariosActivos;
+
+  const filteredHorarios = horariosEnVista.filter((horario) => {
     const matchesSearch =
       horario.nombre?.toLowerCase().includes(searchValue.toLowerCase()) ||
       horario.docente_info?.nombre?.toLowerCase().includes(searchValue.toLowerCase());
@@ -234,15 +238,14 @@ export default function HorariosList() {
         }}
       />
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => navigate('/horarios-archivados')}
-          className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
-        >
-          Ver horarios archivados
-        </button>
-      </div>
+      <ActiveArchiveToggle
+        viewMode={viewMode}
+        onChange={setViewMode}
+        activeLabel="Activos"
+        archivedLabel="Archivados"
+        activeCount={horariosActivos.length}
+        archivedCount={horariosArchivados.length}
+      />
 
       <SearchFilter
         value={searchValue}

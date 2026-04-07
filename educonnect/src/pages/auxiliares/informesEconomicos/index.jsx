@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ConfirmModal,
+  ActiveArchiveToggle,
   FormModal,
   PageHeader,
   SearchFilter,
@@ -301,13 +302,14 @@ export default function InformesEconomicos({
             </label>
           ) : null}
 
-          <button
-            type="button"
-            onClick={() => setViewMode((prev) => (prev === 'archivados' ? 'activos' : 'archivados'))}
-            className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
-          >
-            {viewMode === 'archivados' ? 'Ver activos' : 'Ver archivados'}
-          </button>
+          <ActiveArchiveToggle
+            viewMode={viewMode}
+            onChange={setViewMode}
+            activeLabel="Activos"
+            archivedLabel="Archivados"
+            activeCount={informes.filter((informe) => !isArchivado(informe.estado)).length}
+            archivedCount={informes.filter((informe) => isArchivado(informe.estado)).length}
+          />
         </div>
       </div>
 
@@ -371,14 +373,14 @@ export default function InformesEconomicos({
                               <button
                                 type="button"
                                 onClick={() => openReplace(informe)}
-                                className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-50"
+                                className="rounded-md bg-[#185fa5] px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-[#378add]"
                               >
                                 Actualizar
                               </button>
                               <button
                                 type="button"
                                 onClick={() => openConfirm(informe, 'archive')}
-                                className="rounded-md border border-rose-300 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50"
+                                className="rounded-md bg-[#0b2545] px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
                               >
                                 Archivar
                               </button>
@@ -387,7 +389,7 @@ export default function InformesEconomicos({
                             <button
                               type="button"
                               onClick={() => openConfirm(informe, 'unarchive')}
-                              className="rounded-md border border-emerald-300 px-3 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                              className="rounded-md bg-[#0f6e56] px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-[#085041]"
                             >
                               Desarchivar
                             </button>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, GraduationCap, MapPin, UserRound, Users } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   PageHeader,
@@ -28,6 +28,36 @@ const GRADOS_ORDEN = [
 ];
 
 const CUPOS_POR_GRUPO = 30;
+
+const getCapacityMeta = (cantidad) => {
+  const estudiantes = Number(cantidad || 0);
+  const percent = Math.min(100, Math.round((estudiantes / CUPOS_POR_GRUPO) * 100));
+
+  if (percent >= 90) {
+    return {
+      percent,
+      label: 'Lleno',
+      chip: 'bg-rose-100 text-rose-700 border border-rose-200',
+      bar: 'bg-rose-500',
+    };
+  }
+
+  if (percent >= 65) {
+    return {
+      percent,
+      label: 'Alto',
+      chip: 'bg-amber-100 text-amber-700 border border-amber-200',
+      bar: 'bg-amber-500',
+    };
+  }
+
+  return {
+    percent,
+    label: 'Disponible',
+    chip: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+    bar: 'bg-emerald-500',
+  };
+};
 
 export default function GradosGrupos() {
   const navigate = useNavigate();
@@ -247,79 +277,120 @@ export default function GradosGrupos() {
           </div>
         ) : (
           gruposFiltrados.map((grado) => (
-            <div key={grado.numero_grado} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div
+              key={grado.numero_grado}
+              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+            >
               {/* Grado Header */}
               <button
                 onClick={() => toggleGrado(grado.numero_grado)}
-                className="w-full flex items-center justify-between p-4 bg-[#0b2545] hover:bg-[#185fa5] text-white transition-colors"
+                className="w-full border-b border-slate-200 bg-[#f4f8fc] px-4 py-3 text-slate-800 transition-colors hover:bg-[#eaf2fa]"
               >
                 <div className="flex items-center gap-3 text-left">
-                  {expandedGrados[grado.numero_grado] ? (
-                    <ChevronDown className="w-5 h-5" />
-                  ) : (
-                    <ChevronRight className="w-5 h-5" />
-                  )}
+                  <span className="rounded-md bg-[#dbe9f7] p-1.5 text-[#185fa5]">
+                    <GraduationCap className="h-4 w-4" />
+                  </span>
                   <div>
-                    <div className="font-semibold">{grado.grado_nombre}</div>
-                    <div className="text-xs text-blue-100">{grado.grupos.length} grupo(s)</div>
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Grado {grado.numero_grado}</div>
+                    <div className="text-base font-semibold tracking-tight text-slate-800">{grado.grado_nombre}</div>
                   </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase tracking-wide text-slate-500">Total grupos</div>
+                    <div className="text-sm font-semibold text-slate-700">{grado.grupos.length}</div>
+                  </div>
+                  {expandedGrados[grado.numero_grado] ? (
+                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-slate-500" />
+                  )}
                 </div>
               </button>
 
               {/* Grupos List */}
               {expandedGrados[grado.numero_grado] && (
-                <div className="divide-y divide-slate-200">
+                <div className="bg-slate-50/70 p-4 md:p-5">
                   {grado.grupos.length === 0 ? (
-                    <div className="p-4 text-center text-slate-500 text-sm">
+                    <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500">
                       No hay grupos en este grado
                     </div>
                   ) : (
-                    grado.grupos.map((grupo) => (
-                      <div key={grupo.id} className="p-4 hover:bg-slate-50 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="font-medium text-slate-900">{grupo.nombre}</div>
-                            <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-slate-600">
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                      {grado.grupos.map((grupo) => {
+                        const capacity = getCapacityMeta(grupo.cantidad_estudiantes || 0);
+                        return (
+                          <div
+                            key={grupo.id}
+                            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#185fa5]/30 hover:shadow"
+                          >
+                            <div className="flex items-start justify-between gap-3">
                               <div>
-                                <span className="font-medium text-slate-700">Docente:</span>{' '}
-                                {grupo.docente_guia_nombre || 'Sin asignar'}
+                                <h3 className="text-base font-semibold text-slate-900">{grupo.nombre}</h3>
+                                <p className="mt-0.5 text-xs text-slate-500">Codigo de grupo #{grupo.id}</p>
                               </div>
-                              <div>
-                                <span className="font-medium text-slate-700">Aula:</span>{' '}
-                                {grupo.aula || '-'}
+                              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${capacity.chip}`}>
+                                {capacity.label}
+                              </span>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-slate-600 md:grid-cols-2">
+                              <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                                <UserRound className="h-4 w-4 text-slate-500" />
+                                <span className="truncate">{grupo.docente_guia_nombre || 'Sin docente asignado'}</span>
                               </div>
-                              <div>
-                                <span className="font-medium text-slate-700">Capacidad:</span>{' '}
-                                {grupo.cantidad_estudiantes || 0}/{CUPOS_POR_GRUPO}
+                              <div className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                                <MapPin className="h-4 w-4 text-slate-500" />
+                                <span>{grupo.aula || 'Aula no definida'}</span>
                               </div>
                             </div>
+
+                            <div className="mt-4">
+                              <div className="mb-1 flex items-center justify-between text-xs">
+                                <span className="inline-flex items-center gap-1 font-medium text-slate-700">
+                                  <Users className="h-3.5 w-3.5" />
+                                  Estudiantes
+                                </span>
+                                <span className="font-semibold text-slate-700">
+                                  {grupo.cantidad_estudiantes || 0}/{CUPOS_POR_GRUPO}
+                                </span>
+                              </div>
+                              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                                <div
+                                  className={`h-full rounded-full transition-all ${capacity.bar}`}
+                                  style={{ width: `${capacity.percent}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => navigate(`/usuarios/grados-grupos/${grupo.id}/estudiantes`)}
+                                className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+                              >
+                                <Users className="h-3.5 w-3.5" />
+                                Estudiantes
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openEditForm(grupo)}
+                                className="rounded-md border border-[#185fa5] bg-white px-3 py-1.5 text-xs font-semibold text-[#185fa5] transition-colors hover:bg-[#185fa5]/10"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmModal({ open: true, grupo })}
+                                className="rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                              >
+                                Archivar
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex gap-2 ml-4">
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/usuarios/grados-grupos/${grupo.id}/estudiantes`)}
-                              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700"
-                            >
-                              Estudiantes
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openEditForm(grupo)}
-                              className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#185fa5]"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmModal({ open: true, grupo })}
-                              className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#185fa5]"
-                            >
-                              Archivar
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}

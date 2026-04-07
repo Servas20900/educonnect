@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { crearReunion, getReuniones, actualizarReunion } from '../../api/reuniones';
 import {
   ConfirmModal,
+  ActiveArchiveToggle,
   DataTable,
   FormModal,
   PageHeader,
@@ -354,15 +355,14 @@ export default function AgendarReunion() {
         }}
       />
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setEstadoFiltro((prev) => (prev === 'archivadas' ? 'activas' : 'archivadas'))}
-          className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
-        >
-          {estadoFiltro === 'archivadas' ? 'Ver reuniones activas' : 'Ver reuniones archivadas'}
-        </button>
-      </div>
+      <ActiveArchiveToggle
+        viewMode={estadoFiltro === 'archivadas' ? 'archivados' : 'activos'}
+        onChange={(mode) => setEstadoFiltro(mode === 'archivados' ? 'archivadas' : 'activas')}
+        activeLabel="Reuniones Activas"
+        archivedLabel="Reuniones Archivadas"
+        activeCount={reuniones.filter((reunion) => !isArchivada(reunion.estado)).length}
+        archivedCount={reuniones.filter((reunion) => isArchivada(reunion.estado)).length}
+      />
 
       <SearchFilter
         value={searchValue}
