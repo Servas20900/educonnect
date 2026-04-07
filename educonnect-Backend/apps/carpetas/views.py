@@ -7,7 +7,10 @@ from django.http import HttpResponse
 from django.contrib.contenttypes.models import ContentType
 from rest_framework.generics import get_object_or_404
 from django.utils import timezone
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from urllib.parse import quote
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 import ssl
@@ -133,6 +136,31 @@ def _urls_descarga_documento(documento):
     return candidatos
 
 
+def _leer_archivo_local(documento):
+    local_storage = FileSystemStorage(
+        location=settings.MEDIA_ROOT,
+        base_url=settings.MEDIA_URL,
+    )
+
+    metadatos = documento.metadatos or {}
+    local_storage_path = str(metadatos.get('local_storage_path') or '').strip()
+
+    if not local_storage_path:
+        ruta_archivo = str(documento.ruta_archivo or '').strip()
+        media_url = str(getattr(settings, 'MEDIA_URL', '/media/'))
+        if ruta_archivo and ruta_archivo.startswith(media_url):
+            local_storage_path = ruta_archivo[len(media_url):].lstrip('/')
+
+    if not local_storage_path:
+        return None, None
+
+    if not local_storage.exists(local_storage_path):
+        return None, None
+
+    with local_storage.open(local_storage_path, 'rb') as archivo_local:
+        return archivo_local.read(), documento.mime_type or 'application/octet-stream'
+
+
 def _descargar_remoto(url):
     remote_request = Request(
         url,
@@ -229,6 +257,12 @@ class GenericDocumentUploadView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         except Exception as e:
+            logger.exception(
+                'Error al subir documento a %s:%s por usuario=%s',
+                model_name,
+                object_id,
+                getattr(request.user, 'id', None),
+            )
             return Response(
                 {"error": f"Fallo interno en la subida: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -385,12 +419,14 @@ class DocumentoRepositorioDownloadView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        content = None
-        remote_content_type = None
+        content, remote_content_type = _leer_archivo_local(documento)
         errores_descarga = []
 
         # Intento 1: URLs directas y transformadas.
         for url_descarga in _urls_descarga_documento(documento):
+            parsed = urlparse(str(url_descarga or ''))
+            if parsed.scheme not in {'http', 'https'}:
+                continue
             try:
                 content, remote_content_type = _descargar_remoto(url_descarga)
                 break

@@ -1,5 +1,8 @@
 import cloudinary.uploader
 from rest_framework import serializers
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
+from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from apps.databaseModels.models import DocumentosDocumento, DocumentosRepositorio
 from .models import PatronatoInforme
@@ -12,6 +15,53 @@ class InformeEconomicoWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = PatronatoInforme
         fields = ['id', 'titulo', 'categoria', 'archivo', 'reemplazar_id']
+
+    @staticmethod
+    def _cloudinary_error_permite_fallback(error):
+        mensaje = str(error or '').lower()
+        return any(
+            token in mensaje
+            for token in (
+                'cloud_name is disabled',
+                'must supply',
+                'api key',
+                'api_secret',
+                'authorization',
+            )
+        )
+
+    @staticmethod
+    def _subir_local(archivo, folder_path):
+        local_storage = FileSystemStorage(
+            location=settings.MEDIA_ROOT,
+            base_url=settings.MEDIA_URL,
+        )
+        storage_path = local_storage.save(f"{folder_path}/{archivo.name}", archivo)
+        return {
+            'secure_url': local_storage.url(storage_path),
+            'bytes': int(getattr(archivo, 'size', 0) or 0),
+            'format': (archivo.name.split('.')[-1].lower() if '.' in archivo.name else 'bin'),
+            'etag': '',
+            'public_id': None,
+            'storage_path': storage_path,
+        }
+
+    @classmethod
+    def _subir_archivo(cls, archivo, folder_path):
+        if settings.USE_CLOUDINARY:
+            try:
+                return cloudinary.uploader.upload(
+                    archivo,
+                    folder=folder_path,
+                    resource_type='auto',
+                )
+            except Exception as error:
+                if settings.DEBUG and cls._cloudinary_error_permite_fallback(error):
+                    archivo.seek(0)
+                    return cls._subir_local(archivo, folder_path)
+                raise
+
+        return cls._subir_local(archivo, folder_path)
 
     def create(self, validated_data):
         archivo = validated_data.pop('archivo')
@@ -53,12 +103,9 @@ class InformeEconomicoWriteSerializer(serializers.ModelSerializer):
                 responsable=request.user
             )
 
-        # 2. Subida a Cloudinary
-        upload_result = cloudinary.uploader.upload(
-            archivo,
-            folder=repo.cloudinary_path,
-            resource_type="auto"
-        )
+        # 2. Subida (Cloudinary con fallback local)
+        upload_result = self._subir_archivo(archivo, repo.cloudinary_path)
+        ahora = timezone.now()
 
         # 3. Crear el nuevo documento vinculado al informe (sea nuevo o reutilizado)
         DocumentosDocumento.objects.create(
@@ -69,15 +116,19 @@ class InformeEconomicoWriteSerializer(serializers.ModelSerializer):
             ruta_archivo=upload_result['secure_url'],
             tamaño_bytes=upload_result['bytes'],
             extension=archivo.name.split('.')[-1] if '.' in archivo.name else 'bin',
-            mime_type=upload_result.get('format', 'pdf'),
+            mime_type=(str(getattr(archivo, 'content_type', '') or '').strip() or 'application/octet-stream'),
             version=version_actual,
             documento_anterior=doc_anterior,
             hash_md5=upload_result.get('etag', ''),
             es_version_actual=True,
             etiquetas={'modulo': 'Patronato'},
-            metadatos={'public_id': upload_result['public_id']},
-            fecha_carga=informe.fecha_creacion,
-            fecha_modificacion=informe.fecha_creacion,
+            metadatos={
+                'public_id': upload_result.get('public_id'),
+                'storage_backend': 'local' if upload_result.get('storage_path') else 'cloudinary',
+                'local_storage_path': upload_result.get('storage_path'),
+            },
+            fecha_carga=ahora,
+            fecha_modificacion=ahora,
             cargado_por=request.user,
             content_object=informe 
         )

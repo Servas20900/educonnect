@@ -3,14 +3,21 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from django.utils.timezone import now
-from django.http import Http404
-from django.shortcuts import redirect
-from cloudinary.utils import private_download_url
+from django.http import FileResponse, Http404, HttpResponse
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 import os
+import unicodedata
 
 from .models import Planeamiento
 from .serializers import PlaneamientoSerializer
 from apps.databaseModels.models import AuthUsuarioRol
+
+
+def _normalize_role_name(value):
+    normalized = unicodedata.normalize("NFKD", str(value or ""))
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return normalized.strip().lower()
 
 
 def is_admin_user(user):
@@ -20,10 +27,9 @@ def is_admin_user(user):
     if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
         return True
 
-    return AuthUsuarioRol.objects.filter(
-        usuario=user,
-        rol__nombre__iexact="administrador",
-    ).exists()
+    aliases = {"administrador", "administracion", "admin"}
+    role_names = AuthUsuarioRol.objects.filter(usuario=user).values_list("rol__nombre", flat=True)
+    return any(_normalize_role_name(name) in aliases for name in role_names)
 
 
 class ViewPlaneamiento(viewsets.ModelViewSet):
@@ -72,28 +78,40 @@ class ViewPlaneamiento(viewsets.ModelViewSet):
         if not plane.archivo:
             raise Http404("Este planeamiento no tiene archivo.")
 
-        # En este proyecto Cloudinary guarda el public_id de raw incluyendo extensión.
-        # Ej: media/planeamientos/planeamientos_dbsimp.pdf
-        public_id_con_ext = (plane.archivo.name or "").lstrip("/")
-        _, extension = os.path.splitext(public_id_con_ext)
-        extension_limpia = extension.replace(".", "") or None
+        filename = os.path.basename(str(plane.archivo.name or "").replace("\\", "/")) or "planeamiento"
 
-        download_url = None
+        # Intento 1: leer desde storage y enviar binario (sin redireccion externa).
         try:
-            download_url = private_download_url(
-                public_id_con_ext,
-                extension_limpia,
-                resource_type="raw",
-                type="upload",
-                attachment=True,
-            )
+            file_stream = plane.archivo.open("rb")
+            response = FileResponse(file_stream, as_attachment=True)
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
         except Exception:
-            download_url = None
+            pass
 
-        if not download_url:
-            return Response(
-                {"detail": "No se pudo resolver la descarga del documento en Cloudinary."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        # Intento 2: fetch remoto del URL del archivo y devolver binario.
+        try:
+            file_url = str(getattr(plane.archivo, "url", "") or "").strip()
+            if file_url.startswith("http://") or file_url.startswith("https://"):
+                remote_request = Request(
+                    file_url,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                        "Accept": "*/*",
+                    },
+                )
+                with urlopen(remote_request, timeout=20) as remote_file:
+                    content = remote_file.read()
+                response = HttpResponse(
+                    content,
+                    content_type=getattr(plane.archivo, "file", None) and getattr(plane.archivo.file, "content_type", None) or "application/octet-stream",
+                )
+                response["Content-Disposition"] = f'attachment; filename="{filename}"'
+                return response
+        except (HTTPError, URLError, Exception):
+            pass
 
-        return redirect(download_url)
+        return Response(
+            {"detail": "No fue posible obtener el documento adjunto."},
+            status=status.HTTP_404_NOT_FOUND,
+        )

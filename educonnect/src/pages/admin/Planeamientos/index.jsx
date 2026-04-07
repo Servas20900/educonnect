@@ -52,13 +52,19 @@ export default function PlaneamientosAdminList() {
     cargarPlaneamientos();
   }, []);
 
+  const estadoNorm = (value) => String(value || '').trim().toLowerCase();
+  const esInactivo = (estado) => {
+    const normalized = estadoNorm(estado);
+    return normalized.includes('archiv') || normalized.includes('inactiv');
+  };
+
   const planeamientosActivos = useMemo(
-    () => planeamientos.filter((item) => String(item.estado || '').toLowerCase() !== 'borrador'),
+    () => planeamientos.filter((item) => !esInactivo(item.estado)),
     [planeamientos]
   );
 
   const planeamientosInactivos = useMemo(
-    () => planeamientos.filter((item) => String(item.estado || '').toLowerCase() === 'borrador'),
+    () => planeamientos.filter((item) => esInactivo(item.estado)),
     [planeamientos]
   );
 
@@ -104,6 +110,11 @@ export default function PlaneamientosAdminList() {
       render: (row) => <span className="text-slate-600">{row.detalle || '-'}</span>,
     },
     {
+      key: 'estado',
+      label: 'Estado',
+      render: (row) => <span className="text-slate-700">{row.estado || 'Borrador'}</span>,
+    },
+    {
       key: 'acciones',
       label: 'Acciones',
       render: (row) => (
@@ -137,8 +148,8 @@ export default function PlaneamientosAdminList() {
       <ActiveArchiveToggle
         viewMode={viewMode}
         onChange={setViewMode}
-        activeLabel="Activos"
-        archivedLabel="Inactivos"
+        activeLabel="Visibles"
+        archivedLabel="Archivados"
         activeCount={planeamientosActivos.length}
         archivedCount={planeamientosInactivos.length}
       />

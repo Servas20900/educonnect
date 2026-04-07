@@ -117,8 +117,33 @@ DATABASES = {
     }
 }
 
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+}
+
+
+def _cloudinary_config_is_valid(config):
+    placeholders = {
+        '',
+        'your-cloud-name',
+        'your-api-key',
+        'your-api-secret',
+        'none',
+        'null',
+    }
+
+    values = [str(config.get(key) or '').strip() for key in ('CLOUD_NAME', 'API_KEY', 'API_SECRET')]
+    if not all(values):
+        return False
+
+    return all(value.lower() not in placeholders for value in values)
+
 # Archivos: por defecto local en DEBUG, pero se puede forzar Cloudinary con USE_CLOUDINARY=true
-USE_CLOUDINARY = os.getenv('USE_CLOUDINARY', 'false').lower() == 'true'
+USE_CLOUDINARY_REQUESTED = os.getenv('USE_CLOUDINARY', 'false').lower() == 'true'
+USE_CLOUDINARY = USE_CLOUDINARY_REQUESTED and _cloudinary_config_is_valid(CLOUDINARY_STORAGE)
+
 if DEBUG and not USE_CLOUDINARY:
     DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 else:
@@ -207,18 +232,13 @@ SIMPLE_JWT = {
 }
 
 AUTH_USER_MODEL = 'databaseModels.AuthUsuario'
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
-}
-
-cloudinary.config(
-    cloud_name = CLOUDINARY_STORAGE['CLOUD_NAME'],
-    api_key = CLOUDINARY_STORAGE['API_KEY'],
-    api_secret = CLOUDINARY_STORAGE['API_SECRET'],
-    secure = True
-)
+if USE_CLOUDINARY:
+    cloudinary.config(
+        cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+        api_key=CLOUDINARY_STORAGE['API_KEY'],
+        api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+        secure=True,
+    )
 
 # Dominios de correo permitidos para el registro
 AUTH_ALLOWED_EMAIL_DOMAINS = ['mep.go.cr', 'est.mep.go.cr']

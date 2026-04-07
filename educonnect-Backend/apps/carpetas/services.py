@@ -1,6 +1,8 @@
 import cloudinary.uploader
 import hashlib
 import os
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 from django.db import transaction
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
@@ -37,6 +39,36 @@ class DocumentService:
 
         return 'raw'
 
+    @staticmethod
+    def _subir_a_storage_local(archivo, folder_path, resource_type):
+        local_storage = FileSystemStorage(
+            location=settings.MEDIA_ROOT,
+            base_url=settings.MEDIA_URL,
+        )
+        storage_path = local_storage.save(f"{folder_path}/{archivo.name}", archivo)
+
+        return {
+            'resource_type': resource_type,
+            'secure_url': local_storage.url(storage_path),
+            'bytes': int(getattr(archivo, 'size', 0) or 0),
+            'format': DocumentService._obtener_extension(archivo.name) or 'bin',
+            'public_id': None,
+            'version': None,
+            'storage_path': storage_path,
+        }
+
+    @staticmethod
+    def _permite_fallback_local_por_error_cloudinary(error):
+        mensaje = str(error or '').lower()
+        errores_conocidos = (
+            'must supply',
+            'cloud_name is disabled',
+            'api key',
+            'api_secret',
+            'authorization',
+        )
+        return any(texto in mensaje for texto in errores_conocidos)
+
     @classmethod
     def procesar_subida(cls, archivo, objeto_destino, usuario, descripcion=""):
         archivo_hash = cls._generar_hash(archivo)
@@ -64,7 +96,17 @@ class DocumentService:
             'unique_filename': True,
         }
 
-        resultado = cloudinary.uploader.upload(archivo, **upload_options)
+        if settings.USE_CLOUDINARY:
+            try:
+                resultado = cloudinary.uploader.upload(archivo, **upload_options)
+            except Exception as error:
+                if settings.DEBUG and cls._permite_fallback_local_por_error_cloudinary(error):
+                    archivo.seek(0)
+                    resultado = cls._subir_a_storage_local(archivo, folder_path, resource_type)
+                else:
+                    raise
+        else:
+            resultado = cls._subir_a_storage_local(archivo, folder_path, resource_type)
 
         with transaction.atomic():
             version_anterior = DocumentosDocumento.objects.filter(
@@ -106,6 +148,8 @@ class DocumentService:
                     "version_cloudinary": resultado.get('version'),
                     "cloudinary_folder": folder_path,
                     "resource_type": resource_type,
+                    "storage_backend": 'local' if resultado.get('storage_path') else 'cloudinary',
+                    "local_storage_path": resultado.get('storage_path'),
                 },
                 fecha_carga=timezone.now(),
                 fecha_modificacion=timezone.now(),
