@@ -191,3 +191,15 @@ export const logoutUsuario = async () => {
         return true;
     }
 };
+
+export const changePassword = async (passwordData) => {
+    try {
+        const response = await api.post('api/auth/change-password/', passwordData);
+        return response.data;
+    } catch (error) {
+        const parsed = parseApiError(error, 'No se pudo cambiar la contraseña');
+        const normalizedError = new Error(parsed.message);
+        normalizedError.details = parsed.details;
+        throw normalizedError;
+    }
+};

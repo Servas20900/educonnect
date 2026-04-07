@@ -1,6 +1,12 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import ObtencionTokens, EliminacionTokens, SessionStatusView, RefreshDesdeCookieView
+from .views import (
+    ObtencionTokens,
+    EliminacionTokens,
+    SessionStatusView,
+    RefreshDesdeCookieView,
+    ChangePasswordView,
+)
 
 from django.conf import settings
 from django.conf.urls.static import static
@@ -29,6 +35,7 @@ urlpatterns = [
     path("api/v1/evaluaciones/", include("apps.evaluaciones.urls")),
     path("api/v1/informes-economicos/", include("apps.informesEconomicos.urls")),
     path("api/v1/usuarios/", include("apps.usuarios.urls")),
+    path('api/auth/change-password/', ChangePasswordView.as_view(), name='change-password'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
