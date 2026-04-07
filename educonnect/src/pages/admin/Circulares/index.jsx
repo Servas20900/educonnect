@@ -214,6 +214,7 @@ export default function CircularesList() {
           Ver circulares archivadas
         </button>
       </div>
+      
 
       <SearchFilter
         value={searchValue}
