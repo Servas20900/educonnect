@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DataTable, PageHeader, SearchFilter } from '../../../components/ui';
+import { ActiveArchiveToggle, DataTable, PageHeader, SearchFilter } from '../../../components/ui';
 import {
   descargarArchivoPlaneamiento,
   fetchPlaneamientosAdmin,
@@ -31,6 +31,7 @@ export default function PlaneamientosAdminList() {
   const [planeamientos, setPlaneamientos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
+  const [viewMode, setViewMode] = useState('activos');
   const [errorMessage, setErrorMessage] = useState('');
 
   const cargarPlaneamientos = async () => {
@@ -51,16 +52,28 @@ export default function PlaneamientosAdminList() {
     cargarPlaneamientos();
   }, []);
 
+  const planeamientosActivos = useMemo(
+    () => planeamientos.filter((item) => String(item.estado || '').toLowerCase() !== 'borrador'),
+    [planeamientos]
+  );
+
+  const planeamientosInactivos = useMemo(
+    () => planeamientos.filter((item) => String(item.estado || '').toLowerCase() === 'borrador'),
+    [planeamientos]
+  );
+
+  const planeamientosEnVista = viewMode === 'archivados' ? planeamientosInactivos : planeamientosActivos;
+
   const planeamientosFiltrados = useMemo(() => {
     const q = searchValue.trim().toLowerCase();
 
-    return planeamientos.filter((item) => {
+    return planeamientosEnVista.filter((item) => {
       const titulo = (item.titulo || '').toLowerCase();
       const docente = (item.docente_nombre || '').toLowerCase();
       const detalle = (item.detalle || '').toLowerCase();
       return !q || titulo.includes(q) || docente.includes(q) || detalle.includes(q);
     });
-  }, [planeamientos, searchValue]);
+  }, [planeamientosEnVista, searchValue]);
 
   const handleDescargar = async (item) => {
     if (!item?.archivo) return;
@@ -120,6 +133,15 @@ export default function PlaneamientosAdminList() {
           {errorMessage}
         </div>
       ) : null}
+
+      <ActiveArchiveToggle
+        viewMode={viewMode}
+        onChange={setViewMode}
+        activeLabel="Activos"
+        archivedLabel="Inactivos"
+        activeCount={planeamientosActivos.length}
+        archivedCount={planeamientosInactivos.length}
+      />
 
       <SearchFilter
         value={searchValue}

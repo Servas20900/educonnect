@@ -392,6 +392,28 @@ class ModuloViewSet(viewsets.ViewSet):
                             item for item in child.get('children', [])
                             if item.get('id') != 'reportes-cumplimiento'
                         ]
+                if group.get('id') == 'admin':
+                    admin_order = [
+                        'dashboard',
+                        'usuarios',
+                        'comites',
+                        'circulares',
+                        'horarios',
+                        'documentos',
+                        'planeamientos-admin',
+                        'incapacidades',
+                        'reportes',
+                        'backups',
+                    ]
+                    order_map = {item_id: index for index, item_id in enumerate(admin_order)}
+                    for child in group.get('children', []):
+                        if child.get('id') != 'admin-items':
+                            continue
+                        child_items = child.get('children', [])
+                        child['children'] = sorted(
+                            child_items,
+                            key=lambda item: order_map.get(item.get('id'), len(admin_order) + 100),
+                        )
 
         for key in ('auxiliares-informes', 'auxiliares-reglamentos'):
             existing_roles = route_permissions.get(key, [])

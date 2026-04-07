@@ -3,6 +3,7 @@ import useAuth from '../../../hooks/useAuth';
 import { useRepositorios } from './useRepositorios';
 import {
   PageHeader,
+  ActiveArchiveToggle,
   SearchFilter,
   DataTable,
   FormModal,
@@ -77,6 +78,8 @@ export default function RepositoriosDocumentales() {
     cargarRepositorios,
     cargarDocumentosRepositorio,
     crearRepositorio,
+    actualizarRepositorioPermisos,
+    eliminarRepositorio,
     subirDocumento,
     actualizarDocumento,
     archivarDocumento,
@@ -88,8 +91,10 @@ export default function RepositoriosDocumentales() {
 
   const [repoModalOpen, setRepoModalOpen] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [repoEditModalOpen, setRepoEditModalOpen] = useState(false);
   const [documentoModalOpen, setDocumentoModalOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmDeleteRepoOpen, setConfirmDeleteRepoOpen] = useState(false);
   const [mostrandoArchivados, setMostrandoArchivados] = useState(false);
 
   const [repoForm, setRepoForm] = useState(defaultRepoForm);
@@ -97,6 +102,7 @@ export default function RepositoriosDocumentales() {
   const [documentoForm, setDocumentoForm] = useState(defaultDocumentoForm);
 
   const [documentoEnEdicion, setDocumentoEnEdicion] = useState(null);
+  const [repositorioEnEdicion, setRepositorioEnEdicion] = useState(null);
 
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -188,6 +194,47 @@ export default function RepositoriosDocumentales() {
       await crearRepositorio(repoForm);
       setRepoModalOpen(false);
       showSuccess('Repositorio creado correctamente');
+    } catch (error) {
+      showError(error);
+    }
+  };
+
+  const abrirModalEditarRepositorio = (repo) => {
+    setRepositorioEnEdicion(repo);
+    setRepoForm({
+      nombre: repo?.nombre || '',
+      descripcion: repo?.descripcion || '',
+      cloudinary_path: repo?.cloudinary_path || 'educonnect/documentos/',
+    });
+    setRepoEditModalOpen(true);
+  };
+
+  const submitEditarRepositorio = async (event) => {
+    event.preventDefault();
+    if (!repositorioEnEdicion?.id) return;
+
+    try {
+      await actualizarRepositorioPermisos(repositorioEnEdicion.id, repoForm);
+      setRepoEditModalOpen(false);
+      setRepositorioEnEdicion(null);
+      showSuccess('Repositorio actualizado correctamente');
+    } catch (error) {
+      showError(error);
+    }
+  };
+
+  const abrirConfirmEliminarRepositorio = (repo) => {
+    setRepositorioEnEdicion(repo);
+    setConfirmDeleteRepoOpen(true);
+  };
+
+  const confirmarEliminarRepositorio = async () => {
+    if (!repositorioEnEdicion?.id) return;
+    try {
+      await eliminarRepositorio(repositorioEnEdicion.id);
+      setConfirmDeleteRepoOpen(false);
+      setRepositorioEnEdicion(null);
+      showSuccess('Repositorio eliminado correctamente');
     } catch (error) {
       showError(error);
     }
@@ -326,6 +373,22 @@ export default function RepositoriosDocumentales() {
           >
             Abrir
           </button>
+          {isAdmin ? (
+            <>
+              <button
+                onClick={() => abrirModalEditarRepositorio(row)}
+                className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => abrirConfirmEliminarRepositorio(row)}
+                className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
+              >
+                Eliminar
+              </button>
+            </>
+          ) : null}
         </div>
       ),
     },
@@ -432,12 +495,17 @@ export default function RepositoriosDocumentales() {
         <>
           {isAdmin ? (
             <div className="flex justify-end gap-2">
-              <button
-                onClick={alternarVistaArchivados}
-                className="rounded-md border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] transition-colors hover:bg-[#e6f1fb]"
-              >
-                {mostrandoArchivados ? 'Ver activos' : 'Ver archivados'}
-              </button>
+              <ActiveArchiveToggle
+                viewMode={mostrandoArchivados ? 'archivados' : 'activos'}
+                onChange={(mode) => {
+                  const shouldShowArchived = mode === 'archivados';
+                  if (shouldShowArchived !== mostrandoArchivados) {
+                    alternarVistaArchivados();
+                  }
+                }}
+                activeLabel="Activos"
+                archivedLabel="Archivados"
+              />
               {!mostrandoArchivados ? (
                 <button
                   onClick={abrirModalSubir}
@@ -535,6 +603,49 @@ export default function RepositoriosDocumentales() {
       </FormModal>
 
       <FormModal
+        open={repoEditModalOpen}
+        onClose={() => {
+          setRepoEditModalOpen(false);
+          setRepositorioEnEdicion(null);
+        }}
+        onSubmit={submitEditarRepositorio}
+        title="Editar repositorio"
+        submitLabel={saving ? 'Guardando...' : 'Guardar cambios'}
+        loading={saving}
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Nombre</label>
+            <input
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none focus:ring-2 focus:ring-[#e6f1fb]"
+              value={repoForm.nombre}
+              onChange={(event) => setRepoForm((prev) => ({ ...prev, nombre: event.target.value }))}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Descripción</label>
+            <textarea
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none focus:ring-2 focus:ring-[#e6f1fb]"
+              rows={3}
+              value={repoForm.descripcion}
+              onChange={(event) => setRepoForm((prev) => ({ ...prev, descripcion: event.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Ruta de almacenamiento</label>
+            <input
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none focus:ring-2 focus:ring-[#e6f1fb]"
+              value={repoForm.cloudinary_path}
+              onChange={(event) => setRepoForm((prev) => ({ ...prev, cloudinary_path: event.target.value }))}
+              required
+            />
+          </div>
+        </div>
+      </FormModal>
+
+      <FormModal
         open={documentoModalOpen}
         onClose={() => setDocumentoModalOpen(false)}
         onSubmit={submitEditarDocumento}
@@ -574,6 +685,20 @@ export default function RepositoriosDocumentales() {
         onCancel={() => setConfirmDeleteOpen(false)}
         loading={saving}
         variant={mostrandoArchivados ? 'info' : 'warning'}
+      />
+
+      <ConfirmModal
+        open={confirmDeleteRepoOpen}
+        title="Eliminar carpeta"
+        message="Solo se puede eliminar si esta carpeta no tiene documentos activos adentro."
+        confirmLabel="Eliminar"
+        onConfirm={confirmarEliminarRepositorio}
+        onCancel={() => {
+          setConfirmDeleteRepoOpen(false);
+          setRepositorioEnEdicion(null);
+        }}
+        loading={saving}
+        variant="danger"
       />
 
       {successMessage ? (

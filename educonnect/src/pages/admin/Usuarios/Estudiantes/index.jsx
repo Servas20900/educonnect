@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   PageHeader,
+  ActiveArchiveToggle,
   SearchFilter,
   DataTable,
   ConfirmModal,
@@ -242,29 +243,20 @@ export default function Estudiantes() {
         }}
       />
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('activos')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            activeTab === 'activos'
-              ? 'text-[#0b2545] border-b-2 border-[#0b2545]'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Estudiantes Activos
-        </button>
-        <button
-          onClick={() => setActiveTab('archivados')}
-          className={`px-4 py-2 font-medium text-sm transition-colors ${
-            activeTab === 'archivados'
-              ? 'text-[#0b2545] border-b-2 border-[#0b2545]'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          Estudiantes Archivados
-        </button>
-      </div>
+      <ActiveArchiveToggle
+        viewMode={activeTab}
+        onChange={setActiveTab}
+        activeLabel="Estudiantes Activos"
+        archivedLabel="Estudiantes Archivados"
+        activeCount={estudiantes.filter((e) => {
+          const persona = typeof e.persona === 'object' ? e.persona : {};
+          return persona.activo !== false && persona.activo !== 'false';
+        }).length}
+        archivedCount={estudiantes.filter((e) => {
+          const persona = typeof e.persona === 'object' ? e.persona : {};
+          return persona.activo === false || persona.activo === 'true';
+        }).length}
+      />
 
       <SearchFilter
         value={searchValue}

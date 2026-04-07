@@ -63,25 +63,25 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
     const confirmModalConfig = {
         Aprobar: {
             title: "Aprobar horario",
-            message: `Se aprobara el horario \"${horarioSeleccionado?.nombre || ""}\".`,
+            message: `Se aprobara el horario "${horarioSeleccionado?.nombre || ""}".`,
             confirmText: "Aprobar",
             onConfirm: () => handleConfirm()
         },
         Rechazar: {
             title: "Rechazar horario",
-            message: `Se rechazara el horario \"${horarioSeleccionado?.nombre || ""}\" y volvera a borrador.`,
+            message: `Se rechazara el horario "${horarioSeleccionado?.nombre || ""}" y volvera a borrador.`,
             confirmText: "Rechazar",
             onConfirm: () => handleConfirm("Rechazado por administracion")
         },
         Eliminar: {
             title: "Archivar horario",
-            message: `Se archivara el horario \"${horarioSeleccionado?.nombre || ""}\".`,
+            message: `Se archivara el horario "${horarioSeleccionado?.nombre || ""}".`,
             confirmText: "Archivar",
             onConfirm: handleDelete
         },
         Reactivar: {
             title: "Reactivar horario",
-            message: `Se reactivara el horario \"${horarioSeleccionado?.nombre || ""}\".`,
+            message: `Se reactivara el horario "${horarioSeleccionado?.nombre || ""}".`,
             confirmText: "Reactivar",
             onConfirm: () => handleConfirm("Reactivado por administracion")
         }

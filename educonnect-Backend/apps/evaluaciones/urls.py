@@ -5,11 +5,12 @@ from .views import EvaluacionesEvaluacionViewSet, EvaluacionesCalificacionViewSe
 router = DefaultRouter()
 router.register(r'', EvaluacionesEvaluacionViewSet, basename='evaluacion')
 
-calificaciones_router = DefaultRouter()
-calificaciones_router.register(r'calificaciones', EvaluacionesCalificacionViewSet, basename='calificacion')
-
 urlpatterns = [
-	path('', include(calificaciones_router.urls)),
-	path('grupo/<int:grupo_id>/', EvaluacionesEvaluacionViewSet.as_view({'get': 'por_grupo'}), name='evaluaciones-por-grupo'),
+	path('calificaciones/', EvaluacionesCalificacionViewSet.as_view({'get': 'list', 'post': 'create'}), name='calificaciones-list'),
+	path('calificaciones/<int:pk>/', EvaluacionesCalificacionViewSet.as_view({
+		'get': 'retrieve',
+		'patch': 'partial_update',
+		'delete': 'destroy',
+	}), name='calificaciones-detail'),
 	path('', include(router.urls)),
 ]
