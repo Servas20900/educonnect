@@ -34,6 +34,11 @@ DEBUG = os.getenv('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
 
 
+def _split_env_list(var_name, default=''):
+    raw = os.getenv(var_name, default)
+    return [item.strip() for item in raw.split(',') if item.strip()]
+
+
 # Application definition
 # sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
@@ -170,6 +175,14 @@ AUTH_PASSWORD_VALIDATORS = [
 CORS_ALLOW_CREDENTIALS = True
 CSRF_COOKIE_HTTPONLY = True  # La cookie no será accesible por JS del front (Seguridad)
 SESSION_COOKIE_HTTPONLY = True
+CORS_ALLOWED_ORIGINS = _split_env_list(
+    'CORS_ALLOWED_ORIGINS',
+    'http://localhost:5173,http://localhost:5174'
+)
+CSRF_TRUSTED_ORIGINS = _split_env_list(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://localhost:5173,http://localhost:5174'
+)
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
@@ -201,11 +214,6 @@ AUTH_ALLOWED_EMAIL_DOMAINS = [
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173", # La dirección del front
-    "http://localhost:5174", # Puerto alternativo
-]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
