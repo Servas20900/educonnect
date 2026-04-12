@@ -8,6 +8,7 @@ dist-ssr/
 .env
 .env.*
 !.env.example
+!educonnect/.env.production
 
 # Python
 __pycache__/
