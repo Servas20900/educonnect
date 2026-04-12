@@ -35,9 +35,11 @@ export const enviarPlaneamiento = async (id) => {
 };
 
 export const descargarArchivoPlaneamiento = async (id) => {
-  const baseUrl = api.defaults.baseURL || "http://localhost:8000/";
-  const cleanBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  return `${cleanBase}api/v1/planeamientos/Planeamientos/${id}/archivo/`;
+  const response = await api.get(`api/v1/planeamientos/Planeamientos/${id}/archivo/`, {
+    responseType: 'blob',
+  });
+
+  return window.URL.createObjectURL(response.data);
 };
 
 export const deletePlaneamiento = async (id) => {

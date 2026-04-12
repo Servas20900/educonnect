@@ -1,15 +1,11 @@
-import axios from 'axios';
 import { api } from './authService';
-
-const API_BASE = 'http://localhost:8000/api/v1/usuarios';
 
 // ============ DOCENTES ============
 
 export const fetchDocentes = async (params = {}) => {
   try {
-    const response = await axios.get(`${API_BASE}/docentes/`, {
+    const response = await api.get('api/v1/usuarios/docentes/', {
       params,
-      withCredentials: true,
     });
     return response.data;
   } catch (error) {
@@ -20,9 +16,7 @@ export const fetchDocentes = async (params = {}) => {
 
 export const fetchDocenteDetail = async (id) => {
   try {
-    const response = await axios.get(`${API_BASE}/docentes/${id}/`, {
-      withCredentials: true,
-    });
+    const response = await api.get(`api/v1/usuarios/docentes/${id}/`);
     return response.data;
   } catch (error) {
     console.error('Error fetching docente:', error);
@@ -32,9 +26,7 @@ export const fetchDocenteDetail = async (id) => {
 
 export const createDocente = async (data) => {
   try {
-    const response = await axios.post(`${API_BASE}/docentes/`, data, {
-      withCredentials: true,
-    });
+    const response = await api.post('api/v1/usuarios/docentes/', data);
     return response.data;
   } catch (error) {
     console.error('Error creating docente:', error);
@@ -44,9 +36,7 @@ export const createDocente = async (data) => {
 
 export const updateDocente = async (id, data) => {
   try {
-    const response = await axios.patch(`${API_BASE}/docentes/${id}/`, data, {
-      withCredentials: true,
-    });
+    const response = await api.patch(`api/v1/usuarios/docentes/${id}/`, data);
     return response.data;
   } catch (error) {
     console.error('Error updating docente:', error);
@@ -56,9 +46,7 @@ export const updateDocente = async (id, data) => {
 
 export const deleteDocente = async (id) => {
   try {
-    await axios.delete(`${API_BASE}/docentes/${id}/`, {
-      withCredentials: true,
-    });
+    await api.delete(`api/v1/usuarios/docentes/${id}/`);
   } catch (error) {
     console.error('Error deleting docente:', error);
     throw error;
@@ -67,9 +55,7 @@ export const deleteDocente = async (id) => {
 
 export const fetchCatalogoDocentes = async () => {
   try {
-    const response = await axios.get(`${API_BASE}/docentes/catalogo/`, {
-      withCredentials: true,
-    });
+    const response = await api.get('api/v1/usuarios/docentes/catalogo/');
     return response.data;
   } catch (error) {
     console.error('Error fetching catalogo docentes:', error);
@@ -81,9 +67,8 @@ export const fetchCatalogoDocentes = async () => {
 
 export const fetchEstudiantesUsuarios = async (params = {}) => {
   try {
-    const response = await axios.get(`${API_BASE}/estudiantes/`, {
+    const response = await api.get('api/v1/usuarios/estudiantes/', {
       params,
-      withCredentials: true,
     });
     const data = response.data;
     const list = Array.isArray(data) ? data : data?.results || [];
@@ -105,9 +90,7 @@ export const fetchEstudiantesUsuarios = async (params = {}) => {
 
 export const fetchEstudianteDetail = async (id) => {
   try {
-    const response = await axios.get(`${API_BASE}/estudiantes/${id}/`, {
-      withCredentials: true,
-    });
+    const response = await api.get(`api/v1/usuarios/estudiantes/${id}/`);
     return response.data;
   } catch (error) {
     console.error('Error fetching estudiante:', error);
@@ -117,9 +100,7 @@ export const fetchEstudianteDetail = async (id) => {
 
 export const createEstudiante = async (data) => {
   try {
-    const response = await axios.post(`${API_BASE}/estudiantes/`, data, {
-      withCredentials: true,
-    });
+    const response = await api.post('api/v1/usuarios/estudiantes/', data);
     return response.data;
   } catch (error) {
     console.error('Error creating estudiante:', error);
@@ -129,9 +110,7 @@ export const createEstudiante = async (data) => {
 
 export const updateEstudiante = async (id, data) => {
   try {
-    const response = await axios.patch(`${API_BASE}/estudiantes/${id}/`, data, {
-      withCredentials: true,
-    });
+    const response = await api.patch(`api/v1/usuarios/estudiantes/${id}/`, data);
     return response.data;
   } catch (error) {
     console.error('Error updating estudiante:', error);
@@ -141,9 +120,7 @@ export const updateEstudiante = async (id, data) => {
 
 export const deleteEstudiante = async (id) => {
   try {
-    await axios.delete(`${API_BASE}/estudiantes/${id}/`, {
-      withCredentials: true,
-    });
+    await api.delete(`api/v1/usuarios/estudiantes/${id}/`);
   } catch (error) {
     console.error('Error deleting estudiante:', error);
     throw error;
@@ -152,9 +129,8 @@ export const deleteEstudiante = async (id) => {
 
 export const fetchEstudiantesPorGrupo = async (grupoId, params = {}) => {
   try {
-    const response = await axios.get(`${API_BASE}/estudiantes/por_grupo/`, {
+    const response = await api.get('api/v1/usuarios/estudiantes/por_grupo/', {
       params: { grupo_id: grupoId, ...params },
-      withCredentials: true,
     });
     return response.data;
   } catch (error) {
@@ -167,9 +143,7 @@ export const fetchEstudiantesPorGrupo = async (grupoId, params = {}) => {
 
 export const fetchGrados = async () => {
   try {
-    const response = await axios.get(`${API_BASE}/grados/`, {
-      withCredentials: true,
-    });
+    const response = await api.get('api/v1/usuarios/grados/');
     return response.data;
   } catch (error) {
     console.error('Error fetching grados:', error);
@@ -181,9 +155,8 @@ export const fetchGrados = async () => {
 
 export const fetchGrupos = async (params = {}) => {
   try {
-    const response = await axios.get(`${API_BASE}/grupos/`, {
+    const response = await api.get('api/v1/usuarios/grupos/', {
       params,
-      withCredentials: true,
     });
     return response.data;
   } catch (error) {
@@ -194,9 +167,7 @@ export const fetchGrupos = async (params = {}) => {
 
 export const fetchGrupoDetail = async (id) => {
   try {
-    const response = await axios.get(`${API_BASE}/grupos/${id}/`, {
-      withCredentials: true,
-    });
+    const response = await api.get(`api/v1/usuarios/grupos/${id}/`);
     return response.data;
   } catch (error) {
     console.error('Error fetching grupo:', error);
@@ -206,9 +177,7 @@ export const fetchGrupoDetail = async (id) => {
 
 export const createGrupo = async (data) => {
   try {
-    const response = await axios.post(`${API_BASE}/grupos/`, data, {
-      withCredentials: true,
-    });
+    const response = await api.post('api/v1/usuarios/grupos/', data);
     return response.data;
   } catch (error) {
     console.error('Error creating grupo:', error);
@@ -218,9 +187,7 @@ export const createGrupo = async (data) => {
 
 export const updateGrupo = async (id, data) => {
   try {
-    const response = await axios.patch(`${API_BASE}/grupos/${id}/`, data, {
-      withCredentials: true,
-    });
+    const response = await api.patch(`api/v1/usuarios/grupos/${id}/`, data);
     return response.data;
   } catch (error) {
     console.error('Error updating grupo:', error);
@@ -230,9 +197,7 @@ export const updateGrupo = async (id, data) => {
 
 export const deleteGrupo = async (id) => {
   try {
-    await axios.delete(`${API_BASE}/grupos/${id}/`, {
-      withCredentials: true,
-    });
+    await api.delete(`api/v1/usuarios/grupos/${id}/`);
   } catch (error) {
     console.error('Error deleting grupo:', error);
     throw error;
@@ -241,9 +206,7 @@ export const deleteGrupo = async (id) => {
 
 export const fetchGruposPorGrado = async () => {
   try {
-    const response = await axios.get(`${API_BASE}/grupos/por_grado/`, {
-      withCredentials: true,
-    });
+    const response = await api.get('api/v1/usuarios/grupos/por_grado/');
     return response.data;
   } catch (error) {
     console.error('Error fetching grupos por grado:', error);
@@ -253,9 +216,7 @@ export const fetchGruposPorGrado = async () => {
 
 export const fetchEstudiantesGrupo = async (grupoId) => {
   try {
-    const response = await axios.get(`${API_BASE}/grupos/${grupoId}/estudiantes/`, {
-      withCredentials: true,
-    });
+    const response = await api.get(`api/v1/usuarios/grupos/${grupoId}/estudiantes/`);
     return response.data;
   } catch (error) {
     console.error('Error fetching estudiantes de grupo:', error);
@@ -265,10 +226,9 @@ export const fetchEstudiantesGrupo = async (grupoId) => {
 
 export const asignarEstudianteGrupo = async (grupoId, estudianteId) => {
   try {
-    const response = await axios.post(
-      `${API_BASE}/grupos/${grupoId}/asignar_estudiante/`,
+    const response = await api.post(
+      `api/v1/usuarios/grupos/${grupoId}/asignar_estudiante/`,
       { estudiante_id: estudianteId },
-      { withCredentials: true }
     );
     return response.data;
   } catch (error) {
@@ -279,10 +239,9 @@ export const asignarEstudianteGrupo = async (grupoId, estudianteId) => {
 
 export const removerEstudianteGrupo = async (grupoId, estudianteId) => {
   try {
-    const response = await axios.post(
-      `${API_BASE}/grupos/${grupoId}/remover_estudiante/`,
+    const response = await api.post(
+      `api/v1/usuarios/grupos/${grupoId}/remover_estudiante/`,
       { estudiante_id: estudianteId },
-      { withCredentials: true }
     );
     return response.data;
   } catch (error) {

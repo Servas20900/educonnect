@@ -79,9 +79,10 @@ export function usePlaneamientos() {
 
   const descargarArchivo = async (id, titulo = "planeamiento") => {
     try {
-      const baseUrl = api.defaults.baseURL || "http://localhost:8000/";
-      const cleanBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-      const downloadUrl = `${cleanBase}${BASE}${id}/archivo/`;
+      const response = await api.get(`${BASE}${id}/archivo/`, {
+        responseType: 'blob',
+      });
+      const downloadUrl = window.URL.createObjectURL(response.data);
 
       const a = document.createElement("a");
       a.href = downloadUrl;
@@ -89,6 +90,7 @@ export function usePlaneamientos() {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 2000);
 
       return { success: true };
     } catch (e) {
