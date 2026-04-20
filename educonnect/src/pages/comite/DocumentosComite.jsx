@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchActas, fetchReportesComite } from '../../api/comitesService';
 import { api } from '../../api/authService';
+import Paginador from '../../components/ui/Paginador';
 
 export default function DocumentosComite() {
   const [actas, setActas] = useState([]);
@@ -116,60 +117,64 @@ export default function DocumentosComite() {
                 No hay actas disponibles para este comité.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Número
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Contenido
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Fecha
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Estado
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Elaborada por
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {actas.map((acta) => (
-                      <tr key={acta.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {acta.numero_acta || 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          <div className="max-w-xs truncate">
-                            {acta.contenido || 'Sin contenido'}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {formatDate(acta.fecha_elaboracion)}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getEstadoBadgeClass(acta.estado)}`}>
-                            {acta.estado || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {acta.elaborada_por_username || 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className="text-xs text-gray-400">Sin adjunto</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Paginador items={actas} itemsPorPagina={8}>
+                {(itemsPaginados) => (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Número
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Contenido
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Fecha
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Estado
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Elaborada por
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Acciones
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-slate-100">
+                        {itemsPaginados.map((acta) => (
+                          <tr key={acta.id} className="hover:bg-[#e6f1fb]">
+                            <td className="px-4 py-3 text-sm text-slate-900">
+                              {acta.numero_acta || 'N/A'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-700">
+                              <div className="max-w-xs truncate">
+                                {acta.contenido || 'Sin contenido'}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-500">
+                              {formatDate(acta.fecha_elaboracion)}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getEstadoBadgeClass(acta.estado)}`}>
+                                {acta.estado || 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-500">
+                              {acta.elaborada_por_username || 'N/A'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className="text-xs text-slate-400">Sin adjunto</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Paginador>
             )}
           </div>
 
@@ -190,76 +195,80 @@ export default function DocumentosComite() {
                 No hay reportes disponibles para este comité.
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Título
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Tipo
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Contenido
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Fecha
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Estado
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Elaborado por
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {reportes.map((reporte) => (
-                      <tr key={reporte.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                          {reporte.titulo || 'Sin título'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {reporte.tipo_informe || 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          <div className="max-w-xs truncate">
-                            {reporte.contenido || 'Sin contenido'}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {formatDate(reporte.fecha_elaboracion)}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getEstadoBadgeClass(reporte.estado)}`}>
-                            {reporte.estado || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {reporte.elaborado_por_username || 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          {reporte.archivo_adjunto && (
-                            <button
-                              onClick={() => handleDownload(reporte.archivo_adjunto, `reporte_${reporte.id}.pdf`)}
-                              className="text-indigo-600 hover:text-indigo-900 font-medium"
-                            >
-                              Descargar
-                            </button>
-                          )}
-                          {!reporte.archivo_adjunto && (
-                            <span className="text-xs text-gray-400">Sin adjunto</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Paginador items={reportes} itemsPorPagina={8}>
+                {(itemsPaginados) => (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-200">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Título
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Tipo
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Contenido
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Fecha
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Estado
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Elaborado por
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                            Acciones
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-slate-100">
+                        {itemsPaginados.map((reporte) => (
+                          <tr key={reporte.id} className="hover:bg-[#e6f1fb]">
+                            <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                              {reporte.titulo || 'Sin título'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-500">
+                              {reporte.tipo_informe || 'N/A'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-700">
+                              <div className="max-w-xs truncate">
+                                {reporte.contenido || 'Sin contenido'}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-500">
+                              {formatDate(reporte.fecha_elaboracion)}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getEstadoBadgeClass(reporte.estado)}`}>
+                                {reporte.estado || 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-slate-500">
+                              {reporte.elaborado_por_username || 'N/A'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {reporte.archivo_adjunto && (
+                                <button
+                                  onClick={() => handleDownload(reporte.archivo_adjunto, `reporte_${reporte.id}.pdf`)}
+                                  className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c]"
+                                >
+                                  Descargar
+                                </button>
+                              )}
+                              {!reporte.archivo_adjunto && (
+                                <span className="text-xs text-slate-400">Sin adjunto</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Paginador>
             )}
           </div>
       </>

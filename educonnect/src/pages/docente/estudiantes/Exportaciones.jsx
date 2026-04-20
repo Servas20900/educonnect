@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui';
 import { fetchGruposDocente } from '../../../api/registroEstudiantesService';
 import { exportarPlanilla } from '../../../api/evaluacionesService';
@@ -9,7 +9,6 @@ const HUB_GRUPO_STORAGE_KEY = 'docente_estudiantes_hub_grupo_id';
 const normalizeName = (value) => String(value || '').trim().replace(/\s+/g, '_');
 
 export default function Exportaciones() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryGrupoId = searchParams.get('grupo');
 
@@ -77,14 +76,6 @@ export default function Exportaciones() {
     });
   }, [grupos, search]);
 
-  const handleVolver = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate('/docente/estudiantes');
-  };
-
   const handleDescargar = async (grupo) => {
     if (!grupo?.id) return;
 
@@ -123,13 +114,6 @@ export default function Exportaciones() {
       />
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={handleVolver}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Volver
-        </button>
         <button
           type="button"
           onClick={loadGrupos}

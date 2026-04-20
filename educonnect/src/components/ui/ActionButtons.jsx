@@ -1,5 +1,6 @@
 const BaseButton = ({ onClick, children, className, disabled }) => (
     <button
+        type="button"
         onClick={onClick}
         disabled={disabled}
         className={`rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${className}`}
@@ -17,7 +18,7 @@ export const BtnArchivar = ({ onClick }) => (
 );
 
 export const BtnDesactivar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-red-600 hover:bg-red-700 focus:ring-red-500">
+    <BaseButton onClick={onClick} className="bg-[#0b2545] hover:bg-[#185fa5] focus:ring-[#185fa5]">
         Desactivar
     </BaseButton>
 );
@@ -31,25 +32,25 @@ export const BtnRechazar = ({ onClick }) => (
 // --- BOTONES CON ESTILO SÓLIDO (VERDES/AZULES) ---
 
 export const BtnAprobar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500">
+    <BaseButton onClick={onClick} className="bg-[#0f6e56] hover:bg-[#085041] focus:ring-[#0f6e56]">
         Aprobar
     </BaseButton>
 );
 
 export const BtnActivar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500">
+    <BaseButton onClick={onClick} className="bg-[#0f6e56] hover:bg-[#085041] focus:ring-[#0f6e56]">
         Activar
     </BaseButton>
 );
 
 export const BtnVer = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-blue-600 hover:bg-blue-700 focus:ring-blue-500">
+    <BaseButton onClick={onClick} className="bg-[#185fa5] hover:bg-[#0c447c] focus:ring-[#185fa5]">
         Ver
     </BaseButton>
 );
 
 export const BtnDescargar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500">
+    <BaseButton onClick={onClick} className="bg-[#0b2545] hover:bg-[#185fa5] focus:ring-[#185fa5]">
         Descargar
     </BaseButton>
 );
@@ -62,7 +63,7 @@ export const BtnEditar = ({ onClick, disabled }) => (
         disabled={disabled}
         className={disabled 
             ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
-            : "bg-[#185fa5] hover:bg-[#378add] focus:ring-[#185fa5]"
+            : "bg-[#185fa5] hover:bg-[#0c447c] focus:ring-[#185fa5]"
         }
     >
         Editar

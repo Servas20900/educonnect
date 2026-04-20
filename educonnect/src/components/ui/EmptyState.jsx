@@ -38,7 +38,7 @@ export default function EmptyState({ title, message, action, icon }) {
           <button
             type="button"
             onClick={action.onClick}
-            className="mt-5 rounded-md bg-[#0b2545] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#185fa5] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#378add] focus-visible:ring-offset-2"
+            className="mt-5 rounded-md bg-[#185fa5] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0c447c] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#185fa5] focus-visible:ring-offset-2"
           >
             {action.label}
           </button>

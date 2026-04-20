@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePlaneamientos } from "./usePlaneamientos";
+import Paginador from '../../components/ui/Paginador';
 
 export default function Planeamientos() {
   const {
@@ -57,10 +58,12 @@ export default function Planeamientos() {
     await eliminar(id);
   };
 
-  const handleVer = async (id, titulo) => {
-    const res = await descargarArchivo(id, titulo);
+  const handleVer = async (plan) => {
+    const res = await descargarArchivo(plan.id, plan.titulo, plan.archivo);
     if (!res.success) {
+      const statusCode = res?.error?.response?.status;
       const msg =
+        (statusCode === 404 ? 'Este planeamiento no tiene archivo disponible.' : null) ||
         res?.error?.response?.data?.detail ||
         res?.error?.message ||
         "No se pudo abrir el archivo.";
@@ -92,13 +95,12 @@ export default function Planeamientos() {
 
         <button
           onClick={abrirModal}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-lg bg-[#185fa5] px-4 py-2 text-sm font-medium text-white shadow hover:bg-[#0c447c] disabled:opacity-50"
           disabled={uploading}
         >
           Subir plan
         </button>
       </div>
-
       {(error || errorUploading) && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
           {String(
@@ -132,66 +134,70 @@ export default function Planeamientos() {
         </div>
 
         {/* Tabla */}
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
-                <th className="px-3 py-2">Título</th>
-                <th className="px-3 py-2">Detalle</th>
-                <th className="px-3 py-2">Fecha</th>
-                <th className="px-3 py-2">Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-gray-100">
-              {planesFiltrados.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-3 py-10 text-center text-gray-500"
-                  >
-                    No hay planeamientos todavía.
-                  </td>
-                </tr>
-              ) : (
-                planesFiltrados.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 font-medium text-gray-900">
-                      {p.titulo}
-                    </td>
-
-                    <td className="px-3 py-2 text-gray-600">{p.detalle || "-"}</td>
-
-                    <td className="px-3 py-2 text-gray-600">
-                      {p.creado || "—"}
-                    </td>
-
-                    <td className="px-3 py-2 space-x-3">
-                      {p.archivo ? (
-                        <button
-                          onClick={() => handleVer(p.id, p.titulo)}
-                          className="text-indigo-600"
-                        >
-                          Ver
-                        </button>
-                      ) : (
-                        <span className="text-gray-400">Sin archivo</span>
-                      )}
-
-                      <button
-                        onClick={() => confirmarEliminar(p.id)}
-                        className="text-red-600 hover:text-red-800 font-medium"
-                        disabled={uploading}
-                      >
-                        Archivar
-                      </button>
-                    </td>
+        <Paginador items={planesFiltrados} itemsPorPagina={8}>
+          {(itemsPaginados) => (
+            <div className="mt-4 overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                    <th className="px-3 py-2">Título</th>
+                    <th className="px-3 py-2">Detalle</th>
+                    <th className="px-3 py-2">Fecha</th>
+                    <th className="px-3 py-2">Acciones</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+
+                <tbody className="divide-y divide-slate-100">
+                  {itemsPaginados.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-3 py-10 text-center text-slate-500"
+                      >
+                        No hay planeamientos todavía.
+                      </td>
+                    </tr>
+                  ) : (
+                    itemsPaginados.map((p) => (
+                      <tr key={p.id} className="hover:bg-[#e6f1fb]">
+                        <td className="px-3 py-2 font-medium text-slate-900">
+                          {p.titulo}
+                        </td>
+
+                        <td className="px-3 py-2 text-slate-600">{p.detalle || "-"}</td>
+
+                        <td className="px-3 py-2 text-slate-600">
+                          {p.creado || "—"}
+                        </td>
+
+                        <td className="px-3 py-2 space-x-3">
+                          {p.archivo ? (
+                            <button
+                              onClick={() => handleVer(p)}
+                              className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c]"
+                            >
+                              Ver
+                            </button>
+                          ) : (
+                            <span className="text-slate-400">Sin archivo</span>
+                          )}
+
+                          <button
+                            onClick={() => confirmarEliminar(p.id)}
+                            className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
+                            disabled={uploading}
+                          >
+                            Archivar
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Paginador>
       </div>
 
       {/* Modal subir plan */}

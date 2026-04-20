@@ -104,7 +104,7 @@ export default function HorariosArchivados() {
       render: (row) => (
         <button
           onClick={() => setConfirmModal({ open: true, horario: row })}
-          className="rounded-md bg-[#0f6e56] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#085041]"
+          className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c]"
         >
           Desarchivar
         </button>

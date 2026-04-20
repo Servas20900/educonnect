@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Edit2, Trash2, FileText, AlertCircle, Search } from 'lucide-react';
 import { useOficiosPlantillas } from "./useOficiosPlantillas";
 import FormularioPlantilla from "./FormularioPlantilla";
+import Paginador from '../../../components/ui/Paginador';
 
 export default function OficiosPlantillas() {
   const {
@@ -89,7 +90,7 @@ export default function OficiosPlantillas() {
         </div>
 
         <button
-          className="flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-xl shadow-indigo-100 transition-all transform hover:-translate-y-1 active:scale-95"
+          className="flex items-center px-6 py-3 bg-[#185fa5] hover:bg-[#0c447c] text-white font-bold rounded-2xl shadow-xl shadow-[#e6f1fb] transition-all transform hover:-translate-y-1 active:scale-95"
           onClick={handleModalForm}
         >
           <span className="text-xl mr-2">+</span> Nueva plantilla
@@ -171,86 +172,90 @@ export default function OficiosPlantillas() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-100">
-                  <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">
-                    Nombre
-                  </th>
-                  <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">
-                    Categoría
-                  </th>
-                  <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">
-                    Actualización
-                  </th>
-                  <th className="px-8 py-5 text-left text-xs font-black text-gray-400 uppercase tracking-widest">
-                    Estado
-                  </th>
-                  <th className="px-8 py-5 text-right text-xs font-black text-gray-400 uppercase tracking-widest">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {plantillasFiltradas.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="hover:bg-indigo-50/40 transition-colors"
-                  >
-                    <td className="px-8 py-5 font-bold text-gray-800">
-                      {p.nombre}
-                    </td>
-                    <td className="px-8 py-5 text-gray-600 font-medium">
-                      {p.categoria}
-                    </td>
-                    <td className="px-8 py-5 text-gray-500 font-medium">
-                      {p.ultima_actualizacion}
-                    </td>
-                    <td className="px-8 py-5">
-                      <span
-                        className={`px-3 py-1 inline-flex text-[11px] font-black rounded-full ${badge(p.estado)}`}
+          <Paginador items={plantillasFiltradas} itemsPorPagina={8}>
+            {(itemsPaginados) => (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-slate-50/80 border-b border-slate-100">
+                      <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
+                        Nombre
+                      </th>
+                      <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
+                        Categoría
+                      </th>
+                      <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
+                        Actualización
+                      </th>
+                      <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
+                        Estado
+                      </th>
+                      <th className="px-8 py-5 text-right text-xs font-black text-slate-400 uppercase tracking-widest">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {itemsPaginados.map((p) => (
+                      <tr
+                        key={p.id}
+                        className="hover:bg-[#e6f1fb]/60 transition-colors"
                       >
-                        {p.estado?.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5 text-right">
-                      <div className="flex justify-end gap-3">
-                        {p.archivo_adjunto ? (
-                          <a
-                            href={p.archivo_adjunto}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-4 py-2 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-200 transition-all shadow-sm text-xs font-bold"
+                        <td className="px-8 py-5 font-bold text-slate-800">
+                          {p.nombre}
+                        </td>
+                        <td className="px-8 py-5 text-slate-600 font-medium">
+                          {p.categoria}
+                        </td>
+                        <td className="px-8 py-5 text-slate-500 font-medium">
+                          {p.ultima_actualizacion}
+                        </td>
+                        <td className="px-8 py-5">
+                          <span
+                            className={`px-3 py-1 inline-flex text-[11px] font-black rounded-full ${badge(p.estado)}`}
                           >
-                            VER
-                          </a>
-                        ) : (
-                          <span className="px-4 py-2 text-xs text-gray-400">
-                            Sin archivo
+                            {p.estado?.toUpperCase()}
                           </span>
-                        )}
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex justify-end gap-3">
+                            {p.archivo_adjunto ? (
+                              <a
+                                href={p.archivo_adjunto}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-4 py-2 bg-[#0b2545] text-white rounded-xl hover:bg-[#185fa5] transition-all shadow-sm text-xs font-bold"
+                              >
+                                Ver
+                              </a>
+                            ) : (
+                              <span className="px-4 py-2 text-xs text-slate-400">
+                                Sin archivo
+                              </span>
+                            )}
 
-                        <button
-                          className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm text-xs font-bold"
-                          onClick={() => handleEdit(p)}
-                        >
-                          EDITAR
-                        </button>
+                            <button
+                              className="px-4 py-2 bg-[#185fa5] text-white rounded-xl hover:bg-[#0c447c] transition-all shadow-sm text-xs font-bold"
+                              onClick={() => handleEdit(p)}
+                            >
+                              Editar
+                            </button>
 
-                        <button
-                          className="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm text-xs font-bold"
-                          onClick={() => handleToggleEstado(p)}
-                        >
-                          {p.estado === "Inactivo" ? "ACTIVAR" : "DESACTIVAR"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                            <button
+                              className="px-4 py-2 bg-[#0f6e56] text-white rounded-xl hover:bg-[#085041] transition-all shadow-sm text-xs font-bold"
+                              onClick={() => handleToggleEstado(p)}
+                            >
+                              {p.estado === "Inactivo" ? "Activar" : "Desactivar"}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Paginador>
         )}
       </div>
     </div>

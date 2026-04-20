@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   fetchGruposDocente,
   fetchAsistenciaDiaria,
@@ -33,7 +32,6 @@ const getNextValidDate = () => {
 };
 
 export default function RegistroAsistencia() {
-  const navigate = useNavigate();
   const [grupoId, setGrupoId] = useState("");
   const [grupos, setGrupos] = useState([]);
 
@@ -271,29 +269,12 @@ export default function RegistroAsistencia() {
     }
   };
 
-  const handleVolver = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate('/docente/estudiantes');
-  };
-
   return (
     <div className="space-y-6 p-8 bg-gray-50 min-h-screen">
       <PageHeader
         title="Asistencia"
         subtitle="Registra asistencia diaria por grupo en días hábiles."
       />
-
-      <div>
-        <button
-          onClick={handleVolver}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Volver
-        </button>
-      </div>
 
       {mensaje && (
         <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">

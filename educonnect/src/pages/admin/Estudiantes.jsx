@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Users, Search, RefreshCw, AlertCircle, BookOpen } from 'lucide-react';
 import { fetchEstudiantes } from '../../api/estudiantesService';
+import Paginador from '../../components/ui/Paginador';
 
 export default function Estudiantes() {
   const [estudiantes, setEstudiantes] = useState([]);
@@ -69,57 +70,63 @@ export default function Estudiantes() {
           />
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
-                <th className="px-3 py-2">Nombre</th>
-                <th className="px-3 py-2">Identificacion</th>
-                <th className="px-3 py-2">Codigo</th>
-                <th className="px-3 py-2">Estado</th>
-                <th className="px-3 py-2">Tipo</th>
-                <th className="px-3 py-2">Email</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading && (
-                <tr>
-                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
-                    Cargando estudiantes...
-                  </td>
-                </tr>
-              )}
-              {!loading && filtered.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
-                    No hay estudiantes registrados.
-                  </td>
-                </tr>
-              )}
-              {!loading && filtered.map((est) => {
-                const persona = est.persona_info || {};
-                const nombre = `${persona.nombre || ''} ${persona.primer_apellido || ''} ${persona.segundo_apellido || ''}`.trim();
-                return (
-                  <tr key={est.usuario_id || est.persona_id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 font-medium text-gray-900">{nombre || 'N/A'}</td>
-                    <td className="px-3 py-2 text-gray-700">{persona.identificacion || 'N/A'}</td>
-                    <td className="px-3 py-2 text-gray-700">{est.codigo_estudiante || 'N/A'}</td>
-                    <td className="px-3 py-2">
-                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                        est.estado_estudiante === 'activo' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'
-                      }`}>
-                        {est.estado_estudiante || 'N/A'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-gray-700">{est.tipo_estudiante || 'N/A'}</td>
-                    <td className="px-3 py-2 text-gray-700">
-                      {persona.email_institucional || persona.email_personal || 'N/A'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <Paginador items={filtered} itemsPorPagina={10}>
+            {(itemsPaginados) => (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                      <th className="px-3 py-2">Nombre</th>
+                      <th className="px-3 py-2">Identificacion</th>
+                      <th className="px-3 py-2">Codigo</th>
+                      <th className="px-3 py-2">Estado</th>
+                      <th className="px-3 py-2">Tipo</th>
+                      <th className="px-3 py-2">Email</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loading && (
+                      <tr>
+                        <td colSpan="6" className="px-3 py-6 text-center text-sm text-slate-500">
+                          Cargando estudiantes...
+                        </td>
+                      </tr>
+                    )}
+                    {!loading && itemsPaginados.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="px-3 py-6 text-center text-sm text-slate-500">
+                          No hay estudiantes registrados.
+                        </td>
+                      </tr>
+                    )}
+                    {!loading && itemsPaginados.map((est) => {
+                      const persona = est.persona_info || {};
+                      const nombre = `${persona.nombre || ''} ${persona.primer_apellido || ''} ${persona.segundo_apellido || ''}`.trim();
+                      return (
+                        <tr key={est.usuario_id || est.persona_id} className="hover:bg-[#e6f1fb]">
+                          <td className="px-3 py-2 font-medium text-slate-900">{nombre || 'N/A'}</td>
+                          <td className="px-3 py-2 text-slate-700">{persona.identificacion || 'N/A'}</td>
+                          <td className="px-3 py-2 text-slate-700">{est.codigo_estudiante || 'N/A'}</td>
+                          <td className="px-3 py-2">
+                            <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                              est.estado_estudiante === 'activo' ? 'bg-[#e1f5ee] text-[#085041]' : 'bg-[#faeeda] text-[#854f0b]'
+                            }`}>
+                              {est.estado_estudiante || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">{est.tipo_estudiante || 'N/A'}</td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {persona.email_institucional || persona.email_personal || 'N/A'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Paginador>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import {
   fetchIncapacidades,
   updateIncapacidad,
 } from '../../api/incapacidades';
+import Paginador from '../../components/ui/Paginador';
 
 const defaultForm = {
   docente: '',
@@ -393,49 +394,53 @@ export default function Incapacidades() {
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-4 py-3 text-left">Fecha creacion</th>
-                  <th className="px-4 py-3 text-left">Docente</th>
-                  <th className="px-4 py-3 text-left">Tipo</th>
-                  <th className="px-4 py-3 text-left">Rango</th>
-                  <th className="px-4 py-3 text-left">Documento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {!loading && items.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                      No hay registros para los filtros seleccionados.
-                    </td>
-                  </tr>
-                ) : null}
+          <Paginador items={items} itemsPorPagina={8}>
+            {(itemsPaginados) => (
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3 text-left">Fecha creacion</th>
+                      <th className="px-4 py-3 text-left">Docente</th>
+                      <th className="px-4 py-3 text-left">Tipo</th>
+                      <th className="px-4 py-3 text-left">Rango</th>
+                      <th className="px-4 py-3 text-left">Documento</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!loading && itemsPaginados.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                          No hay registros para los filtros seleccionados.
+                        </td>
+                      </tr>
+                    ) : null}
 
-                {items.map((item) => (
-                  <tr key={item.id} className="border-t border-slate-100">
-                    <td className="px-4 py-3 text-slate-700 font-semibold">{item.fecha_creacion}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-slate-800">{item.docente_nombre || 'Sin docente'}</div>
-                      <div className="text-xs text-slate-500">{item.numero_documento}</div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{tipoLabel[item.tipo] || item.tipo}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{item.fecha_inicio} al {item.fecha_fin}</td>
-                    <td className="px-4 py-3">
-                      {item.documento_url ? (
-                        <a href={item.documento_url} target="_blank" rel="noreferrer" className="text-blue-700 hover:text-blue-900 font-semibold">
-                          Ver archivo
-                        </a>
-                      ) : (
-                        <span className="text-slate-500">Sin adjunto</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    {itemsPaginados.map((item) => (
+                      <tr key={item.id} className="border-t border-slate-100 hover:bg-[#e6f1fb]">
+                        <td className="px-4 py-3 text-slate-700 font-semibold">{item.fecha_creacion}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-slate-800">{item.docente_nombre || 'Sin docente'}</div>
+                          <div className="text-xs text-slate-500">{item.numero_documento}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">{tipoLabel[item.tipo] || item.tipo}</td>
+                        <td className="px-4 py-3 text-xs text-slate-600">{item.fecha_inicio} al {item.fecha_fin}</td>
+                        <td className="px-4 py-3">
+                          {item.documento_url ? (
+                            <a href={item.documento_url} target="_blank" rel="noreferrer" className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c]">
+                              Ver archivo
+                            </a>
+                          ) : (
+                            <span className="text-slate-500">Sin adjunto</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Paginador>
         </section>
       </div>
     </div>

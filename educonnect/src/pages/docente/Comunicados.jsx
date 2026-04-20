@@ -48,6 +48,8 @@ const extractApiErrorMessage = (error) => {
 };
 
 export default function Comunicados() {
+  const actionButtonClass = 'inline-flex min-w-[110px] justify-center rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors';
+
   const [comunicados, setComunicados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -245,7 +247,7 @@ export default function Comunicados() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-[#185fa5] px-4 py-2 text-sm font-medium text-white shadow hover:bg-[#378add] disabled:opacity-60"
+          className="rounded-lg bg-[#185fa5] px-4 py-2 text-sm font-medium text-white shadow hover:bg-[#0c447c] disabled:opacity-60"
         >
           {submitting ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Emitir comunicado'}
         </button>
@@ -289,62 +291,78 @@ export default function Comunicados() {
                 <th className="px-3 py-2">Asunto</th>
                 <th className="px-3 py-2">Destinatarios</th>
                 <th className="px-3 py-2">Tipo</th>
-                <th className="px-3 py-2">Fecha</th>
                 <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Vigencia</th>
                 <th className="px-3 py-2">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">Cargando comunicados...</td>
+                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+                    Cargando comunicados...
+                  </td>
                 </tr>
               ) : comunicadosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">No hay comunicados para mostrar.</td>
+                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+                    No hay comunicados para mostrar.
+                  </td>
                 </tr>
               ) : (
                 comunicadosFiltrados.map((comunicado) => (
-                  <tr key={comunicado.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 font-medium text-gray-900">{comunicado.titulo}</td>
-                    <td className="px-3 py-2 text-gray-700">{formatDestinatarios(comunicado.destinatarios)}</td>
-                    <td className="px-3 py-2 text-gray-700 capitalize">{comunicado.tipo_comunicado}</td>
-                    <td className="px-3 py-2 text-gray-600">{formatDate(comunicado.fecha_publicacion)}</td>
+                  <tr key={comunicado.id} className="border-b last:border-b-0 hover:bg-[#e6f1fb]">
+                    <td className="px-3 py-2 font-medium text-gray-800">{comunicado.titulo || '—'}</td>
+                    <td className="px-3 py-2 text-gray-600">{formatDestinatarios(comunicado.destinatarios)}</td>
+                    <td className="px-3 py-2 text-gray-600">{comunicado.tipo_comunicado || 'aviso'}</td>
                     <td className="px-3 py-2">
-                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${comunicado.visible ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                          comunicado.visible
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
                         {comunicado.visible ? 'Visible' : 'Oculto'}
                       </span>
                     </td>
-                    <td className="px-3 py-2 space-x-2">
-                      <button
-                        className="text-[#185fa5] hover:text-[#0b2545]"
-                        onClick={() => handleEditar(comunicado)}
-                      >
-                        Editar
-                      </button>
-
-                      {comunicado.visible ? (
+                    <td className="px-3 py-2 text-gray-600">{formatDate(comunicado.fecha_vigencia)}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap gap-2">
                         <button
-                          className="text-amber-700 hover:text-amber-900"
-                          onClick={() => handleToggleVisible(comunicado.id, false)}
+                          type="button"
+                          className={`${actionButtonClass} bg-[#185fa5] hover:bg-[#0c447c]`}
+                          onClick={() => handleEditar(comunicado)}
                         >
-                          Despublicar
+                          Editar
                         </button>
-                      ) : (
-                        <button
-                          className="text-emerald-700 hover:text-emerald-900"
-                          onClick={() => handleToggleVisible(comunicado.id, true)}
-                        >
-                          Publicar
-                        </button>
-                      )}
 
-                      <button
-                        className="text-red-600 hover:text-red-800"
-                        onClick={() => handleOcultar(comunicado.id)}
-                      >
-                        Eliminar
-                      </button>
+                        {comunicado.visible ? (
+                          <button
+                            type="button"
+                            className={`${actionButtonClass} bg-[#0b2545] hover:bg-[#081a31]`}
+                            onClick={() => handleToggleVisible(comunicado.id, false)}
+                          >
+                            Despublicar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className={`${actionButtonClass} bg-[#185fa5] hover:bg-[#0c447c]`}
+                            onClick={() => handleToggleVisible(comunicado.id, true)}
+                          >
+                            Publicar
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          className={`${actionButtonClass} bg-red-600 hover:bg-red-700`}
+                          onClick={() => handleOcultar(comunicado.id)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

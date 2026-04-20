@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { PageHeader } from '../../../components/ui';
 import { fetchGruposDocente } from '../../../api/registroEstudiantesService';
 import { fetchEvaluacionesPorGrupo, crearEvaluacion, actualizarEvaluacion, eliminarEvaluacion } from '../../../api/evaluacionesService';
@@ -7,7 +7,6 @@ import { fetchEvaluacionesPorGrupo, crearEvaluacion, actualizarEvaluacion, elimi
 const DOCENTE_GRUPO_STORAGE_KEY = 'docente_academico_hub_grupo_id';
 
 export default function EvaluacionesListado() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryGrupoId = searchParams.get('grupo');
   
@@ -220,14 +219,6 @@ export default function EvaluacionesListado() {
     }
   };
 
-  const handleVolver = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate('/docente/estudiantes');
-  };
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -237,12 +228,6 @@ export default function EvaluacionesListado() {
 
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <button
-            onClick={handleVolver}
-            className="mb-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Volver
-          </button>
           <h2 className="text-2xl font-bold text-slate-900">Evaluaciones</h2>
           <p className="text-sm text-gray-500">
             Gestiona evaluaciones del grupo seleccionado.

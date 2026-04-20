@@ -78,7 +78,7 @@ export default function FormModal({
             <button
               type="submit"
               disabled={loading}
-              className="rounded-md bg-[#0b2545] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#185fa5] disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md bg-[#185fa5] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0c447c] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {submitLabel}
             </button>

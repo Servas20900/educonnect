@@ -61,14 +61,6 @@ export default function AcademicoHub() {
     navigate(`${basePath}?grupo=${grupoId}`);
   };
 
-  const handleVolver = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-    navigate('/docente/estudiantes');
-  };
-
   const cards = [
     {
       id: 'evaluaciones',
@@ -102,15 +94,6 @@ export default function AcademicoHub() {
         title="Académico"
         subtitle="Selecciona un grupo asignado y accede a Evaluaciones, Calificaciones o Promedios"
       />
-
-      <div>
-        <button
-          onClick={handleVolver}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Volver
-        </button>
-      </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

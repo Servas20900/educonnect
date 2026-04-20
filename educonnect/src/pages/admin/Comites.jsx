@@ -17,6 +17,7 @@ import {
     PageHeader,
     SearchFilter,
     StatusBadge,
+    Paginador,
 } from '../../components/ui';
 import useSystemConfig from '../../hooks/useSystemConfig';
 
@@ -450,7 +451,7 @@ export default function Comites() {
                     <button
                         type="button"
                         onClick={() => handleToggleArchive(row)}
-                        className="rounded-md bg-[#0f6e56] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0a5542]"
+                        className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c]"
                     >
                         {row.estado === 'activo' ? 'Archivar' : 'Desarchivar'}
                     </button>
@@ -547,75 +548,79 @@ export default function Comites() {
                         <StatusBadge status={selectedCommittee.estado} size="sm" />
                     </div>
 
-                    <div className="overflow-x-auto rounded-xl border border-slate-200">
-                        <table className="min-w-full divide-y divide-slate-200 text-sm">
-                            <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                <tr>
-                                    <th className="px-4 py-3">Integrante</th>
-                                    <th className="px-4 py-3">Correo institucional</th>
-                                    <th className="px-4 py-3">Rol</th>
-                                    <th className="px-4 py-3">Estado</th>
-                                    <th className="px-4 py-3 text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
-                                {(selectedCommittee.miembros || []).length > 0 ? (
-                                    selectedCommittee.miembros.map((miembro) => (
-                                        <tr key={miembro.id} className="hover:bg-slate-50">
-                                            <td className="px-4 py-3 font-medium text-slate-900">
-                                                {miembro.persona_info?.nombre_completo || 'N/A'}
-                                            </td>
-                                            <td className="px-4 py-3 text-slate-600">
-                                                {miembro.persona_info?.email_institucional || 'N/A'}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <select
-                                                    value={miembroRoles[miembro.id] || miembro.cargo || 'Miembro'}
-                                                    onChange={(event) => handleMemberRoleChange(miembro.id, event.target.value)}
-                                                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
-                                                >
-                                                    {rolesComite.map((rol) => (
-                                                        <option key={rol.value} value={rol.value}>
-                                                            {rol.label}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <StatusBadge status={miembro.activo ? 'Activo' : 'Inactivo'} size="sm" />
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <div className="inline-flex gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleSaveMiembro(selectedCommittee.id, miembro)}
-                                                        disabled={savingMiembroId === miembro.id}
-                                                        className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c] disabled:opacity-60"
-                                                    >
-                                                        Guardar
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveMiembro(selectedCommittee.id, miembro.id)}
-                                                        disabled={savingMiembroId === miembro.id}
-                                                        className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31] disabled:opacity-60"
-                                                    >
-                                                        Remover
-                                                    </button>
-                                                </div>
-                                            </td>
+                    <Paginador items={selectedCommittee.miembros || []} itemsPorPagina={6}>
+                        {(itemsPaginados) => (
+                            <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                <table className="min-w-full divide-y divide-slate-200 text-sm">
+                                    <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th className="px-4 py-3">Integrante</th>
+                                            <th className="px-4 py-3">Correo institucional</th>
+                                            <th className="px-4 py-3">Rol</th>
+                                            <th className="px-4 py-3">Estado</th>
+                                            <th className="px-4 py-3 text-right">Acciones</th>
                                         </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="5" className="px-4 py-8 text-center text-slate-500">
-                                            Este comité aún no tiene integrantes activos.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                        {itemsPaginados.length > 0 ? (
+                                            itemsPaginados.map((miembro) => (
+                                                <tr key={miembro.id} className="hover:bg-[#e6f1fb]">
+                                                    <td className="px-4 py-3 font-medium text-slate-900">
+                                                        {miembro.persona_info?.nombre_completo || 'N/A'}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-slate-600">
+                                                        {miembro.persona_info?.email_institucional || 'N/A'}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <select
+                                                            value={miembroRoles[miembro.id] || miembro.cargo || 'Miembro'}
+                                                            onChange={(event) => handleMemberRoleChange(miembro.id, event.target.value)}
+                                                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
+                                                        >
+                                                            {rolesComite.map((rol) => (
+                                                                <option key={rol.value} value={rol.value}>
+                                                                    {rol.label}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <StatusBadge status={miembro.activo ? 'Activo' : 'Inactivo'} size="sm" />
+                                                    </td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <div className="inline-flex gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleSaveMiembro(selectedCommittee.id, miembro)}
+                                                                disabled={savingMiembroId === miembro.id}
+                                                                className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c] disabled:opacity-60"
+                                                            >
+                                                                Guardar
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveMiembro(selectedCommittee.id, miembro.id)}
+                                                                disabled={savingMiembroId === miembro.id}
+                                                                className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31] disabled:opacity-60"
+                                                            >
+                                                                Remover
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="5" className="px-4 py-8 text-center text-slate-500">
+                                                    Este comité aún no tiene integrantes activos.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Paginador>
                 </section>
             ) : null}
 

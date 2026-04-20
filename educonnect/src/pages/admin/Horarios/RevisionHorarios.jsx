@@ -102,7 +102,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                                 <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig?.message}</p>
                                 <div className="flex justify-end gap-3">
                                     <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
-                                    <button onClick={activeConfirmConfig?.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-indigo-600 hover:bg-indigo-700">
+                                    <button onClick={activeConfirmConfig?.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-[#185fa5] hover:bg-[#0c447c]">
                                         {activeConfirmConfig?.confirmText}
                                     </button>
                                 </div>
@@ -115,7 +115,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                                 <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig.message}</p>
                                 <div className="flex justify-end gap-3">
                                     <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
-                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-rose-600 hover:bg-rose-700">
+                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-red-600 hover:bg-red-700">
                                         {activeConfirmConfig.confirmText}
                                     </button>
                                 </div>
@@ -127,7 +127,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                                 <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig.message}</p>
                                 <div className="flex justify-end gap-3">
                                     <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
-                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-slate-600 hover:bg-slate-700">
+                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-[#0b2545] hover:bg-[#081a31]">
                                         {activeConfirmConfig.confirmText}
                                     </button>
                                 </div>
@@ -139,7 +139,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                                 <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig.message}</p>
                                 <div className="flex justify-end gap-3">
                                     <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
-                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-emerald-600 hover:bg-emerald-700">
+                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-[#0f6e56] hover:bg-[#085041]">
                                         {activeConfirmConfig.confirmText}
                                     </button>
                                 </div>
@@ -149,7 +149,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                 </div>
             </PopUp>
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center">
-                <div className="relative z-0flex-1 min-w-[200px]">
+                <div className="relative flex-1 min-w-[200px]">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
                     <input
                         type="text"
@@ -218,7 +218,7 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                                             </td>
                                             <td className="px-8 py-5">
                                                 <div className="flex items-center justify-center gap-4 min-w-[200px]">
-                                                    <button onClick={() => handleOption("Ver", horario)} className="text-[11px] font-black text-blue-600 hover:text-blue-800">
+                                                    <button onClick={() => handleOption("Ver", horario)} className="rounded-md bg-[#185fa5] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#0c447c]">
                                                         VER
                                                     </button>
                                                     <div className="h-4 w-[1px] bg-gray-200" />
@@ -226,18 +226,18 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                                                         <div className="flex gap-3">
                                                             {horario.estado !== "Publicado" ? (
                                                                 <>
-                                                                    <button onClick={() => handleOption("Aprobar", horario)} className="text-[11px] font-black text-emerald-600">APROBAR</button>
-                                                                    <button onClick={() => handleOption("Rechazar", horario)} className="text-[11px] font-black text-rose-500">RECHAZAR</button>
+                                                                    <button onClick={() => handleOption("Aprobar", horario)} className="rounded-md bg-[#0f6e56] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#085041]">APROBAR</button>
+                                                                    <button onClick={() => handleOption("Rechazar", horario)} className="rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-red-700">RECHAZAR</button>
                                                                 </>
                                                             ) : (
                                                                 <>
-                                                                    <button onClick={() => onEdit(horario)} className="text-[11px] font-black text-indigo-600">EDITAR</button>
-                                                                    <button onClick={() => handleOption("Eliminar", horario)} className="text-[11px] font-black text-slate-500">ARCHIVAR</button>
+                                                                    <button onClick={() => onEdit(horario)} className="rounded-md bg-[#185fa5] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#0c447c]">EDITAR</button>
+                                                                    <button onClick={() => handleOption("Eliminar", horario)} className="rounded-md bg-[#0b2545] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#081a31]">ARCHIVAR</button>
                                                                 </>
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <button onClick={() => handleOption("Reactivar", horario)} className="text-[11px] font-black text-emerald-600">REACTIVAR</button>
+                                                        <button onClick={() => handleOption("Reactivar", horario)} className="rounded-md bg-[#0f6e56] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#085041]">REACTIVAR</button>
                                                     )}
                                                 </div>
                                             </td>

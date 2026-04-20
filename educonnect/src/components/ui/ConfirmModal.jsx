@@ -25,7 +25,7 @@ const VARIANT_CONFIG = {
     icon: InfoOutlinedIcon,
     iconClasses: 'bg-[#e6f1fb] text-[#185fa5]',
     confirmButtonClasses:
-      'bg-[#185fa5] text-white hover:bg-[#0b2545] focus-visible:ring-[#378add]',
+      'bg-[#185fa5] text-white hover:bg-[#0c447c] focus-visible:ring-[#185fa5]',
   },
 }
 

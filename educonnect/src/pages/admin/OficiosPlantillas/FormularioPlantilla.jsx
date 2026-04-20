@@ -158,7 +158,7 @@ export default function FormularioPlantilla({
             type="submit"
             disabled={uploading}
             onClick={() => setEstado("Publicado")}
-            className="px-6 py-2.5 text-sm font-bold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 disabled:opacity-50"
+            className="px-6 py-2.5 text-sm font-bold rounded-lg text-white bg-[#185fa5] hover:bg-[#0c447c] shadow-lg shadow-[#e6f1fb] disabled:opacity-50"
           >
             {uploading ? "Procesando..." : "Publicar"}
           </button>
