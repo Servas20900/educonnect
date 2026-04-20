@@ -71,7 +71,7 @@ export default function Login() {
             value={credentials.username}
             onChange={handleChange}
             required
-            className="w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-shadow"
+            className="w-full rounded-lg px-3 py-2.5 text-base outline-none transition-shadow"
             style={{ border: '0.5px solid #d8dae0', background: '#fafbfc', color: '#0b2545' }}
             onFocus={(e) => { e.target.style.borderColor = '#378add'; e.target.style.boxShadow = '0 0 0 3px rgba(55,138,221,.1)'; }}
             onBlur={(e) => { e.target.style.borderColor = '#d8dae0'; e.target.style.boxShadow = 'none'; }}
@@ -89,7 +89,7 @@ export default function Login() {
             onChange={handleChange}
             placeholder="••••••••"
             required
-            className="w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-shadow"
+            className="w-full rounded-lg px-3 py-2.5 text-base outline-none transition-shadow"
             style={{ border: '0.5px solid #d8dae0', background: '#fafbfc', color: '#0b2545' }}
             onFocus={(e) => { e.target.style.borderColor = '#378add'; e.target.style.boxShadow = '0 0 0 3px rgba(55,138,221,.1)'; }}
             onBlur={(e) => { e.target.style.borderColor = '#d8dae0'; e.target.style.boxShadow = 'none'; }}

@@ -5,6 +5,14 @@ import Loader from '../components/ui/Loader';
 
 const initialAuthState = { role: null, roles: [], isLoading: true, username: null };
 
+const normalizeRoles = (inputRoles, inputRole) => {
+  const roleList = Array.isArray(inputRoles)
+    ? inputRoles.filter(Boolean)
+    : (inputRole ? [inputRole] : []);
+  const primaryRole = inputRole || roleList[0] || null;
+  return { roleList, primaryRole };
+};
+
 export const AuthContext = createContext({
   role: null,
   roles: [],
@@ -22,9 +30,10 @@ export function AuthProvider({ children }) {
     try {
       const response = await getSessionStatus();
       if (response.isAuthenticated) {
+        const { roleList, primaryRole } = normalizeRoles(response.roles, response.role);
         setAuthState({ 
-          role: response.role, 
-          roles: Array.isArray(response.roles) ? response.roles : (response.role ? [response.role] : []),
+          role: primaryRole,
+          roles: roleList,
           username: response.user,
           isLoading: false 
         });
@@ -50,9 +59,10 @@ export function AuthProvider({ children }) {
         isLoading: false 
       });
     } else {
+      const { roleList, primaryRole } = normalizeRoles(authData.roles, authData.role);
       setAuthState({ 
-        role: authData.role, 
-        roles: Array.isArray(authData.roles) ? authData.roles : (authData.role ? [authData.role] : []),
+        role: primaryRole,
+        roles: roleList,
         username: authData.user,
         isLoading: false 
       });

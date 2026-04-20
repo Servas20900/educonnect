@@ -6,9 +6,10 @@ import useSystemConfig from '../hooks/useSystemConfig';
 import Loader from '../components/ui/Loader';
 
 export default function RequireAuth({ children, permissionKey }) {
-  const { role, isLoading } = useAuth();
+  const { role, roles, isLoading } = useAuth();
   const { canAccess } = useSystemConfig();
   const location = useLocation();
+  const hasAuthRole = Boolean(role) || (Array.isArray(roles) && roles.length > 0);
 
   // Si aún está cargando, mostrar loader
   if (isLoading) {
@@ -16,7 +17,7 @@ export default function RequireAuth({ children, permissionKey }) {
   }
 
   // Si no hay rol, redirigir a login
-  if (!role) {
+  if (!hasAuthRole) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
