@@ -1,0 +1,22 @@
+# Target path: /etc/nginx/sites-available/educonnect
+
+server {
+    listen 80;
+    server_name _;
+
+    location /static/ {
+        alias /home/ubuntu/educonnect/staticfiles/;
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+    }
+
+    location /media/ {
+        alias /home/ubuntu/educonnect/educonnect-Backend/media/;
+        expires 30d;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/run/gunicorn.sock;
+    }
+}

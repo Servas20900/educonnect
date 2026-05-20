@@ -1,0 +1,20 @@
+# Target path: /etc/systemd/system/gunicorn.service
+
+[Unit]
+Description=EduConnect Gunicorn service
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/educonnect/educonnect-Backend
+EnvironmentFile=/home/ubuntu/educonnect/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ubuntu/educonnect/educonnect-Backend/venv/bin/gunicorn core.wsgi:application --bind unix:/run/gunicorn.sock --workers 3 --access-logfile - --error-logfile -
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=gunicorn
+RuntimeDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target

@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 from datetime import timedelta
+from urllib.parse import unquote, urlparse
 from dotenv import load_dotenv
 import sys
 import cloudinary
@@ -31,12 +32,22 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
-
 
 def _split_env_list(var_name, default=''):
     raw = os.getenv(var_name, default)
     return [item.strip() for item in raw.split(',') if item.strip()]
+
+
+def _append_unique(items, value):
+    if value and value not in items:
+        items.append(value)
+    return items
+
+
+ALLOWED_HOSTS = _split_env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = _append_unique(ALLOWED_HOSTS, os.getenv('AWS_CLOUDFRONT_DOMAIN'))
+ALLOWED_HOSTS = _append_unique(ALLOWED_HOSTS, os.getenv('AWS_EC2_HOST'))
+ALLOWED_HOSTS = _append_unique(ALLOWED_HOSTS, os.getenv('AWS_EC2_IP'))
 
 
 # Application definition
@@ -77,6 +88,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -111,15 +123,34 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
+def _database_config_from_env():
+    database_url = os.getenv('DATABASE_URL')
+    if database_url:
+        parsed_url = urlparse(database_url)
+        if parsed_url.scheme in {'postgres', 'postgresql'}:
+            return {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': parsed_url.path.lstrip('/'),
+                'USER': unquote(parsed_url.username or ''),
+                'PASSWORD': unquote(parsed_url.password or ''),
+                'HOST': parsed_url.hostname or '',
+                'PORT': str(parsed_url.port or '5432'),
+                'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
+            }
+
+    return {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME', 'Educonnect_db'),
         'USER': os.getenv('DB_USER', 'Educonnect_user'),
         'PASSWORD': os.getenv('DB_PASSWORD', ''),
         'HOST': os.getenv('DB_HOST', 'postgres'),
         'PORT': os.getenv('DB_PORT', '5432'),
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
     }
+
+
+DATABASES = {
+    'default': _database_config_from_env(),
 }
 
 CLOUDINARY_STORAGE = {
@@ -179,9 +210,17 @@ CORS_ALLOWED_ORIGINS = _split_env_list(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:5173,http://localhost:5174'
 )
+CORS_ALLOWED_ORIGINS = _append_unique(
+    CORS_ALLOWED_ORIGINS,
+    f"https://{os.getenv('AWS_CLOUDFRONT_DOMAIN')}" if os.getenv('AWS_CLOUDFRONT_DOMAIN') else None,
+)
 CSRF_TRUSTED_ORIGINS = _split_env_list(
     'CSRF_TRUSTED_ORIGINS',
     'http://localhost:5173,http://localhost:5174'
+)
+CSRF_TRUSTED_ORIGINS = _append_unique(
+    CSRF_TRUSTED_ORIGINS,
+    f"https://{os.getenv('AWS_CLOUDFRONT_DOMAIN')}" if os.getenv('AWS_CLOUDFRONT_DOMAIN') else None,
 )
 
 # Internationalization
@@ -199,7 +238,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR.parent, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
