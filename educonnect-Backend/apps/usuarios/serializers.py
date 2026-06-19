@@ -113,6 +113,7 @@ class GrupoSerializer(serializers.ModelSerializer):
             'aula', 'estado', 'fecha_creacion', 'fecha_modificacion',
             'cantidad_estudiantes'
         ]
+        read_only_fields = ['id', 'fecha_creacion', 'fecha_modificacion']
 
     def get_docente_guia_nombre(self, obj):
         if obj.docente_guia and obj.docente_guia.persona:

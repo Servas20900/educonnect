@@ -6,48 +6,48 @@ import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import { IconLayoutDashboard, IconFileText, IconCalendar, IconFolder, IconUsers,
-  IconChartBar, IconAlertTriangle, IconClipboardList, IconMessageCircle,
-  IconDownload, IconShieldCheck, IconDatabase, IconFileCheck,
-  IconNotes, IconUsersGroup, IconLogin, IconUser, IconFileStack,
-  IconReportAnalytics, IconHeartHandshake } from '@tabler/icons-react';
+import {
+  LayoutDashboard, FileText, Calendar, Folder, Users,
+  BarChart2, AlertTriangle, ClipboardList, MessageCircle,
+  Download, Database, FileCheck, Users2, LogIn, User,
+  LineChart,
+} from 'lucide-react';
 
 import { handlerDrawerOpen, useGetMenuMaster } from '../../api/menu';
 import useAuth from '../../hooks/useAuth';
 import useSystemConfig from '../../hooks/useSystemConfig';
 
 const ICON_MAP = {
-  dashboard:              IconLayoutDashboard,
-  circulares:             IconFileText,
-  horarios:               IconCalendar,
-  documentos:             IconFolder,
-  usuarios:               IconUsers,
-  incapacidades:          IconHeartHandshake,
-  comites:                IconUsersGroup,
-  reportes:               IconChartBar,
-  backups:                IconDatabase,
-  academico:              IconClipboardList,
-  planeamientos:          IconFileCheck,
-  comunicados:            IconMessageCircle,
-  asistencia:             IconCalendar,
-  exportaciones:          IconDownload,
-  riesgo:                 IconAlertTriangle,
-  'crear-acta':           IconFileText,
-  'agendar-reunion':      IconCalendar,
-  'roles-comite':         IconUsers,
-  'informes-economicos':  IconReportAnalytics,
-  reglamentos:            IconFileText,
-  'estudiante-comunicados': IconMessageCircle,
-  'docente-estudiantes':  IconUsers,
-  'docente-horario':      IconCalendar,
-  perfil:                 IconUser,
+  dashboard:                LayoutDashboard,
+  circulares:               FileText,
+  horarios:                 Calendar,
+  documentos:               Folder,
+  usuarios:                 Users,
+  comites:                  Users2,
+  reportes:                 BarChart2,
+  backups:                  Database,
+  academico:                ClipboardList,
+  planeamientos:            FileCheck,
+  comunicados:              MessageCircle,
+  asistencia:               Calendar,
+  exportaciones:            Download,
+  riesgo:                   AlertTriangle,
+  'crear-acta':             FileText,
+  'agendar-reunion':        Calendar,
+  'roles-comite':           Users,
+  'informes-economicos':    LineChart,
+  reglamentos:              FileText,
+  'estudiante-comunicados': MessageCircle,
+  'docente-estudiantes':    Users,
+  'docente-horario':        Calendar,
+  perfil:                   User,
 };
 
 const SIDEBAR_W_OPEN = 240;
 const SIDEBAR_W_CLOSED = 56;
 
 function NavItem({ item, open, onClick, active }) {
-  const Icon = ICON_MAP[item.id] || IconFileText;
+  const Icon = ICON_MAP[item.id] || FileText;
 
   const inner = (
     <Box
@@ -77,7 +77,7 @@ function NavItem({ item, open, onClick, active }) {
           width: 3, bgcolor: '#185fa5', borderRadius: '0 2px 2px 0',
         }} />
       )}
-      <Icon size={16} stroke={1.5} style={{ flexShrink: 0 }} />
+      <Icon size={16} strokeWidth={1.5} style={{ flexShrink: 0 }} />
       {open && (
         <Typography
           sx={{
@@ -213,7 +213,7 @@ function SidebarContent({ drawerOpen }) {
             '&:hover': { bgcolor: 'error.lighter' },
           }}
         >
-          <IconLogin size={16} stroke={1.5} style={{ flexShrink: 0 }} />
+          <LogIn size={16} strokeWidth={1.5} style={{ flexShrink: 0 }} />
           {drawerOpen && (
             <Typography sx={{ fontSize: 13, color: 'inherit', whiteSpace: 'nowrap' }}>
               Cerrar sesión

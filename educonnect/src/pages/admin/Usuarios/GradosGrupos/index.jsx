@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import useAutoRefresh from '../../../../hooks/useAutoRefresh';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, GraduationCap, MapPin, UserRound, Users } from 'lucide-react';
 import { Controller, useForm } from 'react-hook-form';
@@ -7,7 +8,9 @@ import {
   SearchFilter,
   ConfirmModal,
   FormModal,
+  Toast,
 } from '../../../../components/ui';
+import useToast from '../../../../hooks/useToast';
 import CustomSelect from '../../../../components/ui/CustomSelect';
 import {
   fetchGruposPorGrado,
@@ -75,8 +78,7 @@ export default function GradosGrupos() {
   const [docentes, setDocentes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
   const [expandedGrados, setExpandedGrados] = useState({});
 
   const [formOpen, setFormOpen] = useState(false);
@@ -85,9 +87,8 @@ export default function GradosGrupos() {
 
   const [confirmModal, setConfirmModal] = useState({ open: false, grupo: null });
 
-  const loadData = async () => {
-    setLoading(true);
-    setErrorMessage('');
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [gruposData, docentesData] = await Promise.all([
         fetchGruposPorGrado(),
@@ -124,21 +125,21 @@ export default function GradosGrupos() {
         );
       }
 
-      // Expandir primer grado por defecto
-      if (gradosOrdenados.length > 0) {
+      // Expandir primer grado por defecto solo en carga inicial
+      if (!silent && gradosOrdenados.length > 0) {
         setExpandedGrados({ [gradosOrdenados[0].numero_grado]: true });
       }
     } catch (error) {
-      setErrorMessage('No se pudieron cargar los grupos.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      if (!silent) showError('No se pudieron cargar los grupos.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
   }, []);
+  useAutoRefresh(() => loadData(true));
 
   const toggleGrado = (numeroGrado) => {
     setExpandedGrados((prev) => ({
@@ -198,8 +199,11 @@ export default function GradosGrupos() {
 
   const handleFormSubmit = async (data) => {
     if (!data.grado || !data.nombre) {
-      setErrorMessage('Grado y nombre son requeridos.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('Grado y nombre son requeridos.');
+      return;
+    }
+    if (!data.docente_guia) {
+      showError('Debes asignar un docente guía al grupo.');
       return;
     }
 
@@ -212,7 +216,7 @@ export default function GradosGrupos() {
           docente_guia: data.docente_guia ? Number(data.docente_guia) : null,
           aula: data.aula || '',
         });
-        setSuccessMessage('Grupo actualizado correctamente.');
+        showSuccess('Grupo actualizado correctamente.');
       } else {
         await createGrupo({
           grado: Number(data.grado),
@@ -220,14 +224,12 @@ export default function GradosGrupos() {
           docente_guia: data.docente_guia ? Number(data.docente_guia) : null,
           aula: data.aula || '',
         });
-        setSuccessMessage('Grupo creado correctamente.');
+        showSuccess('Grupo creado correctamente.');
       }
-      setTimeout(() => setSuccessMessage(''), 3000);
       closeForm();
       await loadData();
     } catch (error) {
-      setErrorMessage('No fue posible completar la acción.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible completar la acción.');
     } finally {
       setFormLoading(false);
     }
@@ -237,13 +239,11 @@ export default function GradosGrupos() {
     const grupo = confirmModal.grupo;
     try {
       await deleteGrupo(grupo.id);
-      setSuccessMessage('Grupo archivado correctamente.');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showSuccess('Grupo archivado correctamente.');
       setConfirmModal({ open: false, grupo: null });
       await loadData();
     } catch (error) {
-      setErrorMessage('No fue posible archivar el grupo.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible archivar el grupo.');
       setConfirmModal({ open: false, grupo: null });
     }
   };
@@ -467,18 +467,21 @@ export default function GradosGrupos() {
 
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Docente Guía
+              Docente Guía <span className="text-red-500">*</span>
             </label>
             <CustomSelect
               name="docente_guia"
               control={control}
+              rules={{ required: 'Debes asignar un docente guía' }}
               options={docentes.map((doc) => ({
                 value: String(doc.persona?.id || ''),
                 label: `${doc.nombre} ${doc.primer_apellido} ${doc.segundo_apellido || ''}`.trim(),
               }))}
               placeholder="Escribe para buscar docente..."
-              isClearable
             />
+            {errors.docente_guia && (
+              <p className="mt-1 text-xs text-red-500">{errors.docente_guia.message}</p>
+            )}
           </div>
 
           <div className="md:col-span-2">
@@ -511,17 +514,7 @@ export default function GradosGrupos() {
         onCancel={() => setConfirmModal({ open: false, grupo: null })}
       />
 
-      {successMessage ? (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {successMessage}
-        </div>
-      ) : null}
-
-      {errorMessage ? (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      ) : null}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

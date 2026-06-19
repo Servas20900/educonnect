@@ -82,7 +82,6 @@ const FormularioCircular = forwardRef(function FormularioCircular(
     setValue('fecha_vigencia_inicio', todayDate);
   }, [setValue, todayDate]);
 
-  const estadoCalculado = 'Publicado';
   const archivoNuevo = watch('archivo_adjunto');
   const archivoActual = circular?.archivo_adjunto
     ? String(circular.archivo_adjunto).split('/').pop()
@@ -95,7 +94,6 @@ const FormularioCircular = forwardRef(function FormularioCircular(
       detalle: data.detalle.trim(),
       fecha_vigencia_inicio: todayDate,
       fecha_vigencia_fin: null,
-      estado: estadoCalculado,
       categoria: 'General',
       tipo_comunicado: data.tipo_comunicado,
       destinatarios: data.destinatarios,
@@ -273,7 +271,7 @@ const FormularioCircular = forwardRef(function FormularioCircular(
       </div>
 
       <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-        Estado al guardar: <span className="font-semibold">{estadoCalculado}</span>
+        Estado al guardar: <span className="font-semibold">Activa</span>
       </div>
     </div>
   );

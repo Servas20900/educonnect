@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: ./educonnect-Backend
+      dockerfile: Dockerfile
+    container_name: educonnectBackend
+    env_file:
+      - ./educonnect-Backend/.env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             python manage.py seed_demo &&
+             gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120"
+    networks:
+      - educonnect_network
+
+networks:
+  educonnect_network:
+    driver: bridge

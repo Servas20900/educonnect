@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PageHeader } from '../../../components/ui';
+import { DataTable, PageHeader, BtnDescargar } from '../../../components/ui';
 import { fetchGruposDocente } from '../../../api/registroEstudiantesService';
 import { exportarPlanilla } from '../../../api/evaluacionesService';
 
@@ -152,51 +152,30 @@ export default function Exportaciones() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-3 py-2">Grupo</th>
-                <th className="px-3 py-2">Código</th>
-                <th className="px-3 py-2">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr>
-                  <td colSpan="3" className="px-3 py-8 text-center text-slate-500">
-                    Cargando grupos...
-                  </td>
-                </tr>
-              ) : filteredGroups.length === 0 ? (
-                <tr>
-                  <td colSpan="3" className="px-3 py-8 text-center text-slate-500">
-                    No hay grupos para mostrar.
-                  </td>
-                </tr>
-              ) : (
-                filteredGroups.map((grupo) => (
-                  <tr key={grupo.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-3 font-medium text-slate-900">
-                      {grupo.label || grupo.nombre}
-                    </td>
-                    <td className="px-3 py-3 text-slate-700">{grupo.codigo_grupo || '—'}</td>
-                    <td className="px-3 py-3">
-                      <button
-                        type="button"
-                        onClick={() => handleDescargar(grupo)}
-                        disabled={downloading}
-                        className="rounded-md bg-[#185fa5] px-3 py-2 text-xs font-semibold text-white hover:bg-[#378add] disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Descargar Excel
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          loading={loading}
+          data={filteredGroups}
+          emptyMessage="No hay grupos para mostrar."
+          columns={[
+            {
+              key: 'nombre',
+              label: 'Grupo',
+              render: (grupo) => <span className="font-medium text-slate-900">{grupo.label || grupo.nombre}</span>,
+            },
+            {
+              key: 'codigo',
+              label: 'Código',
+              render: (grupo) => <span className="text-slate-700">{grupo.codigo_grupo || '—'}</span>,
+            },
+            {
+              key: 'accion',
+              label: 'Acción',
+              render: (grupo) => (
+                <BtnDescargar onClick={() => handleDescargar(grupo)} disabled={downloading} />
+              ),
+            },
+          ]}
+        />
 
         <p className="text-xs text-slate-500">
           La descarga genera un archivo XLSX con las calificaciones y promedios del grupo.

@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePlaneamientos } from "./usePlaneamientos";
-import Paginador from '../../components/ui/Paginador';
+import { ActiveArchiveToggle, ConfirmModal, DataTable, PageHeader, BtnVer, BtnArchivar, BtnRestaurar, Toast } from '../../components/ui';
+import useToast from '../../hooks/useToast';
+
+const estadoBadge = (estado) => {
+  const map = {
+    'Borrador': 'bg-gray-100 text-gray-700',
+    'En revisión': 'bg-yellow-100 text-yellow-800',
+    'Aprobado': 'bg-green-100 text-green-800',
+    'Archivado': 'bg-red-100 text-red-700',
+  };
+  const cls = map[estado] || 'bg-gray-100 text-gray-600';
+  return <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{estado || 'Borrador'}</span>;
+};
 
 export default function Planeamientos() {
   const {
@@ -8,32 +20,49 @@ export default function Planeamientos() {
     loading,
     uploading,
     error,
-    errorUploading,
     cargar,
     crear,
+    enviar,
     eliminar,
+    desarchivar,
     descargarArchivo,
   } = usePlaneamientos();
 
   const [filtros, setFiltros] = useState({ q: "", estado: "" });
+  const [viewMode, setViewMode] = useState('activos');
   const [modal, setModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ open: false, id: null, accion: null });
 
   const [titulo, setTitulo] = useState("");
   const [detalle, setDetalle] = useState("");
   const [archivo, setArchivo] = useState(null);
 
+  const { toast, showSuccess, showError, clearToast } = useToast();
+
   useEffect(() => {
     cargar();
   }, [cargar]);
 
+  const activos = useMemo(
+    () => planes.filter((p) => p.estado !== 'Archivado'),
+    [planes]
+  );
+
+  const archivados = useMemo(
+    () => planes.filter((p) => p.estado === 'Archivado'),
+    [planes]
+  );
+
+  const planesEnVista = viewMode === 'archivados' ? archivados : activos;
+
   const planesFiltrados = useMemo(() => {
     const q = filtros.q.trim().toLowerCase();
-    return planes.filter((p) => {
+    return planesEnVista.filter((p) => {
       const okQ = !q || (p.titulo || "").toLowerCase().includes(q);
       const okEstado = !filtros.estado || p.estado === filtros.estado;
       return okQ && okEstado;
     });
-  }, [planes, filtros]);
+  }, [planesEnVista, filtros]);
 
   const abrirModal = () => {
     setTitulo("");
@@ -47,15 +76,26 @@ export default function Planeamientos() {
   const submitCrear = async (e) => {
     e.preventDefault();
     if (!titulo.trim() || !detalle.trim() || !archivo) return;
-
     const res = await crear({ titulo, detalle }, archivo);
-    if (res.success) cerrarModal();
+    if (res.success) {
+      showSuccess("Planeamiento creado correctamente.");
+      cerrarModal();
+    } else {
+      showError("No se pudo crear el planeamiento.");
+    }
   };
 
-  const confirmarEliminar = async (id) => {
-    const ok = window.confirm("¿Seguro que deseas eliminar este planeamiento?");
-    if (!ok) return;
-    await eliminar(id);
+  const handleEnviar = async (id) => {
+    const res = await enviar(id);
+    if (res.success) {
+      showSuccess("Planeamiento enviado a revisión.");
+    } else {
+      const msg =
+        res?.error?.response?.data?.error?.message ||
+        res?.error?.response?.data?.detail ||
+        "No se pudo enviar el planeamiento.";
+      showError(msg);
+    }
   };
 
   const handleVer = async (plan) => {
@@ -67,195 +107,206 @@ export default function Planeamientos() {
         res?.error?.response?.data?.detail ||
         res?.error?.message ||
         "No se pudo abrir el archivo.";
-      alert(msg);
-      console.error(res.error);
+      showError(msg);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
-        <p className="mt-4 text-gray-600 font-medium">
-          Cargando planeamientos...
-        </p>
-      </div>
-    );
-  }
+  const abrirConfirm = (id, accion) => setConfirmModal({ open: true, id, accion });
+  const cerrarConfirm = () => setConfirmModal({ open: false, id: null, accion: null });
+
+  const handleConfirmar = async () => {
+    const { id, accion } = confirmModal;
+    cerrarConfirm();
+    if (accion === 'archivar') {
+      const res = await eliminar(id);
+      if (res.success) showSuccess("Planeamiento archivado.");
+      else showError("No se pudo archivar.");
+    } else if (accion === 'desarchivar') {
+      const res = await desarchivar(id);
+      if (res.success) {
+        showSuccess("Planeamiento restaurado a Borrador.");
+      } else {
+        const msg =
+          res?.error?.response?.data?.error?.message ||
+          res?.error?.response?.data?.detail ||
+          "No se pudo desarchivar.";
+        showError(msg);
+      }
+    }
+  };
+
+  const columnsActivos = [
+    {
+      key: 'titulo',
+      label: 'Título',
+      render: (p) => (
+        <div>
+          <span className="font-medium text-slate-900">{p.titulo}</span>
+          {p.comentario_revision && (
+            <p className="mt-1 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
+              Comentario: {p.comentario_revision}
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (p) => estadoBadge(p.estado),
+    },
+    {
+      key: 'creado',
+      label: 'Fecha',
+      render: (p) => <span className="text-slate-600">{p.creado?.slice(0, 10) || '—'}</span>,
+    },
+    {
+      key: 'acciones',
+      label: 'Acciones',
+      render: (p) => (
+        <div className="flex justify-end gap-2">
+          {p.archivo ? (
+            <BtnVer onClick={() => handleVer(p)} />
+          ) : (
+            <span className="text-xs text-slate-400">Sin archivo</span>
+          )}
+          {p.estado === 'Borrador' && (
+            <button
+              type="button"
+              onClick={() => handleEnviar(p.id)}
+              disabled={uploading}
+              className="rounded-md bg-[#185fa5] px-3 py-1 text-xs font-medium text-white hover:bg-[#1450a3] disabled:opacity-50"
+            >
+              Enviar
+            </button>
+          )}
+          <BtnArchivar onClick={() => abrirConfirm(p.id, 'archivar')} disabled={uploading} />
+        </div>
+      ),
+    },
+  ];
+
+  const columnsArchivados = [
+    {
+      key: 'titulo',
+      label: 'Título',
+      render: (p) => <span className="font-medium text-slate-900">{p.titulo}</span>,
+    },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (p) => estadoBadge(p.estado),
+    },
+    {
+      key: 'creado',
+      label: 'Fecha',
+      render: (p) => <span className="text-slate-600">{p.creado?.slice(0, 10) || '—'}</span>,
+    },
+    {
+      key: 'acciones',
+      label: 'Acciones',
+      render: (p) => (
+        <div className="flex justify-end gap-2">
+          {p.archivo && <BtnVer onClick={() => handleVer(p)} />}
+          <BtnRestaurar onClick={() => abrirConfirm(p.id, 'desarchivar')} disabled={uploading} />
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-6 p-8 bg-gray-50 min-h-screen">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-2xl font-bold">Planeamientos Académicos</h2>
-          <p className="text-sm text-gray-500">
-            Carga tu planeamiento con titulo, detalle y documento adjunto.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Planeamientos Académicos"
+        subtitle="Carga tu planeamiento con título, detalle y documento adjunto."
+        showBackButton={false}
+        action={{ label: 'Subir plan', onClick: abrirModal }}
+      />
 
-        <button
-          onClick={abrirModal}
-          className="rounded-lg bg-[#185fa5] px-4 py-2 text-sm font-medium text-white shadow hover:bg-[#0c447c] disabled:opacity-50"
-          disabled={uploading}
-        >
-          Subir plan
-        </button>
-      </div>
-      {(error || errorUploading) && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-          {String(
-            error?.message ||
-              errorUploading?.response?.data?.detail ||
-              errorUploading?.message ||
-              "Error inesperado",
-          )}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {String(error?.message || "Error inesperado")}
         </div>
       )}
 
-      {/* Filtros */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap gap-3">
-          <input
-            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm md:w-1/2"
-            placeholder="Buscar planeamiento"
-            value={filtros.q}
-            onChange={(e) => setFiltros((f) => ({ ...f, q: e.target.value }))}
-          />
+      <ActiveArchiveToggle
+        viewMode={viewMode}
+        onChange={setViewMode}
+        activeLabel="Activos"
+        archivedLabel="Archivados"
+        activeCount={activos.length}
+        archivedCount={archivados.length}
+      />
+
+      <div className="flex flex-wrap gap-3">
+        <input
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm md:w-1/2 focus:border-[#185fa5] focus:outline-none"
+          placeholder="Buscar planeamiento"
+          value={filtros.q}
+          onChange={(e) => setFiltros((f) => ({ ...f, q: e.target.value }))}
+        />
+        {viewMode === 'activos' && (
           <select
-            className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm md:w-48"
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
             value={filtros.estado}
-            onChange={(e) =>
-              setFiltros((f) => ({ ...f, estado: e.target.value }))
-            }
+            onChange={(e) => setFiltros((f) => ({ ...f, estado: e.target.value }))}
           >
             <option value="">Todos los estados</option>
             <option value="Borrador">Borrador</option>
+            <option value="En revisión">En revisión</option>
+            <option value="Aprobado">Aprobado</option>
           </select>
-        </div>
-
-        {/* Tabla */}
-        <Paginador items={planesFiltrados} itemsPorPagina={8}>
-          {(itemsPaginados) => (
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
-                    <th className="px-3 py-2">Título</th>
-                    <th className="px-3 py-2">Detalle</th>
-                    <th className="px-3 py-2">Fecha</th>
-                    <th className="px-3 py-2">Acciones</th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {itemsPaginados.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-3 py-10 text-center text-slate-500"
-                      >
-                        No hay planeamientos todavía.
-                      </td>
-                    </tr>
-                  ) : (
-                    itemsPaginados.map((p) => (
-                      <tr key={p.id} className="hover:bg-[#e6f1fb]">
-                        <td className="px-3 py-2 font-medium text-slate-900">
-                          {p.titulo}
-                        </td>
-
-                        <td className="px-3 py-2 text-slate-600">{p.detalle || "-"}</td>
-
-                        <td className="px-3 py-2 text-slate-600">
-                          {p.creado || "—"}
-                        </td>
-
-                        <td className="px-3 py-2 space-x-3">
-                          {p.archivo ? (
-                            <button
-                              onClick={() => handleVer(p)}
-                              className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c]"
-                            >
-                              Ver
-                            </button>
-                          ) : (
-                            <span className="text-slate-400">Sin archivo</span>
-                          )}
-
-                          <button
-                            onClick={() => confirmarEliminar(p.id)}
-                            className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
-                            disabled={uploading}
-                          >
-                            Archivar
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Paginador>
+        )}
       </div>
 
-      {/* Modal subir plan */}
+      <DataTable
+        loading={loading}
+        data={planesFiltrados}
+        pageSize={8}
+        emptyMessage={viewMode === 'archivados' ? "No hay planeamientos archivados." : "No hay planeamientos todavía."}
+        columns={viewMode === 'archivados' ? columnsArchivados : columnsActivos}
+      />
+
+      {/* Modal crear */}
       {modal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4 z-50">
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b">
-              <h3 className="text-lg font-bold text-gray-800">
-                Subir Planeamiento
-              </h3>
-              <button
-                type="button"
-                onClick={cerrarModal}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+              <h3 className="text-lg font-bold text-gray-800">Subir Planeamiento</h3>
+              <button type="button" onClick={cerrarModal} className="text-gray-400 hover:text-gray-600">✕</button>
             </div>
 
             <form onSubmit={submitCrear} className="p-5 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Título
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Título</label>
                 <input
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:ring-2 focus:ring-[#185fa5] focus:outline-none"
                   placeholder="Ej: Planeamiento Q1"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Detalle
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Detalle</label>
                 <textarea
                   value={detalle}
                   onChange={(e) => setDetalle(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Ej: Planeamiento de Espanol para primer trimestre"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:ring-2 focus:ring-[#185fa5] focus:outline-none"
+                  placeholder="Ej: Planeamiento de Español para primer trimestre"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Archivo (PDF/DOC/DOCX)
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Archivo (PDF/DOC/DOCX)</label>
                 <input
                   type="file"
                   accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   onChange={(e) => setArchivo(e.target.files?.[0] || null)}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e6f1fb] file:text-[#185fa5] hover:file:bg-[#d0e7f7]"
                 />
                 {!archivo && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Debes adjuntar el documento para guardar el planeamiento.
-                  </p>
+                  <p className="text-xs text-gray-400 mt-1">Debes adjuntar el documento para guardar el planeamiento.</p>
                 )}
               </div>
 
@@ -270,7 +321,7 @@ export default function Planeamientos() {
                 <button
                   type="submit"
                   disabled={uploading || !titulo.trim() || !detalle.trim() || !archivo}
-                  className="px-5 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50"
+                  className="px-5 py-2.5 rounded-lg bg-[#185fa5] text-white font-semibold hover:bg-[#1450a3] disabled:opacity-50"
                 >
                   {uploading ? "Subiendo..." : "Guardar"}
                 </button>
@@ -279,6 +330,23 @@ export default function Planeamientos() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.accion === 'desarchivar' ? 'Desarchivar planeamiento' : 'Archivar planeamiento'}
+        message={
+          confirmModal.accion === 'desarchivar'
+            ? '¿Deseas restaurar este planeamiento? Volverá al estado Borrador y podrás enviarlo nuevamente.'
+            : '¿Seguro que deseas archivar este planeamiento? Quedará guardado pero no aparecerá en la lista activa.'
+        }
+        confirmLabel={confirmModal.accion === 'desarchivar' ? 'Restaurar' : 'Archivar'}
+        variant={confirmModal.accion === 'desarchivar' ? 'info' : 'warning'}
+        onConfirm={handleConfirmar}
+        onCancel={cerrarConfirm}
+        loading={uploading}
+      />
+
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

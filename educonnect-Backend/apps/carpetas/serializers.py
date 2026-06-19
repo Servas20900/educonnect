@@ -15,7 +15,7 @@ class DocumentoReadSerializer(serializers.ModelSerializer):
         ]
 
     def get_url_descarga(self, obj):
-        public_id = obj.metadatos.get('public_id')
+        public_id = (obj.metadatos or {}).get('public_id')
         if not public_id:
             return obj.ruta_archivo
         
@@ -47,10 +47,11 @@ class RepositorioSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentosRepositorio
         fields = [
-            'id', 'nombre', 'descripcion', 'cloudinary_path', 
-            'rol_acceso', 'puede_escribir', 'fecha_creacion', 
+            'id', 'nombre', 'descripcion', 'cloudinary_path',
+            'rol_acceso', 'puede_escribir', 'fecha_creacion',
             'creado_por_nombre', 'conteo_documentos'
         ]
+        read_only_fields = ['id', 'fecha_creacion']
         extra_kwargs = {
             'creado_por': {'read_only': True}
         }

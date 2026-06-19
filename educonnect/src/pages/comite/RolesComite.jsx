@@ -1,13 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchComites, fetchMiembrosConRoles } from '../../api/comitesService';
 import { DataTable, PageHeader, StatusBadge } from '../../components/ui';
 import useSystemConfig from '../../hooks/useSystemConfig';
 
 export default function RolesComite() {
   const { getCatalog } = useSystemConfig();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const comiteIdFromUrl = searchParams.get('comite_id') || '';
+  const comiteNombre = searchParams.get('comite_nombre') || '';
 
   const [comites, setComites] = useState([]);
-  const [selectedComite, setSelectedComite] = useState('');
+  const [selectedComite, setSelectedComite] = useState(comiteIdFromUrl);
   const [miembros, setMiembros] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,7 +32,7 @@ export default function RolesComite() {
 
   useEffect(() => {
     if (!selectedComite && comites.length > 0) {
-      setSelectedComite(comites[0].id);
+      setSelectedComite(comiteIdFromUrl || comites[0].id);
     }
   }, [comites, selectedComite]);
 
@@ -108,9 +113,17 @@ export default function RolesComite() {
 
   return (
     <div className="space-y-6 p-6">
+      {comiteNombre && (
+        <div className="flex items-center gap-3">
+          <span className="rounded-full bg-[#e6f1fb] px-3 py-1 text-xs font-semibold text-[#185fa5]">
+            {comiteNombre}
+          </span>
+        </div>
+      )}
+
       <PageHeader
         title="Integrantes de comités"
-        subtitle="Vista de consulta para comités asignados: integrantes, correos y roles internos"
+        subtitle={comiteNombre ? `Roles e integrantes del comité: ${comiteNombre}` : 'Vista de consulta para comités asignados: integrantes, correos y roles internos'}
       />
 
       {error ? (

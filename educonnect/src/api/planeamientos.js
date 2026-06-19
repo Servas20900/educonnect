@@ -13,29 +13,29 @@ const prepareFormData = (data, archivo) => {
 };
 
 export const fetchPlaneamientos = async () => {
-  const response = await api.get("api/v1/planeamientos/Planeamientos/");
+  const response = await api.get("api/v1/planeamientos/planeamientos/");
   return response.data;
 };
 
 export const fetchPlaneamientosAdmin = async () => {
-  const response = await api.get("api/v1/planeamientos/Planeamientos/");
+  const response = await api.get("api/v1/planeamientos/planeamientos/");
   return response.data;
 };
 
 export const createPlaneamiento = async (data, archivo) => {
   const formData = prepareFormData(data, archivo);
-  const response = await api.post("api/v1/planeamientos/Planeamientos/", formData, {
+  const response = await api.post("api/v1/planeamientos/planeamientos/", formData, {
     headers: { "Content-Type": "multipart/form-data" }
   });
   return response.data;
 };
 
 export const enviarPlaneamiento = async (id) => {
-  return await api.post(`api/v1/planeamientos/Planeamientos/${id}/enviar/`);
+  return await api.post(`api/v1/planeamientos/planeamientos/${id}/enviar/`);
 };
 
 export const descargarArchivoPlaneamiento = async (id) => {
-  const response = await api.get(`api/v1/planeamientos/Planeamientos/${id}/archivo/`, {
+  const response = await api.get(`api/v1/planeamientos/planeamientos/${id}/archivo/`, {
     responseType: 'blob',
   });
 
@@ -43,5 +43,15 @@ export const descargarArchivoPlaneamiento = async (id) => {
 };
 
 export const deletePlaneamiento = async (id) => {
-  return await api.delete(`api/v1/planeamientos/Planeamientos/${id}/`);
+  return await api.delete(`api/v1/planeamientos/planeamientos/${id}/`);
+};
+
+export const aprobarPlaneamiento = async (id, comentario) => {
+  const response = await api.post(`api/v1/planeamientos/planeamientos/${id}/aprobar/`, { comentario });
+  return response.data;
+};
+
+export const rechazarPlaneamiento = async (id, comentario) => {
+  const response = await api.post(`api/v1/planeamientos/planeamientos/${id}/rechazar/`, { comentario });
+  return response.data;
 };

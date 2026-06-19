@@ -1,11 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import ViewHorariosHorario
-from .incapacidades.views import ViewHorariosIncapacidad
 
 router = DefaultRouter()
-router.register(r'Horarios', ViewHorariosHorario, basename='horarios-horario')
-router.register(r'incapacidades', ViewHorariosIncapacidad, basename='horarios-incapacidades')
+router.register(r'horarios', ViewHorariosHorario, basename='horarios-horario')
 
 urlpatterns = [
     path('', include(router.urls)),

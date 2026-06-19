@@ -1,13 +1,13 @@
 from django.shortcuts import render
 from .serializers import *
 from rest_framework import viewsets, permissions, status, response, filters
-from .models import * 
+from .models import *
 from rest_framework.views import APIView
 from django.db.models import Q, Count, Max
 from rest_framework.decorators import action
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from django.db.models import Case, Value, When, IntegerField
-from rest_framework.parsers import MultiPartParser, FormParser 
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import PermissionDenied
 from django.http import FileResponse, HttpResponse
 from django.core.exceptions import ObjectDoesNotExist
@@ -16,7 +16,8 @@ from urllib.error import HTTPError, URLError
 from cloudinary.utils import private_download_url
 from django.utils.timezone import now
 from rest_framework.response import Response
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
+from django.contrib.auth.hashers import make_password
 from apps.databaseModels.models import AcademicoGrupo
 from apps.notificaciones.services import crear_notificaciones_profesor_hogar
 from apps.databaseModels.comunicaciones.circulares.views import ViewComunicacionesCircular
@@ -213,22 +214,20 @@ def _docente_can_access_grupo(docente, grupo_id):
     if not docente:
         return False
     return AcademicoGrupo.objects.filter(
-        Q(docente_guia=docente)
-        | Q(academicodocentegrupo__docente=docente, academicodocentegrupo__activo=True),
+        docente_guia=docente,
         id=grupo_id,
         estado__iexact='activo',
-    ).distinct().exists()
+    ).exists()
 
 
 def _docente_ids_can_access_grupo(docente_ids, grupo_id):
     if not docente_ids:
         return False
     return AcademicoGrupo.objects.filter(
-        Q(docente_guia_id__in=docente_ids)
-        | Q(academicodocentegrupo__docente_id__in=docente_ids, academicodocentegrupo__activo=True),
+        docente_guia_id__in=docente_ids,
         id=grupo_id,
         estado__iexact='activo',
-    ).distinct().exists()
+    ).exists()
 
 
 def _resolve_grupo_for_docente(request, grupo_id):
@@ -378,6 +377,7 @@ class GrupoEstudiantesImportView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        creados = 0
         agregados = 0
         duplicados = 0
         errores = []
@@ -412,17 +412,179 @@ class GrupoEstudiantesImportView(APIView):
                 agregados += 1
 
             except PersonasEstudiante.DoesNotExist:
-                errores.append(identificacion)
+                # Intentar crear el estudiante si tiene los datos necesarios
+                nombre = str(row.get("nombre", "")).strip()
+                primer_apellido = str(row.get("primer_apellido", "")).strip()
+                if not nombre or not primer_apellido:
+                    errores.append(f"{identificacion} (faltan nombre/apellido para crearlo)")
+                    continue
+                try:
+                    with transaction.atomic():
+                        nuevo_est = _crear_usuario_estudiante(
+                            identificacion=identificacion,
+                            nombre=nombre,
+                            primer_apellido=primer_apellido,
+                            segundo_apellido=str(row.get("segundo_apellido", "")).strip(),
+                            email=str(row.get("email", "")).strip() or f"{identificacion}@estudiante.local",
+                            password=identificacion,
+                        )
+                        AcademicoMatricula.objects.create(
+                            estudiante=nuevo_est,
+                            grupo=grupo,
+                            fecha_matricula=now().date(),
+                            estado="activo",
+                            observaciones="",
+                        )
+                    agregados += 1
+                    creados += 1
+                except Exception as exc:
+                    errores.append(f"{identificacion} (error al crear: {exc})")
 
         return Response(
             {
                 "message": "Importación completada.",
+                "creados": creados,
                 "agregados": agregados,
                 "duplicados": duplicados,
-                "no_encontrados": errores
+                "no_encontrados": errores,
             },
-            status=status.HTTP_200_OK
+            status=status.HTTP_200_OK,
         )
+
+
+def _generar_codigo_estudiante():
+    ultimo = PersonasEstudiante.objects.order_by("-codigo_estudiante").values_list("codigo_estudiante", flat=True).first()
+    if ultimo:
+        try:
+            num = int(str(ultimo).split("-")[-1]) + 1
+        except ValueError:
+            num = PersonasEstudiante.objects.count() + 1
+    else:
+        num = 1
+    return f"EST-{num:05d}"
+
+
+def _crear_usuario_estudiante(identificacion, nombre, primer_apellido, segundo_apellido="", email="", password=None):
+    """Crea AuthUsuario + PersonasPersona + PersonasEstudiante y asigna rol estudiante."""
+    if not email:
+        email = f"{identificacion}@estudiante.local"
+    if not password:
+        password = identificacion
+
+    with transaction.atomic():
+        persona, _ = PersonasPersona.objects.get_or_create(
+            identificacion=identificacion,
+            defaults={
+                "nombre": nombre,
+                "primer_apellido": primer_apellido,
+                "segundo_apellido": segundo_apellido,
+                "fecha_nacimiento": date(2000, 1, 1),
+                "genero": "No especificado",
+                "tipo_identificacion": "cedula",
+                "nacionalidad": "costarricense",
+                "telefono_principal": "00000000",
+                "telefono_secundario": "",
+                "email_personal": email,
+                "email_institucional": email,
+                "direccion_exacta": "No especificada",
+                "provincia": "No especificada",
+                "canton": "No especificado",
+                "distrito": "No especificado",
+                "estado_civil": "No especificado",
+                "notas": "",
+            },
+        )
+
+        usuario, created = AuthUsuario.objects.get_or_create(
+            persona=persona,
+            defaults={
+                "username": identificacion,
+                "email": email,
+                "password": make_password(password),
+                "is_active": True,
+            },
+        )
+
+        est, _ = PersonasEstudiante.objects.get_or_create(
+            persona=persona,
+            defaults={
+                "codigo_estudiante": _generar_codigo_estudiante(),
+                "fecha_ingreso": date.today(),
+                "estado_estudiante": "activo",
+                "tipo_estudiante": "regular",
+                "condicion_especial": "",
+                "beca": False,
+                "tipo_beca": "",
+                "porcentaje_beca": 0,
+                "tiene_adecuacion": False,
+                "tipo_adecuacion": "",
+            },
+        )
+
+        if created:
+            try:
+                rol = AuthRol.objects.filter(nombre="estudiante").first()
+                if rol:
+                    AuthUsuarioRol.objects.get_or_create(usuario=usuario, rol=rol)
+            except Exception:
+                pass
+
+        return est
+
+
+class RegistrarEstudianteView(APIView):
+    """Crea un nuevo usuario estudiante y lo matricula en el grupo."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, grupo_id):
+        grupo = _resolve_grupo_for_docente(request, grupo_id)
+        if not grupo:
+            return Response({"detail": "Grupo no disponible para este docente."}, status=status.HTTP_404_NOT_FOUND)
+
+        nombre = str(request.data.get("nombre", "")).strip()
+        primer_apellido = str(request.data.get("primer_apellido", "")).strip()
+        segundo_apellido = str(request.data.get("segundo_apellido", "")).strip()
+        identificacion = str(request.data.get("identificacion", "")).strip()
+        email = str(request.data.get("email", "")).strip()
+        password = str(request.data.get("password", "")).strip() or identificacion
+
+        if not nombre or not primer_apellido or not identificacion:
+            return Response(
+                {"detail": "nombre, primer_apellido e identificacion son obligatorios."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Verificar duplicado en el grupo
+        est_existente = PersonasEstudiante.objects.filter(persona__identificacion=identificacion).first()
+        if est_existente and AcademicoMatricula.objects.filter(estudiante=est_existente, grupo=grupo).exists():
+            return Response({"detail": "Ese estudiante ya está matriculado en este grupo."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                est = _crear_usuario_estudiante(
+                    identificacion=identificacion,
+                    nombre=nombre,
+                    primer_apellido=primer_apellido,
+                    segundo_apellido=segundo_apellido,
+                    email=email or f"{identificacion}@estudiante.local",
+                    password=password,
+                )
+                matricula, created = AcademicoMatricula.objects.get_or_create(
+                    estudiante=est,
+                    grupo=grupo,
+                    defaults={"fecha_matricula": now().date(), "estado": "activo", "observaciones": ""},
+                )
+                if not created:
+                    return Response({"detail": "El estudiante ya está en este grupo."}, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response(
+                {"message": "Estudiante registrado correctamente.", "codigo_estudiante": est.codigo_estudiante},
+                status=status.HTTP_201_CREATED,
+            )
+        except IntegrityError as exc:
+            return Response({"detail": f"Error de integridad: {exc}"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class GrupoEstudianteRemoveView(APIView):
@@ -465,10 +627,9 @@ class GruposDocenteView(APIView):
             return Response([], status=status.HTTP_200_OK)
 
         grupos = AcademicoGrupo.objects.filter(
-            Q(docente_guia=docente)
-            | Q(academicodocentegrupo__docente=docente, academicodocentegrupo__activo=True),
+            docente_guia=docente,
             estado__iexact='activo',
-        ).order_by('grado__numero_grado', 'seccion__nombre', 'nombre').distinct()
+        ).order_by('grado__numero_grado', 'seccion__nombre', 'nombre')
 
         data = []
         for g in grupos:

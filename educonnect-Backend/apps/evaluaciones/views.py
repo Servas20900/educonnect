@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from core.permissions import IsDocente, IsAdmin
 from django.db.models import Q
 from django.utils import timezone
 from decimal import Decimal, InvalidOperation
@@ -77,7 +78,6 @@ def _resolve_or_create_docente_grupo(docente_ids, grupo):
             fecha_inicio=timezone.now().date(),
             fecha_fin=None,
             activo=True,
-            fecha_asignacion=timezone.now(),
         )
 
     return None
@@ -164,7 +164,7 @@ def _orden_criticidad(criticidad):
 
 
 class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDocente | IsAdmin]
     serializer_class = EvaluacionesEvaluacionSerializer
 
     def get_serializer_class(self):
@@ -622,8 +622,6 @@ class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
 
         serializer.save(
             docente_grupo=docente_grupo,
-            fecha_creacion=timezone.now(),
-            fecha_modificacion=timezone.now(),
         )
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -664,7 +662,7 @@ class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
         if porcentaje_error:
             return Response({'detail': porcentaje_error}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer.save(fecha_modificacion=timezone.now())
+        serializer.save()
         output = EvaluacionesEvaluacionSerializer(evaluacion, context=self.get_serializer_context())
         return Response(output.data)
 
@@ -674,7 +672,7 @@ class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
 
 
 class EvaluacionesCalificacionViewSet(viewsets.ModelViewSet):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDocente | IsAdmin]
     serializer_class = EvaluacionesCalificacionSerializer
 
     def get_queryset(self):
@@ -760,16 +758,14 @@ class EvaluacionesCalificacionViewSet(viewsets.ModelViewSet):
                 'ausente': False,
                 'justificado': False,
                 'observaciones': '',
-                'fecha_registro': timezone.now(),
                 'registrada_por_id': request.user.id,
             }
         )
 
         if not created:
             calificacion.nota = nota_decimal
-            calificacion.fecha_registro = timezone.now()
             calificacion.registrada_por_id = request.user.id
-            calificacion.save()
+            calificacion.save(update_fields=['nota', 'registrada_por_id'])
 
         serializer = self.get_serializer(calificacion)
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
@@ -793,9 +789,8 @@ class EvaluacionesCalificacionViewSet(viewsets.ModelViewSet):
             )
 
         calificacion.nota = nota_decimal
-        calificacion.fecha_registro = timezone.now()
         calificacion.registrada_por_id = request.user.id
-        calificacion.save(update_fields=['nota', 'fecha_registro', 'registrada_por'])
+        calificacion.save(update_fields=['nota', 'registrada_por_id'])
 
         serializer = self.get_serializer(calificacion)
         return Response(serializer.data)

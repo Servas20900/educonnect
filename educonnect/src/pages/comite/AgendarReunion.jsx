@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { crearReunion, getReuniones, actualizarReunion } from '../../api/reuniones';
 import {
   ConfirmModal,
@@ -8,7 +9,13 @@ import {
   PageHeader,
   SearchFilter,
   StatusBadge,
+  BtnVer,
+  BtnEditar,
+  BtnArchivar,
+  BtnRestaurar,
+  Toast,
 } from '../../components/ui';
+import useToast from '../../hooks/useToast';
 
 const initialForm = {
   fecha: '',
@@ -16,8 +23,12 @@ const initialForm = {
   hora_fin: '',
   tema: '',
   lugar: '',
-  asistentes: '[]',
+  asistentes: '',
 };
+
+
+const todayStr = () => new Date().toISOString().split('T')[0];
+const isWeekend = (dateStr) => { if (!dateStr) return false; const d = new Date(dateStr + 'T12:00:00'); return d.getDay() === 0 || d.getDay() === 6; };
 
 const parseError = (error, fallback) => {
   if (!error) return fallback;
@@ -43,13 +54,20 @@ const ReunionesForm = forwardRef(function ReunionesForm(
   const [form, setForm] = useState(initialForm);
 
   useEffect(() => {
+    const raw = reunion?.asistentes;
+    let asistentes = '';
+    if (Array.isArray(raw) && raw.length > 0) {
+      asistentes = raw.map((a) => typeof a === 'object' ? (a.nombre || a.name || '') : String(a)).filter(Boolean).join(', ');
+    } else if (typeof raw === 'string') {
+      asistentes = raw;
+    }
     setForm({
       fecha: reunion?.fecha || '',
       hora_inicio: reunion?.hora_inicio || '08:00',
       hora_fin: reunion?.hora_fin || '',
       tema: reunion?.tema || '',
       lugar: reunion?.lugar || '',
-      asistentes: JSON.stringify(reunion?.asistentes || [], null, 0),
+      asistentes,
     });
   }, [reunion]);
 
@@ -59,20 +77,17 @@ const ReunionesForm = forwardRef(function ReunionesForm(
   };
 
   const submit = async () => {
-    let asistentes;
-    try {
-      asistentes = JSON.parse(form.asistentes || '[]');
-      if (!Array.isArray(asistentes)) {
-        throw new Error('asistentes debe ser un arreglo JSON.');
-      }
-    } catch {
-      throw new Error('El campo asistentes debe ser un JSON válido (ejemplo: [] o [{"id":1}]).');
-    }
+    if (!form.fecha) throw new Error('La fecha es obligatoria.');
+    if (form.fecha < todayStr()) throw new Error('No se puede agendar en una fecha pasada.');
+    if (isWeekend(form.fecha)) throw new Error('No se puede agendar en sábado o domingo.');
 
-    await onSubmit({
-      ...form,
-      asistentes,
-    });
+    const asistentes = String(form.asistentes || '')
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .map((nombre) => ({ nombre }));
+
+    await onSubmit({ ...form, asistentes });
   };
 
   useImperativeHandle(ref, () => ({ submit }));
@@ -80,17 +95,21 @@ const ReunionesForm = forwardRef(function ReunionesForm(
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-3">
-        <label className="space-y-1 text-sm">
+        <div className="space-y-1 text-sm">
           <span className="font-medium text-slate-700">Fecha</span>
           <input
             type="date"
             name="fecha"
             value={form.fecha}
             onChange={handleChange}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
+            min={todayStr()}
+            className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${isWeekend(form.fecha) ? 'border-red-400 focus:border-red-400' : 'border-slate-300 focus:border-[#185fa5]'}`}
             disabled={loading}
           />
-        </label>
+          {isWeekend(form.fecha) && (
+            <p className="text-xs text-red-500">No se permiten sábados ni domingos.</p>
+          )}
+        </div>
 
         <label className="space-y-1 text-sm">
           <span className="font-medium text-slate-700">Hora inicio</span>
@@ -141,16 +160,16 @@ const ReunionesForm = forwardRef(function ReunionesForm(
       </label>
 
       <label className="space-y-1 text-sm">
-        <span className="font-medium text-slate-700">Asistentes (JSON)</span>
-        <textarea
+        <span className="font-medium text-slate-700">Asistentes</span>
+        <input
           name="asistentes"
           value={form.asistentes}
           onChange={handleChange}
-          rows={3}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-mono focus:border-[#185fa5] focus:outline-none"
+          placeholder="Ej: Juan Pérez, María López, Carlos Mora"
           disabled={loading}
-          placeholder='Ejemplo: [{"id": 1}, {"id": 2}]'
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
         />
+        <p className="text-xs text-slate-400">Separados por coma</p>
       </label>
     </div>
   );
@@ -158,6 +177,10 @@ const ReunionesForm = forwardRef(function ReunionesForm(
 
 export default function AgendarReunion() {
   const formRef = useRef(null);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const comiteId = searchParams.get('comite_id') || '';
+  const comiteNombre = searchParams.get('comite_nombre') || '';
 
   const [reuniones, setReuniones] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -172,16 +195,16 @@ export default function AgendarReunion() {
   const [confirmModal, setConfirmModal] = useState({ open: false, reunion: null, action: null });
   const [detailModal, setDetailModal] = useState({ open: false, reunion: null });
 
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
 
   const loadReuniones = async () => {
     setLoading(true);
     try {
-      const data = await getReuniones();
+      const params = comiteId ? { comite_id: comiteId } : {};
+      const data = await getReuniones(params);
       setReuniones(Array.isArray(data) ? data : data?.results || []);
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudieron cargar las reuniones.'));
+      showError(parseError(error, 'No se pudieron cargar las reuniones.'));
     } finally {
       setLoading(false);
     }
@@ -209,7 +232,7 @@ export default function AgendarReunion() {
 
   const handleSubmitReunion = async (form) => {
     if (!form.fecha || !form.hora_inicio || !form.tema || !form.lugar) {
-      setErrorMessage('Completa fecha, hora inicio, tema y lugar.');
+      showError('Completa fecha, hora inicio, tema y lugar.');
       return;
     }
 
@@ -217,17 +240,17 @@ export default function AgendarReunion() {
     try {
       if (currentReunion?.id) {
         await actualizarReunion(currentReunion.id, form);
-        setSuccessMessage('Reunión actualizada correctamente.');
+        showSuccess('Reunión actualizada correctamente.');
       } else {
-        await crearReunion({ ...form, estado: 'Programada' });
-        setSuccessMessage('Reunión creada correctamente.');
+        await crearReunion({ ...form, estado: 'Programada', ...(comiteId ? { comite: comiteId } : {}) });
+        showSuccess('Reunión creada correctamente.');
       }
 
       setModalOpen(false);
       setCurrentReunion(null);
       await loadReuniones();
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudo guardar la reunión.'));
+      showError(parseError(error, 'No se pudo guardar la reunión.'));
     } finally {
       setSaving(false);
     }
@@ -240,7 +263,7 @@ export default function AgendarReunion() {
         await formRef.current.submit();
       }
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudo validar el formulario.'));
+      showError(parseError(error, 'No se pudo validar el formulario.'));
     }
   };
 
@@ -256,15 +279,15 @@ export default function AgendarReunion() {
     try {
       if (action === 'archive') {
         await actualizarReunion(reunion.id, { estado: 'Archivada' });
-        setSuccessMessage('Reunión archivada correctamente.');
+        showSuccess('Reunión archivada correctamente.');
       }
       if (action === 'unarchive') {
         await actualizarReunion(reunion.id, { estado: 'Programada' });
-        setSuccessMessage('Reunión desarchivada correctamente.');
+        showSuccess('Reunión desarchivada correctamente.');
       }
       await loadReuniones();
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudo completar la acción sobre la reunión.'));
+      showError(parseError(error, 'No se pudo completar la acción sobre la reunión.'));
     } finally {
       setSaving(false);
       setConfirmModal({ open: false, reunion: null, action: null });
@@ -311,32 +334,12 @@ export default function AgendarReunion() {
       label: 'Acciones',
       render: (row) => (
         <div className="flex justify-end gap-2">
-          <button
-            onClick={() => setDetailModal({ open: true, reunion: row })}
-            className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
-          >
-            Ver detalle
-          </button>
-          <button
-            onClick={() => openEdit(row)}
-            className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#378add]"
-          >
-            Editar
-          </button>
+          <BtnVer onClick={() => setDetailModal({ open: true, reunion: row })} />
+          <BtnEditar onClick={() => openEdit(row)} />
           {isArchivada(row.estado) ? (
-            <button
-              onClick={() => openConfirm(row, 'unarchive')}
-              className="rounded-md bg-[#0f6e56] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#085041]"
-            >
-              Desarchivar
-            </button>
+            <BtnRestaurar onClick={() => openConfirm(row, 'unarchive')} />
           ) : (
-            <button
-              onClick={() => openConfirm(row, 'archive')}
-              className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
-            >
-              Archivar
-            </button>
+            <BtnArchivar onClick={() => openConfirm(row, 'archive')} />
           )}
         </div>
       ),
@@ -345,9 +348,17 @@ export default function AgendarReunion() {
 
   return (
     <div className="space-y-6">
+      {comiteNombre && (
+        <div className="flex items-center gap-3">
+          <span className="rounded-full bg-[#e6f1fb] px-3 py-1 text-xs font-semibold text-[#185fa5]">
+            {comiteNombre}
+          </span>
+        </div>
+      )}
+
       <PageHeader
         title="Reuniones"
-        subtitle="Agendar, listar y consultar reuniones del comité"
+        subtitle={comiteNombre ? `Reuniones del comité: ${comiteNombre}` : 'Agendar, listar y consultar reuniones del comité'}
         action={{
           label: 'Nueva Reunión',
           onClick: openCreate,
@@ -398,9 +409,10 @@ export default function AgendarReunion() {
       <FormModal
         open={detailModal.open}
         onClose={() => setDetailModal({ open: false, reunion: null })}
-        onSubmit={(event) => event.preventDefault()}
+        onSubmit={(event) => { event.preventDefault(); setDetailModal({ open: false, reunion: null }); }}
         title="Detalle de Reunión"
         submitLabel="Cerrar"
+        hideCancel
         loading={false}
         maxWidth="md"
       >
@@ -429,10 +441,23 @@ export default function AgendarReunion() {
               </div>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-slate-500">Asistentes (JSON)</p>
-              <pre className="overflow-x-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-xs">
-{JSON.stringify(detailModal.reunion.asistentes || [], null, 2)}
-              </pre>
+              <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">Integrantes / Asistentes</p>
+              {(() => {
+                const lista = Array.isArray(detailModal.reunion.asistentes) ? detailModal.reunion.asistentes : [];
+                if (lista.length === 0) return <p className="text-slate-400 text-xs">Sin asistentes registrados.</p>;
+                return (
+                  <ul className="space-y-1">
+                    {lista.map((a, i) => (
+                      <li key={i} className="flex items-center gap-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm">
+                        <span className="font-medium text-slate-900">{typeof a === 'object' ? (a.nombre || '—') : String(a)}</span>
+                        {typeof a === 'object' && a.cargo && (
+                          <span className="text-xs text-slate-500">· {a.cargo}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -453,17 +478,7 @@ export default function AgendarReunion() {
         loading={saving}
       />
 
-      {successMessage && (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {successMessage}
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      )}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

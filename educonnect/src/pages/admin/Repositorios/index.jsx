@@ -9,7 +9,14 @@ import {
   FormModal,
   ConfirmModal,
   FileUpload,
+  BtnVer,
+  BtnEditar,
+  BtnDescargar,
+  BtnArchivar,
+  BtnRestaurar,
+  Toast,
 } from '../../../components/ui';
+import useToast from '../../../hooks/useToast';
 import { downloadDocumentoRepositorioArchivo } from '../../../api/repositorios';
 
 const defaultRepoForm = {
@@ -79,7 +86,8 @@ export default function RepositoriosDocumentales() {
     cargarDocumentosRepositorio,
     crearRepositorio,
     actualizarRepositorioPermisos,
-    eliminarRepositorio,
+    archivarRepositorio,
+    restaurarRepositorio,
     subirDocumento,
     actualizarDocumento,
     archivarDocumento,
@@ -94,7 +102,8 @@ export default function RepositoriosDocumentales() {
   const [repoEditModalOpen, setRepoEditModalOpen] = useState(false);
   const [documentoModalOpen, setDocumentoModalOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [confirmDeleteRepoOpen, setConfirmDeleteRepoOpen] = useState(false);
+  const [confirmArchivarRepoOpen, setConfirmArchivarRepoOpen] = useState(false);
+  const [mostrandoReposArchivados, setMostrandoReposArchivados] = useState(false);
   const [mostrandoArchivados, setMostrandoArchivados] = useState(false);
 
   const [repoForm, setRepoForm] = useState(defaultRepoForm);
@@ -104,52 +113,29 @@ export default function RepositoriosDocumentales() {
   const [documentoEnEdicion, setDocumentoEnEdicion] = useState(null);
   const [repositorioEnEdicion, setRepositorioEnEdicion] = useState(null);
 
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
 
   useEffect(() => {
-    cargarRepositorios();
-  }, []);
+    cargarRepositorios({ includeArchivados: mostrandoReposArchivados });
+  }, [mostrandoReposArchivados]);
 
   const repositoriosFiltrados = useMemo(() => {
-    return repositorios.filter((repo) => {
-      const texto = search.toLowerCase();
-      return (
-        repo.nombre?.toLowerCase().includes(texto) ||
-        repo.descripcion?.toLowerCase().includes(texto) ||
-        repo.rol_acceso?.toLowerCase().includes(texto)
-      );
-    });
+    const texto = search.toLowerCase();
+    return repositorios.filter((repo) =>
+      repo.nombre?.toLowerCase().includes(texto) ||
+      repo.descripcion?.toLowerCase().includes(texto) ||
+      repo.rol_acceso?.toLowerCase().includes(texto)
+    );
   }, [repositorios, search]);
 
   const documentosFiltrados = useMemo(() => {
-    return documentos.filter((doc) => {
-      const activo = doc?.es_version_actual !== false;
-      if (!isAdmin && !activo) {
-        return false;
-      }
-      if (isAdmin && mostrandoArchivados !== !activo) {
-        return false;
-      }
-
-      const texto = search.toLowerCase();
-      return (
-        doc.nombre?.toLowerCase().includes(texto) ||
-        doc.descripcion?.toLowerCase().includes(texto) ||
-        doc.nombre_cargado_por?.toLowerCase().includes(texto)
-      );
-    });
-  }, [documentos, search, isAdmin, mostrandoArchivados]);
-
-  const showSuccess = (message) => {
-    setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(''), 3000);
-  };
-
-  const showError = (error) => {
-    setErrorMessage(formatError(error));
-    setTimeout(() => setErrorMessage(''), 4500);
-  };
+    const texto = search.toLowerCase();
+    return documentos.filter((doc) =>
+      doc.nombre?.toLowerCase().includes(texto) ||
+      doc.descripcion?.toLowerCase().includes(texto) ||
+      doc.nombre_cargado_por?.toLowerCase().includes(texto)
+    );
+  }, [documentos, search]);
 
   const abrirRepositorio = async (repo) => {
     try {
@@ -158,7 +144,7 @@ export default function RepositoriosDocumentales() {
       setMostrandoArchivados(false);
       await cargarDocumentosRepositorio(repo.id, { archivadosOnly: false });
     } catch (error) {
-      showError(error);
+      showError(formatError(error));
     }
   };
 
@@ -179,7 +165,7 @@ export default function RepositoriosDocumentales() {
       });
     } catch (error) {
       setMostrandoArchivados(!siguienteVistaArchivados);
-      showError(error);
+      showError(formatError(error));
     }
   };
 
@@ -195,7 +181,7 @@ export default function RepositoriosDocumentales() {
       setRepoModalOpen(false);
       showSuccess('Repositorio creado correctamente');
     } catch (error) {
-      showError(error);
+      showError(formatError(error));
     }
   };
 
@@ -219,25 +205,39 @@ export default function RepositoriosDocumentales() {
       setRepositorioEnEdicion(null);
       showSuccess('Repositorio actualizado correctamente');
     } catch (error) {
-      showError(error);
+      showError(formatError(error));
     }
   };
 
-  const abrirConfirmEliminarRepositorio = (repo) => {
+  const abrirConfirmArchivarRepositorio = (repo) => {
     setRepositorioEnEdicion(repo);
-    setConfirmDeleteRepoOpen(true);
+    setConfirmArchivarRepoOpen(true);
   };
 
-  const confirmarEliminarRepositorio = async () => {
+  const confirmarArchivarRepositorio = async () => {
     if (!repositorioEnEdicion?.id) return;
     try {
-      await eliminarRepositorio(repositorioEnEdicion.id);
-      setConfirmDeleteRepoOpen(false);
+      await archivarRepositorio(repositorioEnEdicion.id);
+      setConfirmArchivarRepoOpen(false);
       setRepositorioEnEdicion(null);
-      showSuccess('Repositorio eliminado correctamente');
+      showSuccess('Repositorio archivado correctamente');
     } catch (error) {
-      showError(error);
+      showError(formatError(error));
     }
+  };
+
+  const handleRestaurarRepositorio = async (repo) => {
+    try {
+      await restaurarRepositorio(repo.id);
+      showSuccess('Repositorio restaurado correctamente');
+    } catch (error) {
+      showError(formatError(error));
+    }
+  };
+
+  const alternarVistaReposArchivados = async () => {
+    const siguiente = !mostrandoReposArchivados;
+    setMostrandoReposArchivados(siguiente);
   };
 
   const abrirModalSubir = () => {
@@ -257,7 +257,7 @@ export default function RepositoriosDocumentales() {
       setUploadModalOpen(false);
       showSuccess('Documento cargado correctamente');
     } catch (error) {
-      showError(error);
+      showError(formatError(error));
     }
   };
 
@@ -277,7 +277,7 @@ export default function RepositoriosDocumentales() {
       setDocumentoModalOpen(false);
       showSuccess('Documento actualizado correctamente');
     } catch (error) {
-      showError(error);
+      showError(formatError(error));
     }
   };
 
@@ -297,7 +297,7 @@ export default function RepositoriosDocumentales() {
       }
       setConfirmDeleteOpen(false);
     } catch (error) {
-      showError(error);
+      showError(formatError(error));
     }
   };
 
@@ -367,26 +367,17 @@ export default function RepositoriosDocumentales() {
       label: 'Acciones',
       render: (row) => (
         <div className="flex flex-wrap justify-end gap-2">
-          <button
-            onClick={() => abrirRepositorio(row)}
-            className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#378add]"
-          >
-            Abrir
-          </button>
+          <BtnVer onClick={() => abrirRepositorio(row)} />
           {isAdmin ? (
             <>
-              <button
-                onClick={() => abrirModalEditarRepositorio(row)}
-                className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
-              >
-                Editar
-              </button>
-              <button
-                onClick={() => abrirConfirmEliminarRepositorio(row)}
-                className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-700"
-              >
-                Eliminar
-              </button>
+              {!mostrandoReposArchivados && (
+                <BtnEditar onClick={() => abrirModalEditarRepositorio(row)} />
+              )}
+              {mostrandoReposArchivados ? (
+                <BtnRestaurar onClick={() => handleRestaurarRepositorio(row)} />
+              ) : (
+                <BtnArchivar onClick={() => abrirConfirmArchivarRepositorio(row)} />
+              )}
             </>
           ) : null}
         </div>
@@ -429,29 +420,17 @@ export default function RepositoriosDocumentales() {
       label: 'Acciones',
       render: (row) => (
         <div className="flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => descargarDocumento(row)}
-            className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#378add]"
-          >
-            Descargar
-          </button>
+          <BtnDescargar onClick={() => descargarDocumento(row)} />
           {isAdmin ? (
             <>
               {!mostrandoArchivados ? (
-                <button
-                  onClick={() => abrirModalEditarDocumento(row)}
-                  className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
-                >
-                  Editar
-                </button>
+                <BtnEditar onClick={() => abrirModalEditarDocumento(row)} />
               ) : null}
-              <button
-                onClick={() => abrirConfirmArchivo(row)}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors ${mostrandoArchivados ? 'bg-[#0f6e56] hover:bg-[#085041]' : 'bg-[#0b2545] hover:bg-[#081a31]'}`}
-              >
-                {mostrandoArchivados ? 'Desarchivar' : 'Archivar'}
-              </button>
+              {mostrandoArchivados ? (
+                <BtnRestaurar onClick={() => abrirConfirmArchivo(row)} />
+              ) : (
+                <BtnArchivar onClick={() => abrirConfirmArchivo(row)} />
+              )}
             </>
           ) : null}
         </div>
@@ -525,13 +504,25 @@ export default function RepositoriosDocumentales() {
           />
         </>
       ) : (
-        <DataTable
-          columns={columnasRepositorios}
-          data={repositoriosFiltrados}
-          loading={loadingRepositorios}
-          emptyMessage="No hay repositorios creados"
-          emptyAction={isAdmin ? { label: 'Crear repositorio', onClick: abrirModalNuevoRepositorio } : undefined}
-        />
+        <>
+          {isAdmin ? (
+            <ActiveArchiveToggle
+              viewMode={mostrandoReposArchivados ? 'archivados' : 'activos'}
+              onChange={(mode) => setMostrandoReposArchivados(mode === 'archivados')}
+              activeLabel="Repositorios Activos"
+              archivedLabel="Repositorios Archivados"
+              activeCount={repositorios.length}
+              archivedCount={0}
+            />
+          ) : null}
+          <DataTable
+            columns={columnasRepositorios}
+            data={repositoriosFiltrados}
+            loading={loadingRepositorios}
+            emptyMessage={mostrandoReposArchivados ? 'No hay repositorios archivados' : 'No hay repositorios creados'}
+            emptyAction={isAdmin && !mostrandoReposArchivados ? { label: 'Crear repositorio', onClick: abrirModalNuevoRepositorio } : undefined}
+          />
+        </>
       )}
 
       <FormModal
@@ -688,30 +679,20 @@ export default function RepositoriosDocumentales() {
       />
 
       <ConfirmModal
-        open={confirmDeleteRepoOpen}
-        title="Eliminar carpeta"
-        message="Solo se puede eliminar si esta carpeta no tiene documentos activos adentro."
-        confirmLabel="Eliminar"
-        onConfirm={confirmarEliminarRepositorio}
+        open={confirmArchivarRepoOpen}
+        title="Archivar carpeta"
+        message="La carpeta se archivará. Solo se puede archivar si no tiene documentos activos adentro."
+        confirmLabel="Archivar"
+        onConfirm={confirmarArchivarRepositorio}
         onCancel={() => {
-          setConfirmDeleteRepoOpen(false);
+          setConfirmArchivarRepoOpen(false);
           setRepositorioEnEdicion(null);
         }}
         loading={saving}
-        variant="danger"
+        variant="warning"
       />
 
-      {successMessage ? (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {successMessage}
-        </div>
-      ) : null}
-
-      {errorMessage ? (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      ) : null}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

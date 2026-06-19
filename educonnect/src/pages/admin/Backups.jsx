@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import { Download } from 'lucide-react';
 import {
   DataTable,
   PageHeader,
   SearchFilter,
   StatusBadge,
+  BtnDescargar,
+  Toast,
 } from '../../components/ui';
+import useToast from '../../hooks/useToast';
 import {
   descargarExportacionAdmin,
   exportarDocentes,
@@ -30,10 +34,10 @@ const guessExtension = (formato) => {
 };
 
 export default function Backups() {
+  const { toast, showSuccess, showError, clearToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const [searchExport, setSearchExport] = useState('');
 
@@ -42,22 +46,22 @@ export default function Backups() {
 
   const [exportaciones, setExportaciones] = useState([]);
 
-  const loadData = async () => {
-    setLoading(true);
-    setError('');
+  const loadData = async (silent = false) => {
+    if (!silent) { setLoading(true); setError(''); }
     try {
       const exportsResp = await fetchAdminExportaciones();
       setExportaciones(Array.isArray(exportsResp) ? exportsResp : exportsResp.results || []);
     } catch (err) {
-      setError(formatError(err));
+      if (!silent) setError(formatError(err));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
   }, []);
+  useAutoRefresh(() => loadData(true));
 
   const filteredExportaciones = useMemo(() => {
     const query = searchExport.trim().toLowerCase();
@@ -74,10 +78,9 @@ export default function Backups() {
     try {
       await exportarDocentes(formatoDocentes);
       await loadData();
-      setSuccess('Exportacion de docentes generada correctamente');
-      setTimeout(() => setSuccess(''), 3000);
+      showSuccess('Exportacion de docentes generada correctamente');
     } catch (err) {
-      setError(formatError(err));
+      showError(formatError(err));
       setLoading(false);
     }
   };
@@ -88,10 +91,9 @@ export default function Backups() {
     try {
       await exportarEstudiantes(formatoEstudiantes);
       await loadData();
-      setSuccess('Exportacion de estudiantes generada correctamente');
-      setTimeout(() => setSuccess(''), 3000);
+      showSuccess('Exportacion de estudiantes generada correctamente');
     } catch (err) {
-      setError(formatError(err));
+      showError(formatError(err));
       setLoading(false);
     }
   };
@@ -108,7 +110,7 @@ export default function Backups() {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      setError(formatError(err));
+      showError(formatError(err));
     } finally {
       setDownloadingId(null);
     }
@@ -134,14 +136,7 @@ export default function Backups() {
       key: 'acciones',
       label: 'Acciones',
       render: (row) => (
-        <button
-          type="button"
-          onClick={() => handleDownload(row)}
-          disabled={downloadingId === row.id}
-          className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c] disabled:opacity-60"
-        >
-          {downloadingId === row.id ? 'Descargando...' : 'Descargar'}
-        </button>
+        <BtnDescargar onClick={() => handleDownload(row)} disabled={downloadingId === row.id} />
       ),
     },
   ];
@@ -156,6 +151,7 @@ export default function Backups() {
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       ) : null}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
 
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h3 className="text-lg font-semibold text-slate-900">Exportaciones administrativas</h3>
@@ -226,11 +222,6 @@ export default function Backups() {
         />
       </section>
 
-      {success ? (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 shadow-lg">
-          {success}
-        </div>
-      ) : null}
     </div>
   );
 }

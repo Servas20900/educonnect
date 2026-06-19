@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
+from core.permissions import IsDocente, IsAdmin
 
 from .models import AsistenciaRegistro, AsistenciaDetalle
 from apps.databaseModels.models import AcademicoMatricula, PersonasEstudiante, AcademicoGrupo, PersonasDocente
@@ -74,7 +75,7 @@ def _get_grupo_docente_or_none(docente_ids, grupo_id):
 
 
 class GruposDocenteView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDocente | IsAdmin]
 
     def get(self, request):
         docente_ids = _get_docente_ids_for_user(request.user)
@@ -104,7 +105,7 @@ class GruposDocenteView(APIView):
 
 
 class AsistenciaDiariaView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDocente | IsAdmin]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get(self, request, grupo_id):
@@ -256,7 +257,7 @@ class AsistenciaDiariaView(APIView):
 
 
 class CerrarAsistenciaView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDocente | IsAdmin]
 
     def post(self, request, grupo_id):
         fecha = request.data.get("fecha")
@@ -288,7 +289,7 @@ class CerrarAsistenciaView(APIView):
 
 
 class HistorialAsistenciaView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDocente | IsAdmin]
 
     def get(self, request, grupo_id):
         docente_ids = _get_docente_ids_for_user(request.user)

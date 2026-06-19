@@ -2,8 +2,7 @@ import PopUp from "../../../components/ui/PopUp";
 import { RenderVer } from "./RenderVer";
 import { useRevisionHorarios } from "./hooks/useRevisionHorarios";
 import { useState } from "react";
-import { Edit2, Trash2, Eye, CheckCircle, AlertCircle } from 'lucide-react';
-import Paginador from '../../../components/ui/Paginador'
+import { DataTable, BtnVer, BtnAprobar, BtnRechazar, BtnEditar, BtnArchivar, BtnReactivar } from '../../../components/ui';
 import useSystemConfig from '../../../hooks/useSystemConfig';
 const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }) => {
     const { getCatalog } = useSystemConfig();
@@ -96,52 +95,17 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
             <PopUp isModalOpen={modal} closeModal={closeModal}>
                 <div className="bg-white rounded-2xl overflow-hidden shadow-2xl">
                     <div className="p-1">
-                        {accion === "Aprobar" && (
-                            <div className="p-6">
-                                <h2 className="text-lg font-bold text-gray-800 mb-2">{activeConfirmConfig?.title}</h2>
-                                <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig?.message}</p>
-                                <div className="flex justify-end gap-3">
-                                    <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
-                                    <button onClick={activeConfirmConfig?.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-[#185fa5] hover:bg-[#0c447c]">
-                                        {activeConfirmConfig?.confirmText}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                         {accion === "Ver" && <RenderVer horario={horarioSeleccionado} />}
-                        {accion === "Rechazar" && activeConfirmConfig && (
+                        {activeConfirmConfig && accion !== "Ver" && (
                             <div className="p-6">
                                 <h2 className="text-lg font-bold text-gray-800 mb-2">{activeConfirmConfig.title}</h2>
                                 <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig.message}</p>
                                 <div className="flex justify-end gap-3">
                                     <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
-                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-red-600 hover:bg-red-700">
-                                        {activeConfirmConfig.confirmText}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        {accion === "Eliminar" && activeConfirmConfig && (
-                            <div className="p-6">
-                                <h2 className="text-lg font-bold text-gray-800 mb-2">{activeConfirmConfig.title}</h2>
-                                <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig.message}</p>
-                                <div className="flex justify-end gap-3">
-                                    <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
-                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-[#0b2545] hover:bg-[#081a31]">
-                                        {activeConfirmConfig.confirmText}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        {accion === "Reactivar" && activeConfirmConfig && (
-                            <div className="p-6">
-                                <h2 className="text-lg font-bold text-gray-800 mb-2">{activeConfirmConfig.title}</h2>
-                                <p className="text-sm text-gray-600 mb-5">{activeConfirmConfig.message}</p>
-                                <div className="flex justify-end gap-3">
-                                    <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-gray-600 rounded-lg border border-gray-200">Cancelar</button>
-                                    <button onClick={activeConfirmConfig.onConfirm} className="px-4 py-2 text-sm font-semibold text-white rounded-lg bg-[#0f6e56] hover:bg-[#085041]">
-                                        {activeConfirmConfig.confirmText}
-                                    </button>
+                                    {accion === "Aprobar" && <BtnAprobar onClick={activeConfirmConfig.onConfirm} />}
+                                    {accion === "Rechazar" && <BtnRechazar onClick={activeConfirmConfig.onConfirm} />}
+                                    {accion === "Reactivar" && <BtnReactivar onClick={activeConfirmConfig.onConfirm} />}
+                                    {accion === "Eliminar" && <BtnArchivar onClick={activeConfirmConfig.onConfirm} />}
                                 </div>
                             </div>
                         )}
@@ -183,72 +147,68 @@ const RevisionHorarios = ({ horarios, deleteHorario, onEdit, actualizarHorario }
                     ))}
                 </select>
             </div>
-            <div className="overflow-hidden rounded-3xl border border-gray-100 shadow-sm bg-white">
-                <Paginador items={horariosFiltrados} itemsPorPagina={6}>
-                    {(itemsPaginados) => (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-100">
-                                <thead className="bg-gray-50/50 text-gray-500 text-[10px] font-black uppercase tracking-widest">
-                                    <tr>
-                                        <th className="px-8 py-5 text-left">Horario</th>
-                                        <th className="px-8 py-5 text-left">Docente Responsable</th>
-                                        <th className="px-8 py-5 text-left">Estado</th>
-                                        <th className="px-8 py-5 text-center">Gestión</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50 bg-white">
-                                    {itemsPaginados.map((horario) => (
-                                        <tr key={horario.id} className="hover:bg-indigo-50/30 transition-colors duration-200">
-                                            <td className="px-8 py-5">
-                                                <div className="text-sm font-bold text-gray-800">{horario.nombre}</div>
-                                                <div className="text-[10px] font-black text-gray-400 uppercase mt-0.5">Ref: #{horario.id}</div>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-black text-[10px]">
-                                                        {horario.docente_info?.nombre?.charAt(0)}
-                                                    </div>
-                                                    <span className="text-sm font-semibold text-gray-600">{horario.docente_info?.nombre}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <span className={`px-3 py-1 inline-flex text-[11px] font-black rounded-full ring-1 ring-inset ${getStatusStyles(horario.estado)}`}>
-                                                    {horario.estado.toUpperCase()}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center justify-center gap-4 min-w-[200px]">
-                                                    <button onClick={() => handleOption("Ver", horario)} className="rounded-md bg-[#185fa5] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#0c447c]">
-                                                        VER
-                                                    </button>
-                                                    <div className="h-4 w-[1px] bg-gray-200" />
-                                                    {horario.estado !== "Inactivo" ? (
-                                                        <div className="flex gap-3">
-                                                            {horario.estado !== "Publicado" ? (
-                                                                <>
-                                                                    <button onClick={() => handleOption("Aprobar", horario)} className="rounded-md bg-[#0f6e56] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#085041]">APROBAR</button>
-                                                                    <button onClick={() => handleOption("Rechazar", horario)} className="rounded-md bg-red-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-red-700">RECHAZAR</button>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <button onClick={() => onEdit(horario)} className="rounded-md bg-[#185fa5] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#0c447c]">EDITAR</button>
-                                                                    <button onClick={() => handleOption("Eliminar", horario)} className="rounded-md bg-[#0b2545] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#081a31]">ARCHIVAR</button>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <button onClick={() => handleOption("Reactivar", horario)} className="rounded-md bg-[#0f6e56] px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-[#085041]">REACTIVAR</button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </Paginador>
-            </div>
+            <DataTable
+                pageSize={6}
+                data={horariosFiltrados}
+                emptyMessage="No hay horarios para los filtros seleccionados."
+                columns={[
+                    {
+                        key: 'nombre',
+                        label: 'Horario',
+                        render: (horario) => (
+                            <div>
+                                <div className="text-sm font-bold text-slate-800">{horario.nombre}</div>
+                                <div className="text-xs text-slate-400 uppercase mt-0.5">Ref: #{horario.id}</div>
+                            </div>
+                        ),
+                    },
+                    {
+                        key: 'docente',
+                        label: 'Docente Responsable',
+                        render: (horario) => (
+                            <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-black text-[10px]">
+                                    {horario.docente_info?.nombre?.charAt(0)}
+                                </div>
+                                <span className="text-sm font-semibold text-slate-600">{horario.docente_info?.nombre}</span>
+                            </div>
+                        ),
+                    },
+                    {
+                        key: 'estado',
+                        label: 'Estado',
+                        render: (horario) => (
+                            <span className={`px-3 py-1 inline-flex text-[11px] font-black rounded-full ring-1 ring-inset ${getStatusStyles(horario.estado)}`}>
+                                {horario.estado.toUpperCase()}
+                            </span>
+                        ),
+                    },
+                    {
+                        key: 'gestion',
+                        label: 'Gestión',
+                        render: (horario) => (
+                            <div className="flex items-center justify-end gap-2">
+                                <BtnVer onClick={() => handleOption("Ver", horario)} />
+                                {horario.estado !== "Inactivo" ? (
+                                    horario.estado !== "Publicado" ? (
+                                        <>
+                                            <BtnAprobar onClick={() => handleOption("Aprobar", horario)} />
+                                            <BtnRechazar onClick={() => handleOption("Rechazar", horario)} />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <BtnEditar onClick={() => onEdit(horario)} />
+                                            <BtnArchivar onClick={() => handleOption("Eliminar", horario)} />
+                                        </>
+                                    )
+                                ) : (
+                                    <BtnReactivar onClick={() => handleOption("Reactivar", horario)} />
+                                )}
+                            </div>
+                        ),
+                    },
+                ]}
+            />
         </div>
     );
 };

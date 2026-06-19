@@ -6,7 +6,7 @@ import {
   cerrarAsistenciaDiaria,
   fetchHistorialAsistencia,
 } from "../../api/asistenciaService";
-import { PageHeader } from "../../components/ui";
+import { ConfirmModal, PageHeader } from "../../components/ui";
 
 const getTodayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -52,6 +52,7 @@ export default function RegistroAsistencia() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
+  const [confirmCierre, setConfirmCierre] = useState(false);
 
   const loadGrupos = async () => {
     try {
@@ -248,29 +249,29 @@ export default function RegistroAsistencia() {
     }
   };
 
-  const handleCerrar = async () => {
+  const handleCerrar = () => {
     if (isInvalidAttendanceDate(fecha)) {
       setError("Solo se permite cerrar asistencia para hoy o fechas futuras en días hábiles.");
       return;
     }
+    setConfirmCierre(true);
+  };
 
-    const ok = window.confirm("¿Deseas cerrar el registro diario? Luego no podrá editarse.");
-    if (!ok) return;
-
+  const handleCerrarConfirmado = async () => {
+    setConfirmCierre(false);
     try {
       const res = await cerrarAsistenciaDiaria(grupoId, fecha);
       setMensaje(res?.message || "Registro diario cerrado.");
       await loadAsistencia();
       await loadHistorial();
     } catch (err) {
-      const msg =
-        err?.response?.data?.detail || "No se pudo cerrar el registro diario.";
+      const msg = err?.response?.data?.detail || "No se pudo cerrar el registro diario.";
       setError(msg);
     }
   };
 
   return (
-    <div className="space-y-6 p-8 bg-gray-50 min-h-screen">
+    <div className="space-y-6">
       <PageHeader
         title="Asistencia"
         subtitle="Registra asistencia diaria por grupo en días hábiles."
@@ -570,6 +571,16 @@ export default function RegistroAsistencia() {
           </table>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmCierre}
+        title="Cerrar registro diario"
+        message="¿Deseas cerrar el registro diario? Una vez cerrado no podrá editarse."
+        confirmLabel="Cerrar registro"
+        variant="warning"
+        onConfirm={handleCerrarConfirmado}
+        onCancel={() => setConfirmCierre(false)}
+      />
     </div>
   );
 }

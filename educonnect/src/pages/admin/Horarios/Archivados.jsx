@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Archive, RotateCcw, Trash2, AlertCircle, Clock, Search } from 'lucide-react';
 import { useHorarios } from './hooks/useHorarios';
 import { useNavigate } from 'react-router-dom';
+import useToast from '../../../hooks/useToast';
 import {
   PageHeader,
   SearchFilter,
   DataTable,
   ConfirmModal,
+  BtnRestaurar,
 } from '../../../components/ui';
 
 const formatErrorMessage = (error) => {
@@ -51,8 +52,7 @@ export default function HorariosArchivados() {
     open: false,
     horario: null,
   });
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
 
   useEffect(() => {
     cargarHorarios({ archivados_only: true });
@@ -70,11 +70,9 @@ export default function HorariosArchivados() {
     const { horario } = confirmModal;
     try {
       await desarchivarHorario(horario.id, 'Borrador');
-      setSuccessMessage('Horario desarchivado con éxito');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showSuccess('Horario desarchivado con éxito');
     } catch (error) {
-      setErrorMessage(formatErrorMessage(error));
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError(formatErrorMessage(error));
     } finally {
       setConfirmModal({ open: false, horario: null });
     }
@@ -102,12 +100,7 @@ export default function HorariosArchivados() {
       key: 'acciones',
       label: 'Acciones',
       render: (row) => (
-        <button
-          onClick={() => setConfirmModal({ open: true, horario: row })}
-          className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0c447c]"
-        >
-          Desarchivar
-        </button>
+        <BtnRestaurar onClick={() => setConfirmModal({ open: true, horario: row })} />
       ),
     },
   ];
@@ -150,17 +143,7 @@ export default function HorariosArchivados() {
         loading={uploading}
       />
 
-      {successMessage && (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {successMessage}
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      )}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

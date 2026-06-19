@@ -2,7 +2,6 @@ from rest_framework import serializers
 from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso, PersonasPersona
 from .models import ConfiguracionSistema
 from datetime import datetime
-from django.utils import timezone
 
 class PersonaSimpleSerializer(serializers.ModelSerializer):
     """Serializer simplificado para datos de persona"""
@@ -10,7 +9,7 @@ class PersonaSimpleSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = PersonasPersona
-        fields = ['nombre', 'primer_apellido', 'segundo_apellido', 'nombre_completo']
+        fields = ['id', 'nombre', 'primer_apellido', 'segundo_apellido', 'nombre_completo']
     
     def get_nombre_completo(self, obj):
         return f"{obj.nombre} {obj.primer_apellido} {obj.segundo_apellido or ''}".strip()
@@ -77,7 +76,6 @@ class UsuarioUpdateSerializer(serializers.ModelSerializer):
                 AuthUsuarioRol.objects.get_or_create(
                     usuario=instance,
                     rol=rol,
-                    defaults={'fecha_asignacion': timezone.now()}
                 )
             except AuthRol.DoesNotExist:
                 pass
@@ -122,11 +120,7 @@ class RolUpdateSerializer(serializers.ModelSerializer):
         fields = ['nombre', 'descripcion', 'tipo_rol', 'activo', 'permisos_ids']
     
     def create(self, validated_data):
-        from django.utils import timezone
         permisos_ids = validated_data.pop('permisos_ids', [])
-        validated_data['fecha_creacion'] = timezone.now()
-        validated_data['fecha_modificacion'] = timezone.now()
-        
         rol = AuthRol.objects.create(**validated_data)
         
         # Asignar permisos
@@ -135,19 +129,16 @@ class RolUpdateSerializer(serializers.ModelSerializer):
             AuthRolPermiso.objects.create(
                 rol=rol,
                 permiso=permiso,
-                fecha_asignacion=timezone.now()
             )
-        
+
         return rol
     
     def update(self, instance, validated_data):
-        from django.utils import timezone
         permisos_ids = validated_data.pop('permisos_ids', None)
         
         # Actualizar campos básicos
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.fecha_modificacion = timezone.now()
         instance.save()
         
         # Actualizar permisos si se proporciona la lista
@@ -158,7 +149,6 @@ class RolUpdateSerializer(serializers.ModelSerializer):
                 AuthRolPermiso.objects.create(
                     rol=instance,
                     permiso=permiso,
-                    fecha_asignacion=timezone.now()
                 )
         
         return instance
@@ -192,3 +182,4 @@ class ConfiguracionSistemaSerializer(serializers.ModelSerializer):
             'fecha_creacion',
             'fecha_modificacion',
         ]
+        read_only_fields = ['id', 'fecha_creacion', 'fecha_modificacion']

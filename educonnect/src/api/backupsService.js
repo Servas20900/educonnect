@@ -1,6 +1,6 @@
 import { api } from './authService';
 
-const BASE = 'api/v1/exportaciones/Exportaciones/';
+const BASE = 'api/v1/exportaciones/exportaciones/';
 
 export const fetchAdminExportaciones = async () => {
     try {

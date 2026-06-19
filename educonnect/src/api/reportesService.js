@@ -14,7 +14,7 @@ export const fetchAuditoriaLogs = async (filtros = {}) => {
         if (filtros.resultado) params.append('resultado', filtros.resultado);
         
         const queryString = params.toString() ? `?${params.toString()}` : '';
-        const response = await api.get(`api/v1/reportes/auditoria/${queryString}`);
+        const response = await api.get(`api/v1/auditoria/auditoria/${queryString}`);
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');
@@ -24,7 +24,7 @@ export const fetchAuditoriaLogs = async (filtros = {}) => {
 // Obtener reporte de uso del sistema (últimos 30 días)
 export const fetchReporteUsoSistema = async () => {
     try {
-        const response = await api.get('api/v1/reportes/reporte_uso_sistema/');
+        const response = await api.get('api/v1/auditoria/reporte_uso_sistema/');
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');
@@ -34,7 +34,7 @@ export const fetchReporteUsoSistema = async () => {
 // Obtener reporte por módulo
 export const fetchReportePorModulo = async () => {
     try {
-        const response = await api.get('api/v1/reportes/reporte_por_modulo/');
+        const response = await api.get('api/v1/auditoria/reporte_por_modulo/');
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');
@@ -44,7 +44,7 @@ export const fetchReportePorModulo = async () => {
 // Obtener reporte de errores
 export const fetchReporteErrores = async () => {
     try {
-        const response = await api.get('api/v1/reportes/reporte_errores/');
+        const response = await api.get('api/v1/auditoria/reporte_errores/');
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');

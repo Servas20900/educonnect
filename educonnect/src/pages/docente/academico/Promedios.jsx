@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchGruposDocente, fetchEstudiantesPorGrupo } from '../../../api/registroEstudiantesService';
 import { fetchPromediosPorGrupo } from '../../../api/evaluacionesService';
+import { DataTable, PageHeader } from '../../../components/ui';
 
 const DOCENTE_GRUPO_STORAGE_KEY = 'docente_academico_hub_grupo_id';
 
@@ -137,19 +138,11 @@ export default function Promedios() {
   };
 
   return (
-    <div className="space-y-6 p-8 bg-gray-50 min-h-screen">
-      <div>
-        <button
-          onClick={handleVolver}
-          className="mb-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Volver
-        </button>
-        <h2 className="text-2xl font-bold">Promedios</h2>
-        <p className="text-sm text-gray-500">
-          Visualiza los promedios por semestre de los estudiantes.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Promedios"
+        subtitle="Visualiza los promedios por semestre de los estudiantes."
+      />
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -180,85 +173,66 @@ export default function Promedios() {
           />
         </div>
 
-        <div className="mt-2 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
-                <th className="px-3 py-2">Nombre</th>
-                <th className="px-3 py-2">Código</th>
-                <th className="px-3 py-2 text-center">Semestre 1</th>
-                <th className="px-3 py-2 text-center">Semestre 2</th>
-                <th className="px-3 py-2 text-center">Promedio Final</th>
-                <th className="px-3 py-2 text-center">Estado</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-gray-100">
-              {loading && (
-                <tr>
-                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
-                    Cargando promedios...
-                  </td>
-                </tr>
-              )}
-
-              {!loading && !grupoId && (
-                <tr>
-                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
-                    Selecciona una clase para ver los promedios.
-                  </td>
-                </tr>
-              )}
-
-              {!loading && grupoId && filtered.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
-                    No hay estudiantes en este grupo.
-                  </td>
-                </tr>
-              )}
-
-              {!loading &&
-                filtered.map((e) => {
-                  const promedioData = getPromedioEstudiante(e.persona_id);
-                  const promFinal = parseFloat(promedioData.promedio_final) || 0;
-
-                  return (
-                    <tr key={e.persona_id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 font-medium text-gray-900">{e.nombre || 'N/A'}</td>
-                      <td className="px-3 py-2 text-gray-700">{e.codigo_estudiante || 'N/A'}</td>
-                      <td className="px-3 py-2 text-center text-gray-700">
-                        {promedioData.promedio_semestre_1 || 'N/A'}
-                      </td>
-                      <td className="px-3 py-2 text-center text-gray-700">
-                        {promedioData.promedio_semestre_2 || 'N/A'}
-                      </td>
-                      <td className="px-3 py-2 text-center font-semibold">
-                        <span className={`rounded-full px-2 py-1 text-xs ${
-                          promFinal > 0
-                            ? getProntuarioColor(promFinal)
-                            : 'bg-gray-50 text-gray-700'
-                        }`}>
-                          {promFinal > 0 ? promFinal.toFixed(2) : 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                          promFinal >= 70
-                            ? 'bg-blue-50 text-blue-800'
-                            : promFinal >= 60
-                            ? 'bg-slate-100 text-slate-700'
-                            : 'bg-slate-200 text-slate-800'
-                        }`}>
-                          {promFinal >= 70 ? 'Aprobado' : promFinal > 0 ? 'En riesgo' : '-'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          loading={loading}
+          data={filtered}
+          pageSize={10}
+          emptyMessage={grupoId ? "No hay estudiantes en este grupo." : "Selecciona una clase para ver los promedios."}
+          columns={[
+            {
+              key: 'nombre',
+              label: 'Nombre',
+              render: (e) => <span className="font-medium text-gray-900">{e.nombre || 'N/A'}</span>,
+            },
+            {
+              key: 'codigo',
+              label: 'Código',
+              render: (e) => <span className="text-gray-700">{e.codigo_estudiante || 'N/A'}</span>,
+            },
+            {
+              key: 'semestre1',
+              label: 'Semestre 1',
+              render: (e) => {
+                const d = getPromedioEstudiante(e.persona_id);
+                return <span className="text-gray-700">{d.promedio_semestre_1 || 'N/A'}</span>;
+              },
+            },
+            {
+              key: 'semestre2',
+              label: 'Semestre 2',
+              render: (e) => {
+                const d = getPromedioEstudiante(e.persona_id);
+                return <span className="text-gray-700">{d.promedio_semestre_2 || 'N/A'}</span>;
+              },
+            },
+            {
+              key: 'promedio',
+              label: 'Promedio Final',
+              render: (e) => {
+                const d = getPromedioEstudiante(e.persona_id);
+                const promFinal = parseFloat(d.promedio_final) || 0;
+                return (
+                  <span className={`rounded-full px-2 py-1 text-xs ${promFinal > 0 ? getProntuarioColor(promFinal) : 'bg-gray-50 text-gray-700'}`}>
+                    {promFinal > 0 ? promFinal.toFixed(2) : 'N/A'}
+                  </span>
+                );
+              },
+            },
+            {
+              key: 'estado',
+              label: 'Estado',
+              render: (e) => {
+                const d = getPromedioEstudiante(e.persona_id);
+                const promFinal = parseFloat(d.promedio_final) || 0;
+                return (
+                  <span className={`rounded-full px-2 py-1 text-xs font-semibold ${promFinal >= 70 ? 'bg-blue-50 text-blue-800' : promFinal >= 60 ? 'bg-slate-100 text-slate-700' : 'bg-slate-200 text-slate-800'}`}>
+                    {promFinal >= 70 ? 'Aprobado' : promFinal > 0 ? 'En riesgo' : '-'}
+                  </span>
+                );
+              },
+            },
+          ]}
+        />
       </div>
     </div>
   );

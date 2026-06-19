@@ -45,7 +45,6 @@ const FormularioHorario = forwardRef(function FormularioHorario(
       notas: data.notas.trim(),
       docente: data.docente ? parseInt(data.docente) : null,
       tipo_horario: 'Presencial',
-      estado: 'Borrador',
       version: parseInt(data.version) || 1,
       grupo: null,
       fecha_vigencia_inicio: null,
@@ -74,7 +73,7 @@ const FormularioHorario = forwardRef(function FormularioHorario(
         : usuario?.username || `Usuario ${usuario.id}`;
 
       return {
-        value: usuario.id,
+        value: usuario?.persona?.id ?? usuario.id,
         label: nombreCompleto,
       };
     });

@@ -57,9 +57,7 @@ DEFAULT_NAVIGATION = {
                     "id": "comite-items",
                     "type": "collapse",
                     "children": [
-                        {"id": "crear-acta", "title": "Actas", "type": "item", "url": "/comite/actas"},
-                        {"id": "agendar-reunion", "title": "Reuniones", "type": "item", "url": "/comite/reuniones"},
-                        {"id": "roles-comite", "title": "Roles", "type": "item", "url": "/comite/roles"}
+                        {"id": "comite-home", "title": "Mi Comité", "type": "item", "url": "/comite"}
                     ]
                 }
             ]
@@ -114,10 +112,12 @@ DEFAULT_ROUTE_PERMISSIONS = {
     "academico": ["administrador", "docente"],
     "asistencia": ["administrador", "docente"],
     "riesgo": ["administrador", "docente"],
-    "planeamientos": ["administrador", "docente"],
+    "planeamientos": ["administrador"],
+    "docente-planeamientos": ["administrador", "docente"],
     "comunicados": ["administrador", "docente"],
     "docente-circulares": ["administrador", "docente"],
     "docente-horario": ["administrador", "docente"],
+    "comite-home": ["administrador", "comite"],
     "comite-actas": ["administrador", "comite"],
     "comite-reuniones": ["administrador", "comite"],
     "comite-roles": ["administrador", "comite"],

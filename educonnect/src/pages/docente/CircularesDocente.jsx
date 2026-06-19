@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import useAutoRefresh from '../../hooks/useAutoRefresh';
 import {
   PageHeader,
   SearchFilter,
@@ -80,45 +81,29 @@ export default function CircularesDocente() {
     }
   };
 
-  useEffect(() => {
-    const cargarCirculares = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchCirculares();
-        const circularesFiltradas = Array.isArray(data)
-          ? data.filter((c) => {
-              if (String(c.estado || '').toLowerCase() !== 'publicado') return false;
-              if (c.visible === false) return false;
-
-              let destinatarios = c.destinatarios;
-              if (typeof destinatarios === 'string') {
-                try {
-                  destinatarios = JSON.parse(destinatarios);
-                } catch {
-                  destinatarios = [];
-                }
-              }
-
-              if (!Array.isArray(destinatarios) || destinatarios.length === 0) {
-                return true;
-              }
-
-              const listaNormalizada = destinatarios
-                .map((d) => String(d || '').toLowerCase())
-              return listaNormalizada.includes('docentes');
-            })
-          : [];
-        setCirculares(circularesFiltradas);
-      } catch (error) {
-        console.error('Error al cargar circulares:', error);
-        setCirculares([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    cargarCirculares();
+  const cargarCirculares = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const data = await fetchCirculares();
+      const circularesFiltradas = Array.isArray(data)
+        ? data.filter((c) => {
+            if (String(c.estado || '').toLowerCase() === 'archivada') return false;
+            if (c.visible === false) return false;
+            const destinatarios = String(c.destinatarios || '').toLowerCase();
+            return destinatarios === 'docentes' || destinatarios === 'todos';
+          })
+        : [];
+      setCirculares(circularesFiltradas);
+    } catch (error) {
+      console.error('Error al cargar circulares:', error);
+      if (!silent) setCirculares([]);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { cargarCirculares(); }, [cargarCirculares]);
+  useAutoRefresh(() => cargarCirculares(true));
 
   const filteredCirculares = circulares.filter((circular) => {
     const matchesSearch = circular.titulo

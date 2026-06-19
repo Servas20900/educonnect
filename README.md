@@ -40,6 +40,8 @@ Opcional con cantidades personalizadas:
 docker compose exec backend python manage.py seed_demo --docentes 15 --estudiantes 120 --encargados 50 --comite-users 8 --auxiliares-users 5 --year 2026
 ```
 
+Los parametros `--comite-users` y `--auxiliares-users` agregan esos roles a docentes existentes; no crean cuentas aisladas de comite o auxiliares.
+
 ## 3) Levantar frontend
 
 En otra terminal, desde `educonnect/educonnect/`:

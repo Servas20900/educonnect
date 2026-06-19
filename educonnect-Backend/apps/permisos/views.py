@@ -1,7 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser
 from django.utils import timezone
 from apps.databaseModels.models import AuthUsuario, AuthRol, AuthPermiso, AuthUsuarioRol, AuthRolPermiso
@@ -11,15 +10,24 @@ from .serializers import (
     UsuarioListSerializer, UsuarioDetailSerializer, UsuarioUpdateSerializer,
     RolSerializer, RolUpdateSerializer, PermisoSerializer, ModuloSerializer
 )
+from core.permissions import IsAuthenticated, IsAdmin
+from core.responses import success_response, error_response
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para gestión de usuarios
+    ViewSet para gestión de usuarios — solo Admin.
     """
     queryset = AuthUsuario.objects.all().order_by('-fecha_registro')
-    permission_classes = [IsAuthenticated]
-    
+    permission_classes = [IsAdmin]
+
+    def get_permissions(self):
+        # list y retrieve son de solo lectura — comités y docentes los usan para listar participantes
+        from core.permissions import IsDocenteOrAdmin
+        if self.action in ('list', 'retrieve'):
+            return [IsDocenteOrAdmin()]
+        return [IsAdmin()]
+
     def get_serializer_class(self):
         if self.action == 'list':
             return UsuarioListSerializer
@@ -61,7 +69,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         _, created = AuthUsuarioRol.objects.get_or_create(
             usuario=usuario,
             rol=rol,
-            defaults={'fecha_asignacion': timezone.now()}
+            defaults={'asignado_por': request.user},
         )
 
         if not created:
@@ -184,10 +192,10 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
 class RolViewSet(viewsets.ModelViewSet):
     """
-    ViewSet para gestión de roles
+    ViewSet para gestión de roles — solo Admin.
     """
     queryset = AuthRol.objects.all().order_by('nombre')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -206,7 +214,6 @@ class RolViewSet(viewsets.ModelViewSet):
         """Activa o desactiva un rol"""
         rol = self.get_object()
         rol.activo = not rol.activo
-        rol.fecha_modificacion = timezone.now()
         rol.save()
         return Response({
             'message': f'Rol {"activado" if rol.activo else "desactivado"} exitosamente',
@@ -229,7 +236,6 @@ class RolViewSet(viewsets.ModelViewSet):
                 AuthRolPermiso.objects.create(
                     rol=rol,
                     permiso=permiso,
-                    fecha_asignacion=timezone.now()
                 )
             except AuthPermiso.DoesNotExist:
                 continue
@@ -239,11 +245,11 @@ class RolViewSet(viewsets.ModelViewSet):
 
 class PermisoViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet para listar permisos (solo lectura)
+    ViewSet para listar permisos (solo lectura) — solo Admin.
     """
     queryset = AuthPermiso.objects.filter(activo=True).order_by('modulo', 'nombre')
     serializer_class = PermisoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     
     @action(detail=False, methods=['get'])
     def by_module(self, request):

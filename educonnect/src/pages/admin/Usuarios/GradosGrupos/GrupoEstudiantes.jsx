@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, UserPlus, Users, UserMinus, ArrowRightLeft } from 'lucide-react';
-import { ConfirmModal, DataTable, EmptyState, PageHeader, SearchFilter, StatusBadge } from '../../../../components/ui';
+import { ConfirmModal, DataTable, EmptyState, PageHeader, SearchFilter, StatusBadge, Toast } from '../../../../components/ui';
+import useToast from '../../../../hooks/useToast';
 import {
   asignarEstudianteGrupo,
   fetchEstudiantesGrupo,
@@ -36,8 +37,7 @@ export default function GrupoEstudiantes() {
   const [estudiantesDisponibles, setEstudiantesDisponibles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
   const [processingId, setProcessingId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, estudiante: null });
 
@@ -45,7 +45,6 @@ export default function GrupoEstudiantes() {
     if (!grupoId) return;
 
     setLoading(true);
-    setErrorMessage('');
     try {
       const [grupoData, grupoEstudiantesData, todosEstudiantesData] = await Promise.all([
         fetchGrupoDetail(grupoId),
@@ -73,8 +72,7 @@ export default function GrupoEstudiantes() {
         })
       );
     } catch (error) {
-      setErrorMessage('No se pudo cargar la información del grupo.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No se pudo cargar la información del grupo.');
     } finally {
       setLoading(false);
     }
@@ -117,7 +115,6 @@ export default function GrupoEstudiantes() {
     if (!personaId) return;
 
     setProcessingId(personaId);
-    setErrorMessage('');
     try {
       const grupoActual = getGrupoActual(estudiante);
       if (grupoActual?.id && String(grupoActual.id) !== String(grupoId)) {
@@ -125,12 +122,10 @@ export default function GrupoEstudiantes() {
       }
 
       await asignarEstudianteGrupo(grupoId, personaId);
-      setSuccessMessage('Estudiante asignado al grupo correctamente.');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showSuccess('Estudiante asignado al grupo correctamente.');
       await loadData();
     } catch (error) {
-      setErrorMessage('No fue posible asignar al estudiante.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible asignar al estudiante.');
     } finally {
       setProcessingId(null);
     }
@@ -144,13 +139,11 @@ export default function GrupoEstudiantes() {
     setProcessingId(personaId);
     try {
       await removerEstudianteGrupo(grupoId, personaId);
-      setSuccessMessage('Estudiante removido del grupo correctamente.');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showSuccess('Estudiante removido del grupo correctamente.');
       setConfirmModal({ open: false, estudiante: null });
       await loadData();
     } catch (error) {
-      setErrorMessage('No fue posible remover al estudiante.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible remover al estudiante.');
       setConfirmModal({ open: false, estudiante: null });
     } finally {
       setProcessingId(null);
@@ -345,17 +338,7 @@ export default function GrupoEstudiantes() {
         onCancel={() => setConfirmModal({ open: false, estudiante: null })}
       />
 
-      {successMessage ? (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {successMessage}
-        </div>
-      ) : null}
-
-      {errorMessage ? (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      ) : null}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

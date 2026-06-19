@@ -21,6 +21,7 @@ class ReadSerializerComunicacionesComunicado(serializers.ModelSerializer):
 
 
 class WriteSerializerComunicacionesComunicado(serializers.ModelSerializer):
+    tipo_comunicado = serializers.CharField(required=False, default='informativo')
     DESTINATARIOS_VALIDOS = {'estudiantes', 'encargados'}
     TIPOS_VALIDOS = {
         'informativo',
@@ -192,7 +193,6 @@ class RegistroSerializer(serializers.ModelSerializer):
                 distrito='No especificado',
                 estado_civil='No especificado',
                 notas='',
-                fecha_modificacion=timezone.now(),
             )
 
             usuario = AuthUsuario.objects.create(
@@ -228,7 +228,6 @@ class RegistroSerializer(serializers.ModelSerializer):
                     AuthUsuarioRol.objects.create(
                         usuario=usuario,
                         rol=rol,
-                        fecha_asignacion=timezone.now()
                     )
             except Exception:
                 pass

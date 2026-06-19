@@ -39,7 +39,7 @@ export default function Notificaciones(){
   }, []);
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-700 mb-8 border-b pb-2">
         Mis Notificaciones Automáticas
       </h1>

@@ -1,5 +1,5 @@
-import { fetchCirculares, createCirculares, updateCirculares, deleteCirculares } from "../../../../api/circulares";
-import { useState, useCallback } from 'react';
+import { fetchCirculares, createCirculares, updateCirculares, deleteCirculares, archivarCircular as archivarCircularApi, restaurarCircular as restaurarCircularApi } from "../../../../api/circulares";
+import { useState, useCallback, useEffect } from 'react';
 
 export function useCirculares() {
     const [loading, setLoading] = useState(false);
@@ -8,24 +8,28 @@ export function useCirculares() {
     const [uploading, setUploading] = useState(false);
     const [errorUploading, setErrorUploading] = useState(null);
 
-    const cargarCirculares = useCallback(async () => {
-        setLoading(true);
-        setError(null);
+    const cargarCirculares = useCallback(async (silent = false) => {
+        if (!silent) { setLoading(true); setError(null); }
         try {
             const receivedData = await fetchCirculares();
             setData(Array.isArray(receivedData) ? receivedData : []);
         } catch (err) {
-            setError(err);
+            if (!silent) setError(err);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, []);
 
-    const crearCircular = async (data,archivoSeleccionado) => {
+    useEffect(() => {
+        const id = setInterval(() => cargarCirculares(true), 30_000);
+        return () => clearInterval(id);
+    }, [cargarCirculares]);
+
+    const crearCircular = async (data, archivoSeleccionado) => {
         setUploading(true);
         setErrorUploading(null);
         try {
-            const sendingData = await createCirculares(data,archivoSeleccionado);
+            const sendingData = await createCirculares(data, archivoSeleccionado);
             await cargarCirculares();
             return { success: true, sendingData };
         } catch (err) {
@@ -50,11 +54,42 @@ export function useCirculares() {
             setUploading(false);
         }
     }
+
     const eliminarCircular = async (id) => {
         setUploading(true);
         setError(null);
         try {
             const sendingData = await deleteCirculares(id);
+            await cargarCirculares();
+            return { success: true, sendingData };
+        } catch (err) {
+            setErrorUploading(err);
+            throw err;
+        } finally {
+            setUploading(false);
+        }
+    }
+
+    const archivarCircular = async (id) => {
+        setUploading(true);
+        setError(null);
+        try {
+            const sendingData = await archivarCircularApi(id);
+            await cargarCirculares();
+            return { success: true, sendingData };
+        } catch (err) {
+            setErrorUploading(err);
+            throw err;
+        } finally {
+            setUploading(false);
+        }
+    }
+
+    const restaurarCircular = async (id) => {
+        setUploading(true);
+        setError(null);
+        try {
+            const sendingData = await restaurarCircularApi(id);
             await cargarCirculares();
             return { success: true, sendingData };
         } catch (err) {
@@ -74,6 +109,8 @@ export function useCirculares() {
         errorUploading,
         crearCircular,
         actualizarCircular,
-        eliminarCircular
+        eliminarCircular,
+        archivarCircular,
+        restaurarCircular,
     };
 }

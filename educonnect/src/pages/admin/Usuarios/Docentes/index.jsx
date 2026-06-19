@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import useAutoRefresh from '../../../../hooks/useAutoRefresh';
 import { useNavigate } from 'react-router-dom';
 import {
   PageHeader,
@@ -8,7 +9,12 @@ import {
   ConfirmModal,
   FormModal,
   StatusBadge,
+  BtnEditar,
+  BtnArchivar,
+  BtnReactivar,
+  Toast,
 } from '../../../../components/ui';
+import useToast from '../../../../hooks/useToast';
 import { fetchDocentes, updateDocente, deleteDocente } from '../../../../api/usuariosService';
 
 const defaultForm = {
@@ -32,9 +38,8 @@ export default function Docentes() {
   const [docentes, setDocentes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [activeTab, setActiveTab] = useState('activos'); // 'activos' o 'archivados'
+  const { toast, showSuccess, showError, clearToast } = useToast();
+  const [activeTab, setActiveTab] = useState('activos');
 
   const [formOpen, setFormOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -43,30 +48,29 @@ export default function Docentes() {
 
   const [confirmModal, setConfirmModal] = useState({ open: false, docente: null });
 
-  const loadDocentes = async () => {
-    setLoading(true);
-    setErrorMessage('');
+  const loadDocentes = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await fetchDocentes();
       const list = Array.isArray(data) ? data : data?.results || [];
       setDocentes(list);
     } catch (error) {
-      setErrorMessage('No se pudieron cargar los docentes.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      if (!silent) showError('No se pudieron cargar los docentes.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadDocentes();
   }, []);
+  useAutoRefresh(() => loadDocentes(true));
 
   const docentesFiltrados = useMemo(() => {
     // Primero filtrar por estado (activos o archivados)
     const docentesTabla = activeTab === 'activos'
       ? docentes.filter((d) => d.persona?.activo !== false && d.persona?.activo !== 'false')
-      : docentes.filter((d) => d.persona?.activo === false || d.persona?.activo === 'true');
+      : docentes.filter((d) => d.persona?.activo === false || d.persona?.activo === 'false');
 
     if (!searchValue.trim()) return docentesTabla;
     const term = searchValue.toLowerCase().trim();
@@ -115,21 +119,18 @@ export default function Docentes() {
 
     const personaId = getPersonaId(editingDocente);
     if (!personaId) {
-      setErrorMessage('No fue posible identificar el docente a editar.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible identificar el docente a editar.');
       return;
     }
 
     setFormLoading(true);
     try {
       await updateDocente(personaId, formData);
-      setSuccessMessage('Docente actualizado correctamente.');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showSuccess('Docente actualizado correctamente.');
       closeForm();
       await loadDocentes();
     } catch (error) {
-      setErrorMessage('No fue posible actualizar el docente.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible actualizar el docente.');
     } finally {
       setFormLoading(false);
     }
@@ -145,14 +146,11 @@ export default function Docentes() {
 
     try {
       await deleteDocente(personaId);
-      const action = activeTab === 'activos' ? 'archivado' : 'reactivado';
-      setSuccessMessage(`Docente ${action} correctamente.`);
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showSuccess(`Docente ${activeTab === 'activos' ? 'archivado' : 'reactivado'} correctamente.`);
       setConfirmModal({ open: false, docente: null });
       await loadDocentes();
     } catch (error) {
-      setErrorMessage('No fue posible completar la acción.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible completar la acción.');
       setConfirmModal({ open: false, docente: null });
     }
   };
@@ -190,24 +188,11 @@ export default function Docentes() {
       label: 'Acciones',
       render: (row) => (
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => openEditForm(row)}
-            className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#378add]"
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmModal({ open: true, docente: row })}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors ${
-              activeTab === 'activos'
-                ? 'bg-[#0b2545] hover:bg-[#081a31]'
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            {activeTab === 'activos' ? 'Archivar' : 'Reactivar'}
-          </button>
+          <BtnEditar onClick={() => openEditForm(row)} />
+          {activeTab === 'activos'
+            ? <BtnArchivar onClick={() => setConfirmModal({ open: true, docente: row })} />
+            : <BtnReactivar onClick={() => setConfirmModal({ open: true, docente: row })} />
+          }
         </div>
       ),
     },
@@ -231,7 +216,7 @@ export default function Docentes() {
         activeLabel="Docentes Activos"
         archivedLabel="Docentes Archivados"
         activeCount={docentes.filter((d) => d.persona?.activo !== false && d.persona?.activo !== 'false').length}
-        archivedCount={docentes.filter((d) => d.persona?.activo === false || d.persona?.activo === 'true').length}
+        archivedCount={docentes.filter((d) => d.persona?.activo === false || d.persona?.activo === 'false').length}
       />
 
       <SearchFilter
@@ -348,17 +333,7 @@ export default function Docentes() {
         onCancel={() => setConfirmModal({ open: false, docente: null })}
       />
 
-      {successMessage ? (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {successMessage}
-        </div>
-      ) : null}
-
-      {errorMessage ? (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      ) : null}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

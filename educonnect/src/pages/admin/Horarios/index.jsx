@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { descargarDocumentoHorario } from '../../../api/horario';
 import { useHorarios } from './hooks/useHorarios';
 import FormularioHorario from './FormularioHorario';
 import {
@@ -8,7 +9,12 @@ import {
   DataTable,
   ConfirmModal,
   FormModal,
+  BtnEditar,
+  BtnArchivar,
+  BtnRestaurar,
+  Toast,
 } from '../../../components/ui';
+import useToast from '../../../hooks/useToast';
 
 const formatErrorMessage = (error) => {
   if (!error) return 'Ocurrió un error inesperado';
@@ -51,6 +57,7 @@ export default function HorariosList() {
     crearHorario,
     actualizarHorario,
     archivarHorario,
+    desarchivarHorario,
     subirDocumentoHorario,
   } = useHorarios();
 
@@ -59,14 +66,14 @@ export default function HorariosList() {
   const [confirmModal, setConfirmModal] = useState({
     open: false,
     horario: null,
+    accion: 'archivar',
   });
   const [searchValue, setSearchValue] = useState('');
   const [viewMode, setViewMode] = useState('activos');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
 
   useEffect(() => {
-    cargarHorarios({ include_archivados: true });
+    cargarHorarios();
     cargarUsuarios();
   }, []);
 
@@ -96,27 +103,27 @@ export default function HorariosList() {
     setCurrentHorario(null);
   };
 
-  const handleOpenConfirm = (horario, event) => {
+  const handleOpenConfirm = (horario, accion = 'archivar', event) => {
     if (event?.currentTarget?.blur) {
       event.currentTarget.blur();
     }
-    setConfirmModal({
-      open: true,
-      horario,
-    });
+    setConfirmModal({ open: true, horario, accion });
   };
 
   const handleConfirmAction = async () => {
-    const { horario } = confirmModal;
+    const { horario, accion } = confirmModal;
     try {
-      await archivarHorario(horario.id);
-      setSuccessMessage('Horario archivado con éxito');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      if (accion === 'desarchivar') {
+        await desarchivarHorario(horario.id);
+        showSuccess('Horario restaurado con éxito');
+      } else {
+        await archivarHorario(horario.id);
+        showSuccess('Horario archivado con éxito');
+      }
     } catch (error) {
-      setErrorMessage(formatErrorMessage(error));
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError(formatErrorMessage(error));
     } finally {
-      setConfirmModal({ open: false, horario: null });
+      setConfirmModal({ open: false, horario: null, accion: 'archivar' });
     }
   };
 
@@ -138,17 +145,10 @@ export default function HorariosList() {
         );
       }
 
-      setSuccessMessage(
-        currentHorario
-          ? 'Horario actualizado con éxito'
-          : 'Horario creado con éxito'
-      );
-
+      showSuccess(currentHorario ? 'Horario actualizado con éxito' : 'Horario creado con éxito');
       handleCloseForm();
-      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      setErrorMessage(formatErrorMessage(error));
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError(formatErrorMessage(error));
     }
   };
 
@@ -188,19 +188,18 @@ export default function HorariosList() {
       label: 'Documento',
       render: (row) => {
         const documento = row.documento_adjunto;
-        if (!documento?.url_descarga) {
+        if (!documento) {
           return <span className="text-gray-400">Sin documento</span>;
         }
 
         return (
-          <a
-            href={documento.url_descarga}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => descargarDocumentoHorario(row.id, documento.nombre || `horario_${row.id}`)}
             className="text-[#185fa5] hover:underline text-sm"
           >
             Descargar
-          </a>
+          </button>
         );
       },
     },
@@ -209,18 +208,14 @@ export default function HorariosList() {
       label: 'Acciones',
       render: (row) => (
         <div className="flex justify-end gap-2">
-          <button
-            onClick={() => handleEditHorario(row)}
-            className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#378add]"
-          >
-            Editar
-          </button>
-          <button
-            onClick={(event) => handleOpenConfirm(row, event)}
-            className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
-          >
-            Archivar
-          </button>
+          {viewMode === 'archivados' ? (
+            <BtnRestaurar onClick={() => handleOpenConfirm(row, 'desarchivar')} />
+          ) : (
+            <>
+              <BtnEditar onClick={() => handleEditHorario(row)} />
+              <BtnArchivar onClick={(e) => handleOpenConfirm(row, 'archivar', e)} />
+            </>
+          )}
         </div>
       ),
     },
@@ -285,28 +280,19 @@ export default function HorariosList() {
 
       <ConfirmModal
         open={confirmModal.open}
-        title="Archivar Horario"
-        message="Este horario se moverá a la vista de archivados."
-        variant="warning"
-        confirmLabel="Archivar"
-        onConfirm={handleConfirmAction}
-        onCancel={() =>
-          setConfirmModal({ open: false, horario: null })
+        title={confirmModal.accion === 'desarchivar' ? 'Restaurar Horario' : 'Archivar Horario'}
+        message={confirmModal.accion === 'desarchivar'
+          ? 'El horario volverá a estar visible para el docente asignado.'
+          : 'Este horario se moverá a la vista de archivados y dejará de ser visible para el docente.'
         }
+        variant={confirmModal.accion === 'desarchivar' ? 'info' : 'warning'}
+        confirmLabel={confirmModal.accion === 'desarchivar' ? 'Restaurar' : 'Archivar'}
+        onConfirm={handleConfirmAction}
+        onCancel={() => setConfirmModal({ open: false, horario: null, accion: 'archivar' })}
         loading={uploading}
       />
 
-      {successMessage && (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md bg-green-50 p-4 text-sm text-green-700 border border-green-200">
-          {successMessage}
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      )}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

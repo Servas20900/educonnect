@@ -1,6 +1,5 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.db.models import Count, Q
 
@@ -12,21 +11,14 @@ from apps.databaseModels.models import (
     PersonasDocente,
 )
 from .serializers import AcademicoGradoSerializer, AcademicoGrupoSerializer
-
-
-def _docente_candidate_ids(user):
-    candidate_ids = set()
-    persona_id = getattr(user, 'persona_id', None)
-    if persona_id:
-        candidate_ids.add(persona_id)
-    if getattr(user, 'id', None):
-        candidate_ids.add(user.id)
-    return list(candidate_ids)
+from core.permissions import IsAuthenticated, IsDocenteOrAdmin
+from core.utils import get_docente_ids_for_user
+from core.responses import success_response
 
 
 class AcademicoGradoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AcademicoGradoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsDocenteOrAdmin]
     queryset = AcademicoGrado.objects.filter(activo=True).order_by(
         'nivel', 'numero_grado', 'nombre'
     )
@@ -34,7 +26,7 @@ class AcademicoGradoViewSet(viewsets.ReadOnlyModelViewSet):
 
 class AcademicoGrupoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AcademicoGrupoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsDocenteOrAdmin]
 
     def get_queryset(self):
         qs = AcademicoGrupo.objects.filter(estado__iexact='activo').select_related(
@@ -48,7 +40,7 @@ class AcademicoGrupoViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=['get'], url_path='por-docente')
     def por_docente(self, request):
         try:
-            candidate_ids = _docente_candidate_ids(request.user)
+            candidate_ids = get_docente_ids_for_user(request.user)
             if not candidate_ids:
                 return Response([], status=status.HTTP_200_OK)
 
@@ -59,12 +51,11 @@ class AcademicoGrupoViewSet(viewsets.ReadOnlyModelViewSet):
                 docentes_ids = candidate_ids
 
             grupos = AcademicoGrupo.objects.filter(
-                Q(docente_guia_id__in=docentes_ids)
-                | Q(academicodocentegrupo__docente_id__in=docentes_ids, academicodocentegrupo__activo=True),
+                docente_guia_id__in=docentes_ids,
                 estado__iexact='activo',
             ).select_related('grado', 'seccion').annotate(
                 total_estudiantes=Count('academicomatricula', filter=Q(academicomatricula__estado='activo'))
-            ).order_by('grado__numero_grado', 'seccion__nombre', 'nombre').distinct()
+            ).order_by('grado__numero_grado', 'seccion__nombre', 'nombre')
 
             data = []
             for grupo in grupos:

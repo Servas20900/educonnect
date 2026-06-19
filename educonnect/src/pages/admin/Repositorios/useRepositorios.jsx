@@ -1,11 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import {
   fetchRepositorios,
   fetchItemsByObject,
   uploadDocumentoGenerico,
   createRepositorio,
   updateRepositorio,
-  deleteRepositorio,
+  archivarRepositorio,
+  restaurarRepositorio,
   updateDocumentoRepositorio,
   archivarDocumentoRepositorio,
   desarchivarDocumentoRepositorio,
@@ -23,20 +24,23 @@ export function useRepositorios() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const cargarRepositorios = useCallback(async () => {
-    setLoadingRepositorios(true);
-    setError(null);
+  const cargarRepositorios = useCallback(async (options = {}, silent = false) => {
+    if (!silent) { setLoadingRepositorios(true); setError(null); }
     try {
-      const data = await fetchRepositorios();
+      const data = await fetchRepositorios(options);
       setRepositorios(Array.isArray(data) ? data : []);
       return data;
     } catch (err) {
-      setError(err);
-      throw err;
+      if (!silent) { setError(err); throw err; }
     } finally {
-      setLoadingRepositorios(false);
+      if (!silent) setLoadingRepositorios(false);
     }
   }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => cargarRepositorios({}, true), 30_000);
+    return () => clearInterval(id);
+  }, [cargarRepositorios]);
 
   const cargarDocumentosRepositorio = useCallback(async (repositorioId, options = {}) => {
     setLoadingDocumentos(true);
@@ -94,11 +98,26 @@ export function useRepositorios() {
     }
   }, [cargarRepositorios]);
 
-  const eliminarRepositorio = useCallback(async (repositorioId) => {
+  const archivarRepositorioHook = useCallback(async (repositorioId) => {
     setSaving(true);
     setError(null);
     try {
-      const response = await deleteRepositorio(repositorioId);
+      const response = await archivarRepositorio(repositorioId);
+      await cargarRepositorios();
+      return response;
+    } catch (err) {
+      setError(err);
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [cargarRepositorios]);
+
+  const restaurarRepositorioHook = useCallback(async (repositorioId) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const response = await restaurarRepositorio(repositorioId);
       await cargarRepositorios();
       return response;
     } catch (err) {
@@ -182,7 +201,8 @@ export function useRepositorios() {
     cargarRoles,
     crearRepositorio,
     actualizarRepositorioPermisos,
-    eliminarRepositorio,
+    archivarRepositorio: archivarRepositorioHook,
+    restaurarRepositorio: restaurarRepositorioHook,
     subirDocumento,
     actualizarDocumento,
     archivarDocumento,

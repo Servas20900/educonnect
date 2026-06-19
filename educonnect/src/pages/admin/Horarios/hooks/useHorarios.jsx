@@ -1,5 +1,5 @@
-import { fetchHorario, createHorario, updateHorario, deleteHorario, uploadHorarioDocumento } from "../../../../api/horario";
-import { useState } from 'react';
+import { fetchHorario, createHorario, updateHorario, deleteHorario, uploadHorarioDocumento, restaurarHorario as restaurarHorarioApi } from "../../../../api/horario";
+import { useState, useEffect, useRef } from 'react';
 import { fetchUsuarios } from '../../../../api/permisosService';
 
 export function useHorarios() {
@@ -12,20 +12,26 @@ export function useHorarios() {
     const [loadingUsuarios, setLoadingUsuarios] = useState(false);
     const [errorUsuarios, setErrorUsuarios] = useState(null);
     const [lastQueryParams, setLastQueryParams] = useState({});
+    const lastQueryParamsRef = useRef({});
 
-    const cargarHorarios = async (params = {}) => {
-        setLoading(true);
-        setError(null);
+    const cargarHorarios = async (params = {}, silent = false) => {
+        if (!silent) { setLoading(true); setError(null); }
+        lastQueryParamsRef.current = params || {};
         setLastQueryParams(params || {});
         try {
             const receivedData = await fetchHorario(params);
             setData(Array.isArray(receivedData) ? receivedData : []);
         } catch (err) {
-            setError(err);
+            if (!silent) setError(err);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+
+    useEffect(() => {
+        const id = setInterval(() => cargarHorarios(lastQueryParamsRef.current, true), 30_000);
+        return () => clearInterval(id);
+    }, []);
 
     const cargarUsuarios = async () => {
         setLoadingUsuarios(true);
@@ -89,8 +95,19 @@ export function useHorarios() {
         return actualizarHorario({ estado: 'Archivado' }, id, null);
     }
 
-    const desarchivarHorario = async (id, estadoDestino = 'Borrador') => {
-        return actualizarHorario({ estado: estadoDestino }, id, null);
+    const desarchivarHorario = async (id) => {
+        setUploading(true);
+        setErrorUploading(null);
+        try {
+            const sendingData = await restaurarHorarioApi(id);
+            await cargarHorarios(lastQueryParams);
+            return { success: true, sendingData };
+        } catch (err) {
+            setErrorUploading(err);
+            throw err;
+        } finally {
+            setUploading(false);
+        }
     }
 
     const subirDocumentoHorario = async (horarioId, archivo, descripcion = 'Documento de horario') => {

@@ -1,71 +1,108 @@
-const BaseButton = ({ onClick, children, className, disabled }) => (
-    <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        className={`rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${className}`}
-    >
-        {children}
-    </button>
-);
+const BASE =
+  'inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium text-white ' +
+  'transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ' +
+  'disabled:cursor-not-allowed disabled:opacity-60'
 
-// --- BOTONES CON ESTILO SÓLIDO (OSCUROS/COLORES FUERTES) ---
+export const BtnPrimario = ({ onClick, children, disabled, type = 'button' }) => (
+  <button type={type} onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#185fa5] hover:bg-[#0c447c] focus:ring-[#185fa5]`}>
+    {children}
+  </button>
+)
 
-export const BtnArchivar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-[#0b2545] hover:bg-[#081a31] focus:ring-[#0b2545]">
-        Archivar
-    </BaseButton>
-);
+export const BtnSecundario = ({ onClick, children, disabled, type = 'button' }) => (
+  <button type={type} onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#0b2545] hover:bg-[#081a31] focus:ring-[#0b2545]`}>
+    {children}
+  </button>
+)
 
-export const BtnDesactivar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-[#0b2545] hover:bg-[#185fa5] focus:ring-[#185fa5]">
-        Desactivar
-    </BaseButton>
-);
+// ── Acciones positivas ──────────────────────────────────────────────────────
 
-export const BtnRechazar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-rose-600 hover:bg-rose-700 focus:ring-rose-500">
-        Rechazar
-    </BaseButton>
-);
+export const BtnAprobar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#0f6e56] hover:bg-[#085041] focus:ring-[#0f6e56]`}>
+    Aprobar
+  </button>
+)
 
-// --- BOTONES CON ESTILO SÓLIDO (VERDES/AZULES) ---
+export const BtnActivar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#0f6e56] hover:bg-[#085041] focus:ring-[#0f6e56]`}>
+    Activar
+  </button>
+)
 
-export const BtnAprobar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-[#0f6e56] hover:bg-[#085041] focus:ring-[#0f6e56]">
-        Aprobar
-    </BaseButton>
-);
+export const BtnReactivar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#0f6e56] hover:bg-[#085041] focus:ring-[#0f6e56]`}>
+    Reactivar
+  </button>
+)
 
-export const BtnActivar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-[#0f6e56] hover:bg-[#085041] focus:ring-[#0f6e56]">
-        Activar
-    </BaseButton>
-);
+export const BtnRestaurar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#0f6e56] hover:bg-[#085041] focus:ring-[#0f6e56]`}>
+    Restaurar
+  </button>
+)
 
-export const BtnVer = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-[#185fa5] hover:bg-[#0c447c] focus:ring-[#185fa5]">
-        Ver
-    </BaseButton>
-);
+// ── Acciones neutras ────────────────────────────────────────────────────────
 
-export const BtnDescargar = ({ onClick }) => (
-    <BaseButton onClick={onClick} className="bg-[#0b2545] hover:bg-[#185fa5] focus:ring-[#185fa5]">
-        Descargar
-    </BaseButton>
-);
-
-// --- BOTÓN EDITAR CON LÓGICA DE DESHABILITADO ---
+export const BtnVer = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#185fa5] hover:bg-[#0c447c] focus:ring-[#185fa5]`}>
+    Ver
+  </button>
+)
 
 export const BtnEditar = ({ onClick, disabled }) => (
-    <BaseButton 
-        onClick={onClick} 
-        disabled={disabled}
-        className={disabled 
-            ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
-            : "bg-[#185fa5] hover:bg-[#0c447c] focus:ring-[#185fa5]"
-        }
-    >
-        Editar
-    </BaseButton>
-);
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#185fa5] hover:bg-[#0c447c] focus:ring-[#185fa5]`}>
+    Editar
+  </button>
+)
+
+export const BtnDescargar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#0b2545] hover:bg-[#185fa5] focus:ring-[#185fa5]`}>
+    Descargar
+  </button>
+)
+
+export const BtnEnviar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#185fa5] hover:bg-[#0c447c] focus:ring-[#185fa5]`}>
+    Enviar
+  </button>
+)
+
+export const BtnCancelar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-slate-500 hover:bg-slate-600 focus:ring-slate-400`}>
+    Cancelar
+  </button>
+)
+
+// ── Acciones destructivas / archivo ────────────────────────────────────────
+
+export const BtnArchivar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#0b2545] hover:bg-[#081a31] focus:ring-[#0b2545]`}>
+    Archivar
+  </button>
+)
+
+export const BtnDesactivar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-[#0b2545] hover:bg-[#185fa5] focus:ring-[#185fa5]`}>
+    Desactivar
+  </button>
+)
+
+export const BtnRechazar = ({ onClick, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled}
+    className={`${BASE} bg-rose-600 hover:bg-rose-700 focus:ring-rose-500`}>
+    Rechazar
+  </button>
+)

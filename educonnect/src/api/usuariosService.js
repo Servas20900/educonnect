@@ -108,6 +108,16 @@ export const createEstudiante = async (data) => {
   }
 };
 
+export const importarEstudiantes = async (archivo, grupoId) => {
+  const formData = new FormData();
+  formData.append('archivo', archivo);
+  if (grupoId) formData.append('grupo_id', grupoId);
+  const response = await api.post('api/v1/usuarios/estudiantes/importar/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
 export const updateEstudiante = async (id, data) => {
   try {
     const response = await api.patch(`api/v1/usuarios/estudiantes/${id}/`, data);

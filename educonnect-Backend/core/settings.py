@@ -257,12 +257,34 @@ AUTH_ALLOWED_EMAIL_DOMAINS = [
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
+    # ── Autenticación ────────────────────────────────────────────────────────
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'core.authenticate.AutenticacionCustomJWT',
     ),
+    # ── Permisos por defecto: usuario autenticado ─────────────────────────
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    # ── Handler de errores estandarizado ─────────────────────────────────
+    'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
+    # ── Throttling (rate limiting) ────────────────────────────────────────
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',
+        'user': '200/minute',
+        'login': '10/minute',       # para el endpoint de login
+        'export': '10/hour',        # para exportaciones pesadas
+    },
+    # ── Paginación desactivada globalmente (frontend espera arrays directos) ─
+    'DEFAULT_PAGINATION_CLASS': None,
+    'PAGE_SIZE': None,
+    # ── Renderer ────────────────────────────────────────────────────────
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
 }
 
 SIMPLE_JWT = {
@@ -296,14 +318,58 @@ AUTH_ALLOWED_EMAIL_DOMAINS = ['mep.go.cr', 'est.mep.go.cr']
 AUTH_STUDENT_EMAIL_DOMAIN = 'est.mep.go.cr'
 AUTH_TEACHER_EMAIL_DOMAIN = 'mep.go.cr'
 
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = os.getenv('EMAIL_HOST')
-    EMAIL_PORT = 587
-    EMAIL_USE_TLS = True
-    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
-DEFAULT_FROM_EMAIL = 'EduConnect <no-reply@educonnect.com>'
+# ─── Archivos ────────────────────────────────────────────────────────────────
+# Límite de subida: 10 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024      # 10 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
+# Extensiones permitidas globalmente
+ALLOWED_UPLOAD_EXTENSIONS = [
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+    '.ppt', '.pptx', '.txt', '.csv',
+    '.jpg', '.jpeg', '.png', '.gif', '.webp',
+]
+
+# ─── Caché (para roles de usuario, etc.) ────────────────────────────────────
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'educonnect-cache',
+        'TIMEOUT': 300,     # 5 minutos
+    }
+}
+
+# ─── Logging ─────────────────────────────────────────────────────────────────
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '[{asctime}] {levelname} {name}: {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+    },
+    'loggers': {
+        'educonnect': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'WARNING',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

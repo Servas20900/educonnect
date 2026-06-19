@@ -9,7 +9,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
-import { IconMenu2, IconUser, IconLogout } from '@tabler/icons-react';
+import { Menu as MenuIcon, User, LogOut } from 'lucide-react';
 import { handlerDrawerOpen, useGetMenuMaster } from '../../api/menu';
 import useAuth from '../../hooks/useAuth';
 import useSystemConfig from '../../hooks/useSystemConfig';
@@ -78,7 +78,7 @@ export default function Topbar() {
           '&:hover': { bgcolor: 'action.hover' },
         }}
       >
-        <IconMenu2 size={16} stroke={1.5} />
+        <MenuIcon size={16} strokeWidth={1.5} />
       </IconButton>
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -126,11 +126,11 @@ export default function Topbar() {
         }}
       >
         <MenuItem onClick={() => { handleClose(); navigate('/perfil'); }}>
-          <ListItemIcon><IconUser size={16} stroke={1.5} /></ListItemIcon>
+          <ListItemIcon><User size={16} strokeWidth={1.5} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: 13 }}>Perfil</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-          <ListItemIcon sx={{ color: 'error.main' }}><IconLogout size={16} stroke={1.5} /></ListItemIcon>
+          <ListItemIcon sx={{ color: 'error.main' }}><LogOut size={16} strokeWidth={1.5} /></ListItemIcon>
           <ListItemText primaryTypographyProps={{ fontSize: 13 }}>Cerrar sesión</ListItemText>
         </MenuItem>
       </Menu>

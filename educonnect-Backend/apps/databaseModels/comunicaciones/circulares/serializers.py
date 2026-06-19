@@ -1,5 +1,4 @@
 import json
-
 from rest_framework import serializers
 
 from apps.databaseModels.models import ComunicacionesCircular
@@ -16,15 +15,17 @@ class ReadSerializerComunicacionesCircular(serializers.ModelSerializer):
 
 class WriteSerializerComunicacionesCircular(serializers.ModelSerializer):
     autor_nombre = serializers.ReadOnlyField(source='creada_por.username')
-    DESTINATARIOS_VALIDOS = {'docentes', 'estudiantes', 'encargados'}
+    destinatarios = serializers.CharField(required=False, default='todos')
+
+    DESTINATARIOS_VALIDOS = {'docentes', 'estudiantes', 'todos'}
 
     class Meta:
         model = ComunicacionesCircular
         fields = [
             'id', 'titulo', 'contenido', 'archivo_adjunto',
             'fecha_vigencia_inicio', 'fecha_vigencia_fin',
-            'estado', 'categoria', 'fecha_creacion', 'autor_nombre',
-            'detalle', 'tipo_comunicado', 'destinatarios', 'visible'
+            'categoria', 'fecha_creacion', 'autor_nombre',
+            'detalle', 'destinatarios', 'visible',
         ]
         read_only_fields = ['id', 'fecha_creacion', 'creada_por']
 
@@ -40,24 +41,26 @@ class WriteSerializerComunicacionesCircular(serializers.ModelSerializer):
 
     def validate_destinatarios(self, value):
         if value in (None, ''):
-            return ['docentes']
+            return 'todos'
 
+        # Parsear JSON string enviado desde FormData (ej: '["docentes"]')
         if isinstance(value, str):
-            try:
-                value = json.loads(value)
-            except json.JSONDecodeError:
-                raise serializers.ValidationError('Destinatarios debe ser un arreglo JSON valido.')
+            stripped = value.strip()
+            if stripped.startswith('[') or stripped.startswith('"'):
+                try:
+                    value = json.loads(stripped)
+                except (ValueError, TypeError):
+                    pass
 
-        if not isinstance(value, list) or not value:
-            raise serializers.ValidationError('Debe seleccionar al menos un destinatario.')
+        # Acepta tanto string directo como lista legacy del frontend
+        if isinstance(value, list):
+            if not value:
+                return 'todos'
+            value = value[0]
 
-        normalizados = []
-        for item in value:
-            destino = str(item).strip().lower()
-            if destino == 'docente':
-                destino = 'docentes'
-            if destino not in self.DESTINATARIOS_VALIDOS:
-                raise serializers.ValidationError('Destinatario invalido. Use docentes, estudiantes o encargados.')
-            normalizados.append(destino)
-
-        return sorted(list(set(normalizados)))
+        destino = str(value).strip().lower()
+        if destino not in self.DESTINATARIOS_VALIDOS:
+            raise serializers.ValidationError(
+                f'Destinatario invalido. Use: {", ".join(sorted(self.DESTINATARIOS_VALIDOS))}.'
+            )
+        return destino

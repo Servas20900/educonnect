@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Archive, RotateCcw, Trash2, AlertCircle, Search } from 'lucide-react';
 import { useCirculares } from './hooks/useCirculares';
 import { useNavigate } from 'react-router-dom';
+import useToast from '../../../hooks/useToast';
 import {
   PageHeader,
   SearchFilter,
   DataTable,
   ConfirmModal,
   StatusBadge,
+  BtnRestaurar,
 } from '../../../components/ui';
 
 export default function CircularesArchivadas() {
@@ -16,7 +17,7 @@ export default function CircularesArchivadas() {
     circularesExistentes,
     loading,
     uploading,
-    actualizarCircular,
+    restaurarCircular,
   } = useCirculares();
 
   const navigate = useNavigate();
@@ -27,15 +28,14 @@ export default function CircularesArchivadas() {
     circular: null,
     action: null,
   });
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
 
   useEffect(() => {
     cargarCirculares();
   }, [cargarCirculares]);
 
   const circularesArchivadas = circularesExistentes.filter(
-    (circular) => circular.estado === 'Archivado'
+    (circular) => circular.estado === 'archivada'
   );
 
   const filteredCirculares = circularesArchivadas.filter((circular) =>
@@ -50,23 +50,17 @@ export default function CircularesArchivadas() {
     const { circular, action } = confirmModal;
     try {
       if (action === 'restore') {
-        await actualizarCircular({ estado: 'Publicado' }, circular.id, null);
-        setSuccessMessage('Circular desarchivada con éxito');
-        setTimeout(() => setSuccessMessage(''), 3000);
+        await restaurarCircular(circular.id);
+        showSuccess('Circular desarchivada con éxito');
       }
     } catch (error) {
       const payload = error?.details;
       if (payload && typeof payload === 'object') {
         const [field, value] = Object.entries(payload)[0] || [];
-        if (field && value) {
-          setErrorMessage(`${field}: ${Array.isArray(value) ? value[0] : value}`);
-        } else {
-          setErrorMessage('No fue posible desarchivar la circular');
-        }
+        showError(field && value ? `${field}: ${Array.isArray(value) ? value[0] : value}` : 'No fue posible desarchivar la circular');
       } else {
-        setErrorMessage(error?.message || 'No fue posible desarchivar la circular');
+        showError(error?.message || 'No fue posible desarchivar la circular');
       }
-      setTimeout(() => setErrorMessage(''), 4000);
     } finally {
       setConfirmModal({ open: false, circular: null, action: null });
     }
@@ -94,12 +88,7 @@ export default function CircularesArchivadas() {
       key: 'acciones',
       label: 'Acciones',
       render: (row) => (
-        <button
-          onClick={() => handleOpenConfirm(row, 'restore')}
-          className="rounded-md bg-[#0f6e56] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#085041]"
-        >
-          Desarchivar
-        </button>
+        <BtnRestaurar onClick={() => handleOpenConfirm(row, 'restore')} />
       ),
     },
   ];
@@ -142,17 +131,7 @@ export default function CircularesArchivadas() {
         loading={uploading}
       />
 
-      {successMessage && (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {successMessage}
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      )}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

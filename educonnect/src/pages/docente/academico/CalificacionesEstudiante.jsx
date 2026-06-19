@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { fetchCalificacionesPorEstudiante, guardarCalificacion, crearCalificacion } from '../../../api/evaluacionesService';
+import { PageHeader } from '../../../components/ui';
 
 export default function CalificacionesEstudiante() {
   const navigate = useNavigate();
@@ -81,20 +82,11 @@ export default function CalificacionesEstudiante() {
   };
 
   return (
-    <div className="space-y-6 p-8 bg-gray-50 min-h-screen">
-      <div>
-        <button
-          onClick={handleVolver}
-          className="mb-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Volver
-        </button>
-        <h2 className="text-2xl font-bold">Calificaciones por Estudiante</h2>
-        <p className="text-sm text-gray-500">
-          {detalle?.estudiante?.nombre || 'Estudiante'}
-          {detalle?.estudiante?.codigo_estudiante ? ` (${detalle.estudiante.codigo_estudiante})` : ''}
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Calificaciones por Estudiante"
+        subtitle={`${detalle?.estudiante?.nombre || 'Estudiante'}${detalle?.estudiante?.codigo_estudiante ? ` (${detalle.estudiante.codigo_estudiante})` : ''}`}
+      />
 
       {mensaje && (
         <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">

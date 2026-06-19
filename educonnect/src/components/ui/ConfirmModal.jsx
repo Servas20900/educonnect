@@ -4,25 +4,23 @@ import {
   DialogContent,
   DialogTitle,
 } from '@mui/material'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined'
+import { Trash2, Info, AlertTriangle } from 'lucide-react'
 
 const VARIANT_CONFIG = {
   danger: {
-    icon: DeleteOutlineIcon,
+    icon: Trash2,
     iconClasses: 'bg-red-100 text-red-700',
     confirmButtonClasses:
       'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-400',
   },
   warning: {
-    icon: WarningAmberOutlinedIcon,
+    icon: AlertTriangle,
     iconClasses: 'bg-amber-100 text-amber-700',
     confirmButtonClasses:
       'bg-amber-600 text-white hover:bg-amber-700 focus-visible:ring-amber-400',
   },
   info: {
-    icon: InfoOutlinedIcon,
+    icon: Info,
     iconClasses: 'bg-[#e6f1fb] text-[#185fa5]',
     confirmButtonClasses:
       'bg-[#185fa5] text-white hover:bg-[#0c447c] focus-visible:ring-[#185fa5]',
@@ -79,7 +77,7 @@ export default function ConfirmModal({
       <DialogContent className="px-5 pb-5 pt-8 sm:px-6 sm:pb-6 sm:pt-9">
         <div className="flex flex-col items-center text-center">
           <div className={`mb-5 mt-1 rounded-full p-3.5 ${currentVariant.iconClasses}`}>
-            <Icon fontSize="small" />
+            <Icon size={20} />
           </div>
 
           <h2 className="text-lg font-semibold leading-tight text-slate-900">{title}</h2>

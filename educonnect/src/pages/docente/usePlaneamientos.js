@@ -1,7 +1,7 @@
-﻿import { useCallback, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../../api/authService";
 
-const BASE = "api/v1/planeamientos/Planeamientos/";
+const BASE = "api/v1/planeamientos/planeamientos/";
 const toArray = (data) => (Array.isArray(data) ? data : data?.results || []);
 
 const inferFilename = (titulo, archivoUrl) => {
@@ -51,18 +51,22 @@ export function usePlaneamientos() {
   const [errorUploading, setErrorUploading] = useState(null);
   const missingFileIdsRef = useRef(new Set());
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const cargar = useCallback(async (silent = false) => {
+    if (!silent) { setLoading(true); setError(null); }
     try {
       const res = await api.get(BASE);
       setPlanes(toArray(res.data));
     } catch (e) {
-      setError(e);
+      if (!silent) setError(e);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => cargar(true), 30_000);
+    return () => clearInterval(id);
+  }, [cargar]);
 
   const crear = async ({ titulo, detalle }, archivoSeleccionado) => {
     setUploading(true);
@@ -117,6 +121,21 @@ export function usePlaneamientos() {
     }
   };
 
+  const desarchivar = async (id) => {
+    setUploading(true);
+    setErrorUploading(null);
+    try {
+      const res = await api.post(`${BASE}${id}/desarchivar/`);
+      await cargar();
+      return { success: true, data: res.data };
+    } catch (e) {
+      setErrorUploading(e);
+      return { success: false, error: e };
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const descargarArchivo = async (id, titulo = "planeamiento", archivoUrl = "") => {
     if (missingFileIdsRef.current.has(id)) {
       return {
@@ -152,6 +171,7 @@ export function usePlaneamientos() {
     crear,
     enviar,
     eliminar,
+    desarchivar,
     descargarArchivo,
   };
 }

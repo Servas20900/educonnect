@@ -1,6 +1,7 @@
 from rest_framework import viewsets, filters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from core.permissions import IsAdmin
 from rest_framework.response import Response
 from django.db.models import Count, Max
 from django.utils import timezone
@@ -15,7 +16,7 @@ class ViewAuthAuditoriaLog(viewsets.ReadOnlyModelViewSet):
     """
     queryset = AuthAuditoriaLog.objects.all().select_related('usuario', 'usuario__persona')
     serializer_class = ReadSerializerAuthAuditoriaLog
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdmin]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['usuario__email', 'accion', 'modulo', 'descripcion']
     ordering_fields = ['fecha_hora', 'accion', 'modulo']
@@ -71,7 +72,7 @@ def _email_usuario(valor_usuario):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdmin])
 def reporte_uso_sistema(request):
     desde = timezone.now() - timezone.timedelta(days=30)
     queryset = (
@@ -98,7 +99,7 @@ def reporte_uso_sistema(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdmin])
 def reporte_por_modulo(request):
     desde = timezone.now() - timezone.timedelta(days=30)
     queryset = (
@@ -120,7 +121,7 @@ def reporte_por_modulo(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAdmin])
 def reporte_errores(request):
     desde = timezone.now() - timezone.timedelta(days=30)
     logs = (

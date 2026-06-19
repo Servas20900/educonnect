@@ -6,7 +6,9 @@ import {
   PageHeader,
   SearchFilter,
   StatusBadge,
+  Toast,
 } from '../../../components/ui';
+import useToast from '../../../hooks/useToast';
 import useSystemConfig from '../../../hooks/useSystemConfig';
 import useInformeEconomico from './hooks/useInformeEconomico';
 
@@ -85,15 +87,14 @@ export default function InformesEconomicos({
   const [expandedId, setExpandedId] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
 
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
   const [confirmModal, setConfirmModal] = useState({ open: false, informe: null, action: null });
 
   const loadInformes = async () => {
     try {
       await cargarInformes({ includeArchived: true, categoria: fixedCategoria });
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudieron cargar los informes.'));
+      showError(parseError(error, 'No se pudieron cargar los informes.'));
     }
   };
 
@@ -131,21 +132,16 @@ export default function InformesEconomicos({
     event.preventDefault();
 
     if (!formData.titulo.trim()) {
-      setErrorMessage('El titulo del informe es obligatorio.');
+      showError('El titulo del informe es obligatorio.');
       return;
     }
 
     if (!archivo) {
-      setErrorMessage(
-        editingInforme
-          ? 'Para reemplazar el informe debes seleccionar un archivo.'
-          : 'Debes seleccionar un archivo para registrar el informe.'
-      );
+      showError(editingInforme ? 'Para reemplazar el informe debes seleccionar un archivo.' : 'Debes seleccionar un archivo para registrar el informe.');
       return;
     }
 
     setSaving(true);
-    setErrorMessage('');
 
     try {
       await ejecutarSubida({
@@ -155,16 +151,12 @@ export default function InformesEconomicos({
         reemplazarId: editingInforme?.id || null,
       });
 
-      setSuccessMessage(
-        editingInforme
-          ? 'Informe actualizado con una nueva version.'
-          : 'Informe registrado correctamente.'
-      );
+      showSuccess(editingInforme ? 'Informe actualizado con una nueva version.' : 'Informe registrado correctamente.');
       setFormOpen(false);
       setEditingInforme(null);
       await loadInformes();
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudo guardar el informe.'));
+      showError(parseError(error, 'No se pudo guardar el informe.'));
     } finally {
       setSaving(false);
     }
@@ -179,20 +171,19 @@ export default function InformesEconomicos({
     if (!informe) return;
 
     setSaving(true);
-    setErrorMessage('');
 
     try {
       if (action === 'archive') {
         await archivarInforme(informe.id);
-        setSuccessMessage('Informe archivado correctamente.');
+        showSuccess('Informe archivado correctamente.');
       }
       if (action === 'unarchive') {
         await desarchivarInforme(informe.id);
-        setSuccessMessage('Informe desarchivado correctamente.');
+        showSuccess('Informe desarchivado correctamente.');
       }
       await loadInformes();
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudo completar la accion sobre el informe.'));
+      showError(parseError(error, 'No se pudo completar la accion sobre el informe.'));
     } finally {
       setSaving(false);
       setConfirmModal({ open: false, informe: null, action: null });
@@ -201,7 +192,6 @@ export default function InformesEconomicos({
 
   const handleDownload = async (informe) => {
     setDownloadingId(informe.id);
-    setErrorMessage('');
 
     try {
       const response = await descargarInforme(informe.id);
@@ -239,9 +229,9 @@ export default function InformesEconomicos({
       document.body.removeChild(link);
       window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
 
-      setSuccessMessage(`Se descargo correctamente: ${fileName}`);
+      showSuccess(`Se descargo correctamente: ${fileName}`);
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudo descargar el archivo del informe.'));
+      showError(parseError(error, 'No se pudo descargar el archivo del informe.'));
     } finally {
       setDownloadingId(null);
     }
@@ -488,17 +478,7 @@ export default function InformesEconomicos({
         confirmLabel={confirmModal.action === 'archive' ? 'Archivar' : 'Desarchivar'}
       />
 
-      {successMessage ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {successMessage}
-        </div>
-      ) : null}
-
-      {errorMessage ? (
-        <div className="rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {errorMessage}
-        </div>
-      ) : null}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

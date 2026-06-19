@@ -6,6 +6,7 @@ import {
   setComunicadoVisible,
   updateComunicado,
 } from '../../api/comunicadosService';
+import { ConfirmModal, DataTable, PageHeader, BtnEditar, BtnArchivar, BtnActivar, BtnDesactivar } from '../../components/ui';
 
 const initialForm = {
   titulo: '',
@@ -48,8 +49,6 @@ const extractApiErrorMessage = (error) => {
 };
 
 export default function Comunicados() {
-  const actionButtonClass = 'inline-flex min-w-[110px] justify-center rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors';
-
   const [comunicados, setComunicados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,6 +56,7 @@ export default function Comunicados() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ open: false, id: null });
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState(null);
 
@@ -145,21 +145,22 @@ export default function Comunicados() {
     setError('');
   };
 
-  const handleOcultar = async (id) => {
-    const ok = window.confirm('¿Seguro que deseas eliminar este comunicado? Se ocultará para los destinatarios.');
-    if (!ok) return;
+  const handleOcultar = (id) => {
+    setConfirmModal({ open: true, id });
+  };
 
+  const handleOcultarConfirmado = async () => {
+    const id = confirmModal.id;
+    setConfirmModal({ open: false, id: null });
     setError('');
     setMensaje('');
     try {
       await hideComunicado(id);
-      if (editingId === id) {
-        handleCancelarEdicion();
-      }
-      setMensaje('Comunicado eliminado correctamente.');
+      if (editingId === id) handleCancelarEdicion();
+      setMensaje('Comunicado archivado correctamente.');
       await cargarComunicados();
     } catch {
-      setError('No se pudo eliminar el comunicado.');
+      setError('No se pudo archivar el comunicado.');
     }
   };
 
@@ -187,10 +188,11 @@ export default function Comunicados() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Comunicados</h2>
-        <p className="text-sm text-gray-500">Envía avisos, tareas o cambios a estudiantes y encargados.</p>
-      </div>
+      <PageHeader
+        title="Comunicados"
+        subtitle="Envía avisos, tareas o cambios a estudiantes y encargados."
+        showBackButton={false}
+      />
 
       <form onSubmit={handleSubmit} className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm space-y-4">
         <div className="flex items-center justify-between gap-3">
@@ -284,93 +286,69 @@ export default function Comunicados() {
           </select>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
-                <th className="px-3 py-2">Asunto</th>
-                <th className="px-3 py-2">Destinatarios</th>
-                <th className="px-3 py-2">Tipo</th>
-                <th className="px-3 py-2">Estado</th>
-                <th className="px-3 py-2">Vigencia</th>
-                <th className="px-3 py-2">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
-                    Cargando comunicados...
-                  </td>
-                </tr>
-              ) : comunicadosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-gray-500">
-                    No hay comunicados para mostrar.
-                  </td>
-                </tr>
-              ) : (
-                comunicadosFiltrados.map((comunicado) => (
-                  <tr key={comunicado.id} className="border-b last:border-b-0 hover:bg-[#e6f1fb]">
-                    <td className="px-3 py-2 font-medium text-gray-800">{comunicado.titulo || '—'}</td>
-                    <td className="px-3 py-2 text-gray-600">{formatDestinatarios(comunicado.destinatarios)}</td>
-                    <td className="px-3 py-2 text-gray-600">{comunicado.tipo_comunicado || 'aviso'}</td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                          comunicado.visible
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-slate-200 text-slate-700'
-                        }`}
-                      >
-                        {comunicado.visible ? 'Visible' : 'Oculto'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-gray-600">{formatDate(comunicado.fecha_vigencia)}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          className={`${actionButtonClass} bg-[#185fa5] hover:bg-[#0c447c]`}
-                          onClick={() => handleEditar(comunicado)}
-                        >
-                          Editar
-                        </button>
-
-                        {comunicado.visible ? (
-                          <button
-                            type="button"
-                            className={`${actionButtonClass} bg-[#0b2545] hover:bg-[#081a31]`}
-                            onClick={() => handleToggleVisible(comunicado.id, false)}
-                          >
-                            Despublicar
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className={`${actionButtonClass} bg-[#185fa5] hover:bg-[#0c447c]`}
-                            onClick={() => handleToggleVisible(comunicado.id, true)}
-                          >
-                            Publicar
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          className={`${actionButtonClass} bg-red-600 hover:bg-red-700`}
-                          onClick={() => handleOcultar(comunicado.id)}
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className="mt-4">
+          <DataTable
+            loading={loading}
+            data={comunicadosFiltrados}
+            emptyMessage="No hay comunicados para mostrar."
+            columns={[
+              {
+                key: 'titulo',
+                label: 'Asunto',
+                render: (c) => <span className="font-medium text-slate-900">{c.titulo || '—'}</span>,
+              },
+              {
+                key: 'destinatarios',
+                label: 'Destinatarios',
+                render: (c) => <span className="text-slate-600">{formatDestinatarios(c.destinatarios)}</span>,
+              },
+              {
+                key: 'tipo',
+                label: 'Tipo',
+                render: (c) => <span className="text-slate-600">{c.tipo_comunicado || 'aviso'}</span>,
+              },
+              {
+                key: 'estado',
+                label: 'Estado',
+                render: (c) => (
+                  <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${c.visible ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}>
+                    {c.visible ? 'Visible' : 'Oculto'}
+                  </span>
+                ),
+              },
+              {
+                key: 'vigencia',
+                label: 'Vigencia',
+                render: (c) => <span className="text-slate-600">{formatDate(c.fecha_vigencia)}</span>,
+              },
+              {
+                key: 'acciones',
+                label: 'Acciones',
+                render: (c) => (
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <BtnEditar onClick={() => handleEditar(c)} />
+                    {c.visible ? (
+                      <BtnDesactivar onClick={() => handleToggleVisible(c.id, false)} />
+                    ) : (
+                      <BtnActivar onClick={() => handleToggleVisible(c.id, true)} />
+                    )}
+                    <BtnArchivar onClick={() => handleOcultar(c.id)} />
+                  </div>
+                ),
+              },
+            ]}
+          />
         </div>
       </div>
+    <ConfirmModal
+        open={confirmModal.open}
+        title="Archivar comunicado"
+        message="¿Seguro que deseas archivar este comunicado? Dejará de ser visible para los destinatarios."
+        confirmLabel="Archivar"
+        variant="warning"
+        onConfirm={handleOcultarConfirmado}
+        onCancel={() => setConfirmModal({ open: false, id: null })}
+      />
     </div>
   );
 }

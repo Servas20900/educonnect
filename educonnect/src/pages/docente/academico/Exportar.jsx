@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchGruposDocente } from '../../../api/registroEstudiantesService';
 import { exportarPlanilla } from '../../../api/evaluacionesService';
+import { PageHeader } from '../../../components/ui';
 
 const DOCENTE_GRUPO_STORAGE_KEY = 'docente_academico_hub_grupo_id';
 
@@ -101,19 +102,11 @@ export default function Exportar() {
   };
 
   return (
-    <div className="space-y-6 p-8 bg-gray-50 min-h-screen">
-      <div>
-        <button
-          onClick={handleVolver}
-          className="mb-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Volver
-        </button>
-        <h2 className="text-2xl font-bold">Exportar Planilla de Notas</h2>
-        <p className="text-sm text-gray-500">
-          Descarga la planilla de notas en formato Excel.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Exportar Planilla de Notas"
+        subtitle="Descarga la planilla de notas en formato Excel."
+      />
 
       {mensaje && (
         <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">

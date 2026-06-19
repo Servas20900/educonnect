@@ -14,13 +14,13 @@ const prepareFormData = (data, archivoSeleccionado) => {
 };
 
 export const fetchOficiosPlantillas = async () => {
-  const response = await api.get("api/v1/oficiosPlantillas/OficiosPlantilla/");
+  const response = await api.get("api/v1/oficios-plantillas/oficios-plantillas/");
   return response.data;
 };
 
 export const createOficiosPlantilla = async (data, archivoSeleccionado) => {
   const formData = prepareFormData(data, archivoSeleccionado);
-  const response = await api.post("api/v1/oficiosPlantillas/OficiosPlantilla/", formData, {
+  const response = await api.post("api/v1/oficios-plantillas/oficios-plantillas/", formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
@@ -28,13 +28,13 @@ export const createOficiosPlantilla = async (data, archivoSeleccionado) => {
 
 export const updateOficiosPlantilla = async (data, id, archivoSeleccionado) => {
   const formData = prepareFormData(data, archivoSeleccionado);
-  const response = await api.put(`api/v1/oficiosPlantillas/OficiosPlantilla/${id}/`, formData, {
+  const response = await api.put(`api/v1/oficios-plantillas/oficios-plantillas/${id}/`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
 };
 
 export const deleteOficiosPlantilla = async (id) => {
-  const response = await api.delete(`api/v1/oficiosPlantillas/OficiosPlantilla/${id}/`);
+  const response = await api.delete(`api/v1/oficios-plantillas/oficios-plantillas/${id}/`);
   return response.data;
 };

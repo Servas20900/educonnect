@@ -151,8 +151,6 @@ class DocumentService:
                     "storage_backend": 'local' if resultado.get('storage_path') else 'cloudinary',
                     "local_storage_path": resultado.get('storage_path'),
                 },
-                fecha_carga=timezone.now(),
-                fecha_modificacion=timezone.now(),
                 cargado_por=usuario
             )
             

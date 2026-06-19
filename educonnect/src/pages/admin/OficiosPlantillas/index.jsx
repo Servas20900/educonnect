@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Edit2, Trash2, FileText, AlertCircle, Search } from 'lucide-react';
 import { useOficiosPlantillas } from "./useOficiosPlantillas";
 import FormularioPlantilla from "./FormularioPlantilla";
-import Paginador from '../../../components/ui/Paginador';
+import { DataTable, PageHeader, BtnEditar, BtnActivar, BtnDesactivar } from '../../../components/ui';
 
 export default function OficiosPlantillas() {
   const {
@@ -43,10 +42,10 @@ export default function OficiosPlantillas() {
 
   const handleToggleEstado = async (p) => {
     try {
-      await eliminarPlantilla(p.id); // tu destroy hace toggle
-      setMensaje("Estado actualizado ✅");
-    } catch (e) {
-      setMensaje("Error actualizando estado ❌");
+      await eliminarPlantilla(p.id);
+      setMensaje("Estado actualizado");
+    } catch {
+      setMensaje("Error actualizando estado");
     }
   };
 
@@ -60,11 +59,8 @@ export default function OficiosPlantillas() {
       const nombreOk =
         !filtros.nombre ||
         (p.nombre || "").toLowerCase().includes(filtros.nombre.toLowerCase());
-
-      const categoriaOk =
-        !filtros.categoria || p.categoria === filtros.categoria;
+      const categoriaOk = !filtros.categoria || p.categoria === filtros.categoria;
       const estadoOk = !filtros.estado || p.estado === filtros.estado;
-
       return nombreOk && categoriaOk && estadoOk;
     });
   }, [plantillasExistentes, filtros]);
@@ -75,42 +71,85 @@ export default function OficiosPlantillas() {
     return "bg-amber-100 text-amber-700";
   };
 
-  if (loading) return <div className="p-6">Cargando...</div>;
+  const tableColumns = [
+    {
+      key: 'nombre',
+      label: 'Nombre',
+      render: (p) => <span className="font-bold text-slate-800">{p.nombre}</span>,
+    },
+    {
+      key: 'categoria',
+      label: 'Categoría',
+      render: (p) => <span className="text-slate-600 font-medium">{p.categoria}</span>,
+    },
+    {
+      key: 'ultima_actualizacion',
+      label: 'Actualización',
+      render: (p) => <span className="text-slate-500">{p.ultima_actualizacion}</span>,
+    },
+    {
+      key: 'estado',
+      label: 'Estado',
+      render: (p) => (
+        <span className={`px-3 py-1 inline-flex text-[11px] font-black rounded-full ${badge(p.estado)}`}>
+          {p.estado?.toUpperCase()}
+        </span>
+      ),
+    },
+    {
+      key: 'acciones',
+      label: 'Acciones',
+      render: (p) => (
+        <div className="flex justify-end gap-2">
+          {p.archivo_adjunto ? (
+            <a
+              href={p.archivo_adjunto}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#185fa5]"
+            >
+              Ver
+            </a>
+          ) : (
+            <span className="text-xs text-slate-400">Sin archivo</span>
+          )}
+          <BtnEditar onClick={() => handleEdit(p)} />
+          {p.estado === "Inactivo" ? (
+            <BtnActivar onClick={() => handleToggleEstado(p)} />
+          ) : (
+            <BtnDesactivar onClick={() => handleToggleEstado(p)} />
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen font-sans space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-800">
-            Oficios y Plantillas
-          </h2>
-          <p className="text-sm text-gray-500">
-            Catálogo de formatos oficiales.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Oficios y Plantillas"
+        subtitle="Catálogo de formatos oficiales."
+        action={{
+          label: 'Nueva plantilla',
+          onClick: handleModalForm,
+          icon: '+',
+        }}
+      />
 
-        <button
-          className="flex items-center px-6 py-3 bg-[#185fa5] hover:bg-[#0c447c] text-white font-bold rounded-2xl shadow-xl shadow-[#e6f1fb] transition-all transform hover:-translate-y-1 active:scale-95"
-          onClick={handleModalForm}
-        >
-          <span className="text-xl mr-2">+</span> Nueva plantilla
-        </button>
-      </div>
-
-      {mensaje && (
-        <div className="p-3 rounded-xl bg-white border border-gray-200 text-sm text-gray-700">
+      {mensaje ? (
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
           {mensaje}
         </div>
-      )}
+      ) : null}
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error?.detail || error?.message || "Error al cargar plantillas"}
         </div>
-      )}
+      ) : null}
 
-      {form && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      {form ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <FormularioPlantilla
             uploading={uploading}
             errorUploading={errorUploading}
@@ -121,35 +160,33 @@ export default function OficiosPlantillas() {
             setInformation={setMensaje}
           />
         </div>
-      )}
+      ) : null}
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-wrap gap-4 items-center">
         <input
           type="text"
           placeholder="Buscar por nombre..."
           name="nombre"
           value={filtros.nombre}
           onChange={handleChange}
-          className="flex-1 min-w-[250px] px-4 py-2.5 bg-gray-50 rounded-xl focus:ring-2 focus:ring-indigo-500"
+          className="flex-1 min-w-[250px] rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
         />
-
         <select
           name="categoria"
           value={filtros.categoria}
           onChange={handleChange}
-          className="py-2.5 px-4 bg-gray-50 rounded-xl focus:ring-2 focus:ring-indigo-500"
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
         >
           <option value="">Todas las categorías</option>
           <option value="General">General</option>
           <option value="Comunicados">Comunicados</option>
           <option value="Comité">Comité</option>
         </select>
-
         <select
           name="estado"
           value={filtros.estado}
           onChange={handleChange}
-          className="py-2.5 px-4 bg-gray-50 rounded-xl focus:ring-2 focus:ring-indigo-500"
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#185fa5] focus:outline-none"
         >
           <option value="">Todos los estados</option>
           <option value="Publicado">Publicado</option>
@@ -158,106 +195,14 @@ export default function OficiosPlantillas() {
         </select>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-        {plantillasFiltradas.length === 0 ? (
-          <div className="flex flex-col items-center py-16">
-            <div className="bg-indigo-50 p-6 rounded-full mb-4">
-              <span className="text-5xl">📂</span>
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800">
-              No hay resultados
-            </h2>
-            <p className="text-gray-400 mt-2 text-center max-w-xs">
-              Ajustá filtros o crea una nueva plantilla.
-            </p>
-          </div>
-        ) : (
-          <Paginador items={plantillasFiltradas} itemsPorPagina={8}>
-            {(itemsPaginados) => (
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-100">
-                      <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
-                        Nombre
-                      </th>
-                      <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
-                        Categoría
-                      </th>
-                      <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
-                        Actualización
-                      </th>
-                      <th className="px-8 py-5 text-left text-xs font-black text-slate-400 uppercase tracking-widest">
-                        Estado
-                      </th>
-                      <th className="px-8 py-5 text-right text-xs font-black text-slate-400 uppercase tracking-widest">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {itemsPaginados.map((p) => (
-                      <tr
-                        key={p.id}
-                        className="hover:bg-[#e6f1fb]/60 transition-colors"
-                      >
-                        <td className="px-8 py-5 font-bold text-slate-800">
-                          {p.nombre}
-                        </td>
-                        <td className="px-8 py-5 text-slate-600 font-medium">
-                          {p.categoria}
-                        </td>
-                        <td className="px-8 py-5 text-slate-500 font-medium">
-                          {p.ultima_actualizacion}
-                        </td>
-                        <td className="px-8 py-5">
-                          <span
-                            className={`px-3 py-1 inline-flex text-[11px] font-black rounded-full ${badge(p.estado)}`}
-                          >
-                            {p.estado?.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <div className="flex justify-end gap-3">
-                            {p.archivo_adjunto ? (
-                              <a
-                                href={p.archivo_adjunto}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-4 py-2 bg-[#0b2545] text-white rounded-xl hover:bg-[#185fa5] transition-all shadow-sm text-xs font-bold"
-                              >
-                                Ver
-                              </a>
-                            ) : (
-                              <span className="px-4 py-2 text-xs text-slate-400">
-                                Sin archivo
-                              </span>
-                            )}
-
-                            <button
-                              className="px-4 py-2 bg-[#185fa5] text-white rounded-xl hover:bg-[#0c447c] transition-all shadow-sm text-xs font-bold"
-                              onClick={() => handleEdit(p)}
-                            >
-                              Editar
-                            </button>
-
-                            <button
-                              className="px-4 py-2 bg-[#0f6e56] text-white rounded-xl hover:bg-[#085041] transition-all shadow-sm text-xs font-bold"
-                              onClick={() => handleToggleEstado(p)}
-                            >
-                              {p.estado === "Inactivo" ? "Activar" : "Desactivar"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Paginador>
-        )}
-      </div>
+      <DataTable
+        columns={tableColumns}
+        data={plantillasFiltradas}
+        loading={loading}
+        pageSize={8}
+        emptyMessage="No hay plantillas. Ajustá los filtros o creá una nueva."
+        emptyAction={{ label: 'Nueva plantilla', onClick: handleModalForm }}
+      />
     </div>
   );
 }

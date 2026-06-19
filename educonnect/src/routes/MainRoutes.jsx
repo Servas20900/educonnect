@@ -20,7 +20,6 @@ const CircularesArchivadas = Loadable(lazy(() => import('../pages/admin/Circular
 const Horarios          = Loadable(lazy(() => import('../pages/admin/Horarios')));
 const HorariosArchivados = Loadable(lazy(() => import('../pages/admin/Horarios/Archivados')));
 const Documentos        = Loadable(lazy(() => import('../pages/admin/Repositorios')));
-const Incapacidades     = Loadable(lazy(() => import('../pages/admin/Incapacidades')));
 const PlaneamientosAdmin = Loadable(lazy(() => import('../pages/admin/Planeamientos')));
 const GestionPermisos   = Loadable(lazy(() => import('../pages/admin/GestionPermisosModulos')));
 const Reportes          = Loadable(lazy(() => import('../pages/admin/Reportes')));
@@ -52,6 +51,7 @@ const HorarioDocente     = Loadable(lazy(() => import('../pages/docente/HorarioD
 const EstudiantesExportaciones = Loadable(lazy(() => import('../pages/docente/estudiantes/Exportaciones')));
 
 // Comité
+const ComiteHub    = Loadable(lazy(() => import('../pages/comite/ComiteHub')));
 const Actas        = Loadable(lazy(() => import('../pages/comite/CrearActa')));
 const Reuniones    = Loadable(lazy(() => import('../pages/comite/AgendarReunion')));
 const RolesComite  = Loadable(lazy(() => import('../pages/comite/RolesComite')));
@@ -96,7 +96,6 @@ const AppRoutes = {
     { path: 'horarios',      element: <Guard permissionKey="horarios"><Horarios /></Guard> },
     { path: 'horarios-archivados', element: <Guard permissionKey="horarios"><HorariosArchivados /></Guard> },
     { path: 'documentos',    element: <Guard permissionKey="documentos"><Documentos /></Guard> },
-    { path: 'incapacidades', element: <Guard permissionKey="incapacidades"><Incapacidades /></Guard> },
     { path: 'planeamientos', element: <Guard permissionKey="planeamientos"><PlaneamientosAdmin /></Guard> },
     { path: 'permisos',      element: <Guard permissionKey="permisos"><GestionPermisos /></Guard> },
     { path: 'reportes',      element: <Guard permissionKey="reportes"><Reportes /></Guard> },
@@ -115,18 +114,6 @@ const AppRoutes = {
         { path: 'permisos', element: <Guard permissionKey="permisos"><GestionPermisos /></Guard> },
       ],
     },
-    {
-      path: 'admin/usuarios',
-      children: [
-        { index: true, element: <Guard permissionKey="usuarios"><UsuariosHome /></Guard> },
-        { path: 'docentes', element: <Guard permissionKey="usuarios"><UsuariosDocentes /></Guard> },
-        { path: 'estudiantes', element: <Guard permissionKey="usuarios"><UsuariosEstudiantes /></Guard> },
-        { path: 'grados-grupos', element: <Guard permissionKey="usuarios"><UsuariosGradosGrupos /></Guard> },
-        { path: 'grados-grupos/:grupoId/estudiantes', element: <Guard permissionKey="usuarios"><UsuariosGrupoEstudiantes /></Guard> },
-        { path: 'permisos', element: <Guard permissionKey="permisos"><GestionPermisos /></Guard> },
-      ],
-    },
-
     // Docente
     {
       path: 'docente',
@@ -147,7 +134,7 @@ const AppRoutes = {
         },
         { path: 'asistencia',   element: <Guard permissionKey="asistencia"><Asistencia /></Guard> },
         { path: 'riesgo',       element: <Guard permissionKey="riesgo"><Riesgo /></Guard> },
-        { path: 'planeamientos',element: <Guard permissionKey="planeamientos"><Planeamientos /></Guard> },
+        { path: 'planeamientos',element: <Guard permissionKey="docente-planeamientos"><Planeamientos /></Guard> },
         { path: 'comunicados',  element: <Guard permissionKey="comunicados"><Comunicados /></Guard> },
         { path: 'circulares',   element: <Guard permissionKey="docente-circulares"><CircularesDocente /></Guard> },
         { path: 'horario',      element: <Guard permissionKey="docente-horario"><HorarioDocente /></Guard> },
@@ -158,9 +145,10 @@ const AppRoutes = {
     {
       path: 'comite',
       children: [
-        { path: 'actas',    element: <Guard permissionKey="comite-actas"><Actas /></Guard> },
-        { path: 'reuniones',element: <Guard permissionKey="comite-reuniones"><Reuniones /></Guard> },
-        { path: 'roles',    element: <Guard permissionKey="comite-roles"><RolesComite /></Guard> },
+        { index: true,       element: <Guard permissionKey="comite-home"><ComiteHub /></Guard> },
+        { path: 'actas',     element: <Guard permissionKey="comite-actas"><Actas /></Guard> },
+        { path: 'reuniones', element: <Guard permissionKey="comite-reuniones"><Reuniones /></Guard> },
+        { path: 'roles',     element: <Guard permissionKey="comite-roles"><RolesComite /></Guard> },
       ],
     },
 

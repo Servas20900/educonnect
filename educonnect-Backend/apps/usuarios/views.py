@@ -2,11 +2,14 @@ from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from core.permissions import IsAdmin, IsDocenteOrAdmin
 from django.db.models import Q, Count
 from django.utils import timezone
-from datetime import datetime
+from datetime import datetime, date
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError
+from django.db import transaction, IntegrityError
+from django.contrib.auth.hashers import make_password
 import re
 
 from apps.databaseModels.models import (
@@ -152,8 +155,8 @@ def _asegurar_estudiante_por_persona_id(persona_id):
 
 
 class ViewDocentes(viewsets.ModelViewSet):
-    """ViewSet para gestionar Docentes"""
-    permission_classes = [permissions.IsAuthenticated]
+    """ViewSet para gestionar Docentes — solo Admin."""
+    permission_classes = [IsAdmin]
     serializer_class = DocenteSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
@@ -203,7 +206,6 @@ class ViewDocentes(viewsets.ModelViewSet):
         for field in persona_fields:
             if field in request.data:
                 setattr(persona, field, request.data.get(field))
-        persona.fecha_modificacion = timezone.now()
         persona.save()
 
         # Campos propios del docente.
@@ -230,7 +232,6 @@ class ViewDocentes(viewsets.ModelViewSet):
 
         # Archivado lógico.
         persona.activo = False
-        persona.fecha_modificacion = timezone.now()
         persona.save()
 
         instance.estado_laboral = 'inactivo'
@@ -243,7 +244,7 @@ class ViewDocentes(viewsets.ModelViewSet):
 
         return Response({'mensaje': 'Docente archivado correctamente.'}, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=False, methods=['get'], permission_classes=[IsAdmin])
     def catalogo(self, request):
         """
         Retorna lista de docentes activos con información mínima.
@@ -278,7 +279,7 @@ class ViewDocentes(viewsets.ModelViewSet):
 
         return Response(docentes)
 
-    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=False, methods=['post'], permission_classes=[IsAdmin])
     def crear_desde_usuario(self, request):
         """
         Crea un PersonasDocente a partir de un usuario que tiene rol docente.
@@ -320,9 +321,80 @@ class ViewDocentes(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+def _crear_estudiante_usuario(identificacion, nombre, primer_apellido, segundo_apellido='', email='', password=None):
+    """Crea PersonasPersona + AuthUsuario + PersonasEstudiante y asigna rol estudiante."""
+    if not email:
+        email = f'{identificacion}@estudiante.local'
+    if not password:
+        password = identificacion
+
+    with transaction.atomic():
+        persona, _ = PersonasPersona.objects.get_or_create(
+            identificacion=identificacion,
+            defaults={
+                'nombre': nombre,
+                'primer_apellido': primer_apellido,
+                'segundo_apellido': segundo_apellido,
+                'fecha_nacimiento': date(2000, 1, 1),
+                'genero': 'No especificado',
+                'tipo_identificacion': 'cedula',
+                'nacionalidad': 'costarricense',
+                'telefono_principal': '00000000',
+                'telefono_secundario': '',
+                'email_personal': email,
+                'email_institucional': email,
+                'direccion_exacta': 'No especificada',
+                'provincia': 'No especificada',
+                'canton': 'No especificado',
+                'distrito': 'No especificado',
+                'estado_civil': 'No especificado',
+                'notas': '',
+            },
+        )
+
+        usuario, created = AuthUsuario.objects.get_or_create(
+            persona=persona,
+            defaults={
+                'username': identificacion,
+                'email': email,
+                'password': make_password(password),
+                'is_active': True,
+            },
+        )
+
+        ultimo = PersonasEstudiante.objects.order_by('-codigo_estudiante').values_list('codigo_estudiante', flat=True).first()
+        try:
+            num = int(str(ultimo or '0').split('-')[-1]) + 1
+        except ValueError:
+            num = PersonasEstudiante.objects.count() + 1
+
+        est, _ = PersonasEstudiante.objects.get_or_create(
+            persona=persona,
+            defaults={
+                'codigo_estudiante': f'EST-{num:05d}',
+                'fecha_ingreso': date.today(),
+                'estado_estudiante': 'activo',
+                'tipo_estudiante': 'regular',
+                'condicion_especial': '',
+                'beca': False,
+                'tipo_beca': '',
+                'porcentaje_beca': 0,
+                'tiene_adecuacion': False,
+                'tipo_adecuacion': '',
+            },
+        )
+
+        if created:
+            rol = AuthRol.objects.filter(nombre='estudiante').first()
+            if rol:
+                AuthUsuarioRol.objects.get_or_create(usuario=usuario, rol=rol)
+
+        return est
+
+
 class ViewEstudiantes(viewsets.ModelViewSet):
-    """ViewSet para gestionar Estudiantes"""
-    permission_classes = [permissions.IsAuthenticated]
+    """ViewSet para gestionar Estudiantes — solo Admin."""
+    permission_classes = [IsAdmin]
     serializer_class = EstudianteSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
@@ -380,7 +452,6 @@ class ViewEstudiantes(viewsets.ModelViewSet):
         for field in persona_fields:
             if field in request.data:
                 setattr(persona, field, request.data.get(field))
-        persona.fecha_modificacion = timezone.now()
         persona.save()
 
         estudiante_fields = [
@@ -404,7 +475,6 @@ class ViewEstudiantes(viewsets.ModelViewSet):
         persona = instance.persona
 
         persona.activo = False
-        persona.fecha_modificacion = timezone.now()
         persona.save()
 
         instance.estado_estudiante = 'inactivo'
@@ -416,7 +486,132 @@ class ViewEstudiantes(viewsets.ModelViewSet):
 
         return Response({'mensaje': 'Estudiante archivado correctamente.'}, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def create(self, request, *args, **kwargs):
+        if not self._verificar_admin():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('No tienes permisos para registrar estudiantes.')
+
+        nombre = str(request.data.get('nombre', '')).strip()
+        primer_apellido = str(request.data.get('primer_apellido', '')).strip()
+        segundo_apellido = str(request.data.get('segundo_apellido', '')).strip()
+        identificacion = str(request.data.get('identificacion', '')).strip()
+        email = str(request.data.get('email', '')).strip()
+        password = str(request.data.get('password', '')).strip() or identificacion
+        grupo_id = request.data.get('grupo_id')
+
+        if not nombre or not primer_apellido or not identificacion:
+            return Response(
+                {'detail': 'nombre, primer_apellido e identificacion son obligatorios.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not grupo_id:
+            return Response(
+                {'detail': 'Debes asignar el estudiante a un grupo.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            grupo = AcademicoGrupo.objects.get(id=grupo_id, estado__iexact='activo')
+        except AcademicoGrupo.DoesNotExist:
+            return Response({'detail': 'El grupo seleccionado no existe o no está activo.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                est = _crear_estudiante_usuario(
+                    identificacion=identificacion,
+                    nombre=nombre,
+                    primer_apellido=primer_apellido,
+                    segundo_apellido=segundo_apellido,
+                    email=email or f'{identificacion}@estudiante.local',
+                    password=password,
+                )
+                AcademicoMatricula.objects.get_or_create(
+                    estudiante=est,
+                    grupo=grupo,
+                    defaults={'fecha_matricula': date.today(), 'estado': 'activo', 'observaciones': ''},
+                )
+            serializer = self.get_serializer(est)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except IntegrityError as exc:
+            return Response({'detail': f'Ya existe un usuario con esa identificación: {exc}'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAdmin])
+    def importar(self, request):
+        """Importa estudiantes desde CSV o Excel. Crea los que no existan y los matricula en el grupo."""
+        import pandas as pd
+
+        grupo_id = request.data.get('grupo_id')
+        if not grupo_id:
+            return Response({'detail': 'Debes seleccionar un grupo para importar.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            grupo = AcademicoGrupo.objects.get(id=grupo_id, estado__iexact='activo')
+        except AcademicoGrupo.DoesNotExist:
+            return Response({'detail': 'El grupo seleccionado no existe o no está activo.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        archivo = request.FILES.get('archivo')
+        if not archivo:
+            return Response({'detail': 'Debes adjuntar un archivo CSV o Excel.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if archivo.name.endswith('.csv'):
+                df = pd.read_csv(archivo)
+            else:
+                df = pd.read_excel(archivo)
+        except Exception:
+            return Response({'detail': 'No se pudo leer el archivo. Verifica el formato.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if 'identificacion' not in df.columns:
+            return Response({'detail': "El archivo debe incluir la columna 'identificacion'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        creados = 0
+        existentes = 0
+        errores = []
+
+        for _, row in df.iterrows():
+            identificacion = str(row.get('identificacion', '')).strip()
+            if not identificacion:
+                continue
+            nombre = str(row.get('nombre', '')).strip()
+            primer_apellido = str(row.get('primer_apellido', '')).strip()
+            if not nombre or not primer_apellido:
+                errores.append(f'{identificacion} (faltan nombre/primer_apellido)')
+                continue
+            try:
+                with transaction.atomic():
+                    ya_existe = PersonasEstudiante.objects.filter(persona__identificacion=identificacion).exists()
+                    if ya_existe:
+                        existentes += 1
+                        est = PersonasEstudiante.objects.get(persona__identificacion=identificacion)
+                    else:
+                        est = _crear_estudiante_usuario(
+                            identificacion=identificacion,
+                            nombre=nombre,
+                            primer_apellido=primer_apellido,
+                            segundo_apellido=str(row.get('segundo_apellido', '')).strip(),
+                            email=str(row.get('email', '')).strip() or f'{identificacion}@estudiante.local',
+                            password=identificacion,
+                        )
+                        creados += 1
+                    AcademicoMatricula.objects.get_or_create(
+                        estudiante=est,
+                        grupo=grupo,
+                        defaults={'fecha_matricula': date.today(), 'estado': 'activo', 'observaciones': ''},
+                    )
+            except Exception as exc:
+                errores.append(f'{identificacion} ({exc})')
+
+        return Response({
+            'message': 'Importación completada.',
+            'creados': creados,
+            'existentes': existentes,
+            'errores': errores,
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAdmin])
     def por_grupo(self, request):
         """
         Lista estudiantes de un grupo específico.
@@ -451,7 +646,7 @@ class ViewEstudiantes(viewsets.ModelViewSet):
 
 class ViewGrados(viewsets.ReadOnlyModelViewSet):
     """ViewSet para listar Grados (solo lectura)"""
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDocenteOrAdmin]
     serializer_class = GradoSerializer
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['numero_grado', 'nombre']
@@ -460,7 +655,7 @@ class ViewGrados(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return AcademicoGrado.objects.filter(activo=True).order_by('numero_grado')
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=False, methods=['get'], permission_classes=[IsAdmin])
     def activos(self, request):
         """Retorna solo los grados activos"""
         grados = AcademicoGrado.objects.filter(activo=True).order_by('numero_grado')
@@ -469,8 +664,8 @@ class ViewGrados(viewsets.ReadOnlyModelViewSet):
 
 
 class ViewGrupos(viewsets.ModelViewSet):
-    """ViewSet para gestionar Grupos Académicos"""
-    permission_classes = [permissions.IsAuthenticated]
+    """ViewSet para gestionar Grupos Académicos — Admin gestiona, Docente puede leer."""
+    permission_classes = [IsDocenteOrAdmin]
     serializer_class = GrupoSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nombre', 'codigo_grupo', 'grado__nombre']
@@ -541,7 +736,41 @@ class ViewGrupos(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def partial_update(self, request, *args, **kwargs):
+        if not self._verificar_admin():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('No tienes permisos para editar grupos.')
+
+        instance = self.get_object()
+
+        if 'docente_guia' in request.data:
+            docente_persona_id = request.data.get('docente_guia')
+            if docente_persona_id:
+                docente_obj = _asegurar_docente_por_persona_id(docente_persona_id)
+                if not docente_obj:
+                    return Response({'error': 'Docente guía inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+                instance.docente_guia = docente_obj
+            else:
+                instance.docente_guia = None
+
+        for field in ('nombre', 'aula', 'estado', 'periodo', 'seccion'):
+            if field in request.data:
+                setattr(instance, field, request.data.get(field))
+
+        if 'grado' in request.data:
+            grado_id = request.data.get('grado')
+            try:
+                instance.grado = AcademicoGrado.objects.get(id=grado_id, activo=True)
+            except AcademicoGrado.DoesNotExist:
+                return Response({'error': 'Grado inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        instance.fecha_modificacion = timezone.now()
+        instance.save()
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], permission_classes=[IsAdmin])
     def estudiantes(self, request, pk=None):
         """Lista estudiantes de un grupo específico"""
         try:
@@ -559,7 +788,7 @@ class ViewGrupos(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
     def asignar_estudiante(self, request, pk=None):
         """
         Asigna un estudiante a un grupo.
@@ -610,7 +839,7 @@ class ViewGrupos(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
     def remover_estudiante(self, request, pk=None):
         """
         Remueve un estudiante de un grupo (marca como retirado).
@@ -650,7 +879,7 @@ class ViewGrupos(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=False, methods=['get'], permission_classes=[IsAdmin])
     def por_grado(self, request):
         """
         Retorna grupos organizados por grado.

@@ -19,6 +19,11 @@ class PlaneamientoSerializer(serializers.ModelSerializer):
             "revisado_por",
         ]
 
+    def validate_archivo(self, value):
+        if isinstance(value, str):
+            return None
+        return value
+
     def validate(self, attrs):
         request = self.context.get("request")
         if request and request.method == "POST":

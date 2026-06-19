@@ -2,6 +2,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchGruposDocente } from '../../api/registroEstudiantesService';
 import { fetchDetalleRiesgoEstudiante, fetchRiesgoPorGrupo } from '../../api/evaluacionesService';
+import { DataTable, PageHeader, BtnVer } from '../../components/ui';
 
 const DOCENTE_GRUPO_STORAGE_KEY = 'docente_estudiantes_hub_grupo_id';
 
@@ -160,19 +161,11 @@ export default function RiesgoEstudiantes() {
   };
 
   return (
-    <div className="space-y-6 p-8 bg-gray-50 min-h-screen">
-      <div>
-        <button
-          onClick={handleVolver}
-          className="mb-3 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          Volver
-        </button>
-        <h2 className="text-2xl font-bold">Riesgo Académico</h2>
-        <p className="text-sm text-gray-500">
-          Detecta estudiantes con bajo desempeño en entregables o con entregas pendientes.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Riesgo Académico"
+        subtitle="Detecta estudiantes con bajo desempeño en entregables o con entregas pendientes."
+      />
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -225,70 +218,53 @@ export default function RiesgoEstudiantes() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
-                <th className="px-3 py-2">Estudiante</th>
-                <th className="px-3 py-2">Criticidad</th>
-                <th className="px-3 py-2 text-center">Promedio entregables</th>
-                <th className="px-3 py-2 text-center">No entregadas</th>
-                <th className="px-3 py-2 text-center">Entregables bajos</th>
-                <th className="px-3 py-2 text-right">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading && (
-                <tr>
-                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
-                    Cargando estudiantes en riesgo...
-                  </td>
-                </tr>
-              )}
-
-              {!loading && !grupoId && (
-                <tr>
-                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
-                    Selecciona un grupo para ver la matriz de riesgo.
-                  </td>
-                </tr>
-              )}
-
-              {!loading && grupoId && filtered.length === 0 && (
-                <tr>
-                  <td colSpan="6" className="px-3 py-6 text-center text-sm text-gray-500">
-                    No hay estudiantes clasificados en riesgo para este grupo.
-                  </td>
-                </tr>
-              )}
-
-              {!loading && filtered.map((item) => (
-                <tr key={item.estudiante.persona_id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2">
-                    <p className="font-medium text-gray-900">{item.estudiante.nombre || 'N/A'}</p>
-                    <p className="text-xs text-gray-500">{item.estudiante.codigo_estudiante || 'Sin código'}</p>
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${criticidadStyles[item.criticidad] || 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
-                      {criticidadLabel[item.criticidad] || 'N/A'}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-center text-gray-700">{item.promedio_entregables}%</td>
-                  <td className="px-3 py-2 text-center text-gray-700">{item.no_entregadas}/{item.total_evaluaciones}</td>
-                  <td className="px-3 py-2 text-center text-gray-700">{item.bajas}</td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      onClick={() => abrirDetalle(item.estudiante.persona_id)}
-                      className="rounded-md bg-[#185fa5] px-3 py-1 text-xs font-medium text-white hover:bg-[#378add]"
-                    >
-                      Ver detalle
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          loading={loading}
+          data={filtered}
+          pageSize={10}
+          emptyMessage={grupoId ? "No hay estudiantes clasificados en riesgo para este grupo." : "Selecciona un grupo para ver la matriz de riesgo."}
+          columns={[
+            {
+              key: 'estudiante',
+              label: 'Estudiante',
+              render: (item) => (
+                <div>
+                  <p className="font-medium text-gray-900">{item.estudiante.nombre || 'N/A'}</p>
+                  <p className="text-xs text-gray-500">{item.estudiante.codigo_estudiante || 'Sin código'}</p>
+                </div>
+              ),
+            },
+            {
+              key: 'criticidad',
+              label: 'Criticidad',
+              render: (item) => (
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${criticidadStyles[item.criticidad] || 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
+                  {criticidadLabel[item.criticidad] || 'N/A'}
+                </span>
+              ),
+            },
+            {
+              key: 'promedio',
+              label: 'Promedio entregables',
+              render: (item) => <span className="text-gray-700">{item.promedio_entregables}%</span>,
+            },
+            {
+              key: 'no_entregadas',
+              label: 'No entregadas',
+              render: (item) => <span className="text-gray-700">{item.no_entregadas}/{item.total_evaluaciones}</span>,
+            },
+            {
+              key: 'bajas',
+              label: 'Entregables bajos',
+              render: (item) => <span className="text-gray-700">{item.bajas}</span>,
+            },
+            {
+              key: 'accion',
+              label: 'Acción',
+              render: (item) => <BtnVer onClick={() => abrirDetalle(item.estudiante.persona_id)} />,
+            },
+          ]}
+        />
 
         <p className="text-xs text-gray-500">
           Criterio: se clasifica por entregables no entregados y rendimiento de entregables (no por porcentaje final del curso).

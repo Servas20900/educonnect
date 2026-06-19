@@ -7,6 +7,7 @@ class Planeamiento(models.Model):
         ("Borrador", "Borrador"),
         ("En revisión", "En revisión"),
         ("Aprobado", "Aprobado"),
+        ("Archivado", "Archivado"),
     )
 
     docente = models.ForeignKey(

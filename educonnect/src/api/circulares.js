@@ -72,8 +72,9 @@ const prepareFormData = (data, archivoSeleccionado) => {
 
 export const fetchCirculares = async () => {
     try {
-        const response = await api.get('api/v1/ComunicacionesCircular/');
-        return response.data;
+        const response = await api.get('api/v1/circulares/');
+        const data = response.data;
+        return Array.isArray(data) ? data : (data.results ?? []);
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');
     }
@@ -82,7 +83,7 @@ export const fetchCirculares = async () => {
 export const createCirculares = async (data, archivoSeleccionado) => {
     try {
         const formData = prepareFormData(data, archivoSeleccionado);
-        const response = await api.post('api/v1/ComunicacionesCircular/', formData, {
+        const response = await api.post('api/v1/circulares/', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data;
@@ -101,7 +102,7 @@ export const createCirculares = async (data, archivoSeleccionado) => {
 export const updateCirculares = async (data, id, archivoSeleccionado) => {
     try {
         const formData = prepareFormData(data, archivoSeleccionado);
-        const response = await api.patch(`api/v1/ComunicacionesCircular/${id}/`, formData, {
+        const response = await api.patch(`api/v1/circulares/${id}/`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data;
@@ -119,16 +120,40 @@ export const updateCirculares = async (data, id, archivoSeleccionado) => {
 
 export const deleteCirculares = async (id) => {
     try {
-        const response = await api.delete(`api/v1/ComunicacionesCircular/${id}/`);
+        const response = await api.delete(`api/v1/circulares/${id}/`);
         return response.data;
     } catch (error) {
         throw error.response ? error.response.data : new Error('Error de conexión');
     }
 };
 
+export const archivarCircular = async (id) => {
+    try {
+        const response = await api.delete(`api/v1/circulares/${id}/`);
+        return response.data;
+    } catch (error) {
+        const payload = error.response?.data;
+        const normalizedError = new Error(payload?.detail || 'Error al archivar la circular');
+        normalizedError.details = payload || null;
+        throw normalizedError;
+    }
+};
+
+export const restaurarCircular = async (id) => {
+    try {
+        const response = await api.patch(`api/v1/circulares/${id}/restaurar/`, {});
+        return response.data;
+    } catch (error) {
+        const payload = error.response?.data;
+        const normalizedError = new Error(payload?.detail || 'Error al restaurar la circular');
+        normalizedError.details = payload || null;
+        throw normalizedError;
+    }
+};
+
 export const downloadCircularArchivo = async (id) => {
     try {
-        const response = await api.get(`api/v1/ComunicacionesCircular/${id}/descargar/`, {
+        const response = await api.get(`api/v1/circulares/${id}/descargar/`, {
             responseType: 'blob'
         });
         return response;

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import useAutoRefresh from '../../../../hooks/useAutoRefresh';
 import { useNavigate } from 'react-router-dom';
 import {
   PageHeader,
@@ -8,12 +9,24 @@ import {
   ConfirmModal,
   FormModal,
   StatusBadge,
+  BtnEditar,
+  BtnArchivar,
+  BtnReactivar,
+  Toast,
 } from '../../../../components/ui';
+import useToast from '../../../../hooks/useToast';
 import {
   fetchEstudiantesUsuarios,
+  createEstudiante,
   updateEstudiante,
   deleteEstudiante,
+  importarEstudiantes,
+  fetchGrupos,
 } from '../../../../api/usuariosService';
+
+const CSV_TEMPLATE = `nombre,primer_apellido,segundo_apellido,identificacion,email
+Juan,Pérez,Mora,123456789,juan.perez@ejemplo.com
+María,López,,987654321,`;
 
 const defaultForm = {
   nombre: '',
@@ -26,6 +39,16 @@ const defaultForm = {
   tipo_estudiante: 'regular',
 };
 
+const defaultRegistroForm = {
+  nombre: '',
+  primer_apellido: '',
+  segundo_apellido: '',
+  identificacion: '',
+  email: '',
+  password: '',
+  grupo_id: '',
+};
+
 const getPersonaId = (estudiante) =>
   typeof estudiante?.persona === 'object' ? estudiante?.persona?.id : estudiante?.persona;
 
@@ -35,9 +58,8 @@ export default function Estudiantes() {
   const [estudiantes, setEstudiantes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchValue, setSearchValue] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [activeTab, setActiveTab] = useState('activos'); // 'activos' o 'archivados'
+  const { toast, showSuccess, showError, clearToast } = useToast();
+  const [activeTab, setActiveTab] = useState('activos');
 
   const [formOpen, setFormOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -46,24 +68,41 @@ export default function Estudiantes() {
 
   const [confirmModal, setConfirmModal] = useState({ open: false, estudiante: null });
 
-  const loadEstudiantes = async () => {
-    setLoading(true);
-    setErrorMessage('');
+  // Registro
+  const [registroOpen, setRegistroOpen] = useState(false);
+  const [registroLoading, setRegistroLoading] = useState(false);
+  const [registroForm, setRegistroForm] = useState(defaultRegistroForm);
+  const [grupos, setGrupos] = useState([]);
+
+  // Importar
+  const [importarOpen, setImportarOpen] = useState(false);
+  const [importarLoading, setImportarLoading] = useState(false);
+  const [importarArchivo, setImportarArchivo] = useState(null);
+  const [importarGrupoId, setImportarGrupoId] = useState('');
+  const [importResult, setImportResult] = useState(null);
+  const fileRef = useRef(null);
+
+  const loadEstudiantes = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await fetchEstudiantesUsuarios();
       const list = Array.isArray(data) ? data : data?.results || [];
       setEstudiantes(list);
     } catch (error) {
-      setErrorMessage('No se pudieron cargar los estudiantes.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      if (!silent) showError('No se pudieron cargar los estudiantes.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadEstudiantes();
+    fetchGrupos({ estado: 'activo' }).then((data) => {
+      const list = Array.isArray(data) ? data : data?.results || [];
+      setGrupos(list);
+    }).catch(() => {});
   }, []);
+  useAutoRefresh(() => loadEstudiantes(true));
 
   const estudiantesFiltrados = useMemo(() => {
     // Primero filtrar por estado
@@ -74,7 +113,7 @@ export default function Estudiantes() {
         })
       : estudiantes.filter((e) => {
           const persona = typeof e.persona === 'object' ? e.persona : {};
-          return persona.activo === false || persona.activo === 'true';
+          return persona.activo === false || persona.activo === 'false';
         });
 
     if (!searchValue.trim()) return estudiantesTabla;
@@ -120,21 +159,18 @@ export default function Estudiantes() {
 
     const personaId = getPersonaId(editingEstudiante);
     if (!personaId) {
-      setErrorMessage('No fue posible identificar el estudiante a editar.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible identificar el estudiante a editar.');
       return;
     }
 
     setFormLoading(true);
     try {
       await updateEstudiante(personaId, formData);
-      setSuccessMessage('Estudiante actualizado correctamente.');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showSuccess('Estudiante actualizado correctamente.');
       closeForm();
       await loadEstudiantes();
     } catch (error) {
-      setErrorMessage('No fue posible actualizar el estudiante.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible actualizar el estudiante.');
     } finally {
       setFormLoading(false);
     }
@@ -150,16 +186,60 @@ export default function Estudiantes() {
 
     try {
       await deleteEstudiante(personaId);
-      const action = activeTab === 'activos' ? 'archivado' : 'reactivado';
-      setSuccessMessage(`Estudiante ${action} correctamente.`);
-      setTimeout(() => setSuccessMessage(''), 3000);
+      showSuccess(`Estudiante ${activeTab === 'activos' ? 'archivado' : 'reactivado'} correctamente.`);
       setConfirmModal({ open: false, estudiante: null });
       await loadEstudiantes();
     } catch (error) {
-      setErrorMessage('No fue posible completar la acción.');
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError('No fue posible completar la acción.');
       setConfirmModal({ open: false, estudiante: null });
     }
+  };
+
+  const handleRegistroSubmit = async (e) => {
+    e.preventDefault();
+    setRegistroLoading(true);
+    try {
+      await createEstudiante(registroForm);
+      showSuccess('Estudiante registrado correctamente.');
+      setRegistroOpen(false);
+      setRegistroForm(defaultRegistroForm);
+      await loadEstudiantes();
+    } catch (err) {
+      const detail = err?.response?.data?.detail || err?.message || 'Error al registrar.';
+      showError(detail);
+    } finally {
+      setRegistroLoading(false);
+    }
+  };
+
+  const handleImportarSubmit = async (e) => {
+    e.preventDefault();
+    if (!importarGrupoId) { showError('Debes seleccionar un grupo.'); return; }
+    if (!importarArchivo) { showError('Selecciona un archivo.'); return; }
+    setImportarLoading(true);
+    setImportResult(null);
+    try {
+      const res = await importarEstudiantes(importarArchivo, importarGrupoId);
+      setImportResult(res);
+      setImportarArchivo(null);
+      if (fileRef.current) fileRef.current.value = '';
+      await loadEstudiantes();
+    } catch (err) {
+      const detail = err?.response?.data?.detail || err?.message || 'Error al importar.';
+      setImportResult({ error: detail });
+    } finally {
+      setImportarLoading(false);
+    }
+  };
+
+  const descargarPlantilla = () => {
+    const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plantilla_estudiantes.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const columns = [
@@ -208,24 +288,11 @@ export default function Estudiantes() {
       label: 'Acciones',
       render: (row) => (
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => openEditForm(row)}
-            className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#378add]"
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmModal({ open: true, estudiante: row })}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium text-white transition-colors ${
-              activeTab === 'activos'
-                ? 'bg-[#0b2545] hover:bg-[#081a31]'
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            {activeTab === 'activos' ? 'Archivar' : 'Reactivar'}
-          </button>
+          <BtnEditar onClick={() => openEditForm(row)} />
+          {activeTab === 'activos'
+            ? <BtnArchivar onClick={() => setConfirmModal({ open: true, estudiante: row })} />
+            : <BtnReactivar onClick={() => setConfirmModal({ open: true, estudiante: row })} />
+          }
         </div>
       ),
     },
@@ -235,13 +302,30 @@ export default function Estudiantes() {
     <div className="space-y-6">
       <PageHeader
         title="Usuarios - Estudiantes"
-        subtitle="Administra, edita y archiva estudiantes del sistema"
+        subtitle="Administra, registra e importa estudiantes del sistema"
         action={{
           label: 'Volver a Usuarios',
           onClick: () => navigate('/usuarios'),
           icon: '←',
         }}
       />
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => { setRegistroOpen(true); setRegistroForm(defaultRegistroForm); }}
+          className="rounded-lg bg-[#185fa5] px-4 py-2 text-sm font-medium text-white shadow hover:bg-[#0c447c]"
+        >
+          + Registrar estudiante
+        </button>
+        <button
+          type="button"
+          onClick={() => { setImportarOpen(true); setImportResult(null); setImportarGrupoId(''); }}
+          className="rounded-lg border border-[#185fa5] px-4 py-2 text-sm font-medium text-[#185fa5] hover:bg-blue-50"
+        >
+          Importar CSV / Excel
+        </button>
+      </div>
 
       <ActiveArchiveToggle
         viewMode={activeTab}
@@ -254,7 +338,7 @@ export default function Estudiantes() {
         }).length}
         archivedCount={estudiantes.filter((e) => {
           const persona = typeof e.persona === 'object' ? e.persona : {};
-          return persona.activo === false || persona.activo === 'true';
+          return persona.activo === false || persona.activo === 'false';
         }).length}
       />
 
@@ -367,17 +451,134 @@ export default function Estudiantes() {
         onCancel={() => setConfirmModal({ open: false, estudiante: null })}
       />
 
-      {successMessage ? (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {successMessage}
-        </div>
-      ) : null}
+      {/* Modal Registrar */}
+      <FormModal
+        open={registroOpen}
+        onClose={() => setRegistroOpen(false)}
+        onSubmit={handleRegistroSubmit}
+        title="Registrar nuevo estudiante"
+        submitLabel={registroLoading ? 'Registrando...' : 'Registrar estudiante'}
+        loading={registroLoading}
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {[
+            { key: 'nombre', label: 'Nombre', required: true },
+            { key: 'primer_apellido', label: 'Primer apellido', required: true },
+            { key: 'segundo_apellido', label: 'Segundo apellido', required: false },
+            { key: 'identificacion', label: 'Identificación', required: true },
+            { key: 'email', label: 'Correo electrónico', required: false, type: 'email' },
+            { key: 'password', label: 'Contraseña inicial', required: false, placeholder: 'Por defecto: identificación' },
+          ].map(({ key, label, required, type, placeholder }) => (
+            <label key={key} className="text-sm text-slate-700">
+              {label}{required && <span className="text-red-500"> *</span>}
+              <input
+                type={type || 'text'}
+                required={required}
+                placeholder={placeholder || ''}
+                value={registroForm[key]}
+                onChange={(e) => setRegistroForm((p) => ({ ...p, [key]: e.target.value }))}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#378add]"
+              />
+            </label>
+          ))}
 
-      {errorMessage ? (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
+          <label className="text-sm text-slate-700 md:col-span-2">
+            Grupo <span className="text-red-500">*</span>
+            <select
+              required
+              value={registroForm.grupo_id}
+              onChange={(e) => setRegistroForm((p) => ({ ...p, grupo_id: e.target.value }))}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#378add]"
+            >
+              <option value="">Seleccionar grupo</option>
+              {grupos.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.nombre}{g.grado?.nombre ? ` — ${g.grado.nombre}` : ''}{g.docente_guia_nombre ? ` (${g.docente_guia_nombre})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-      ) : null}
+        <p className="mt-3 text-xs text-slate-400">
+          Si no se indica contraseña, se usará el número de identificación como contraseña inicial.
+        </p>
+      </FormModal>
+
+      {/* Modal Importar */}
+      <FormModal
+        open={importarOpen}
+        onClose={() => setImportarOpen(false)}
+        onSubmit={handleImportarSubmit}
+        title="Importar estudiantes desde archivo"
+        submitLabel={importarLoading ? 'Importando...' : 'Importar archivo'}
+        loading={importarLoading}
+        maxWidth="md"
+      >
+        <div className="space-y-4">
+          <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+            <p className="mb-2 text-xs font-semibold text-blue-800">Formato esperado:</p>
+            <pre className="overflow-x-auto rounded-md border border-blue-200 bg-white p-3 text-xs text-slate-700">{`nombre,primer_apellido,segundo_apellido,identificacion,email
+Juan,Pérez,Mora,123456789,juan@ejemplo.com
+María,López,,987654321,`}</pre>
+            <p className="mt-2 text-xs text-blue-700">
+              <strong>Obligatorias:</strong> nombre, primer_apellido, identificacion<br />
+              <strong>Opcionales:</strong> segundo_apellido, email<br />
+              La contraseña inicial será el número de identificación.
+            </p>
+            <button
+              type="button"
+              onClick={descargarPlantilla}
+              className="mt-3 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-50"
+            >
+              Descargar plantilla CSV
+            </button>
+          </div>
+
+          <label className="text-sm text-slate-700">
+            Grupo <span className="text-red-500">*</span>
+            <select
+              required
+              value={importarGrupoId}
+              onChange={(e) => setImportarGrupoId(e.target.value)}
+              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#378add]"
+            >
+              <option value="">Seleccionar grupo</option>
+              {grupos.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.nombre}{g.grado?.nombre ? ` — ${g.grado.nombre}` : ''}{g.docente_guia_nombre ? ` (${g.docente_guia_nombre})` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            onChange={(e) => setImportarArchivo(e.target.files[0] || null)}
+            className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-gray-700 hover:file:bg-gray-50"
+          />
+
+          {importResult && (
+            <div className={`rounded-md border p-3 text-sm space-y-1 ${importResult.error ? 'border-red-200 bg-red-50 text-red-700' : 'border-green-200 bg-green-50 text-green-800'}`}>
+              {importResult.error ? (
+                <p>{importResult.error}</p>
+              ) : (
+                <>
+                  <p className="font-medium">{importResult.message}</p>
+                  <p>Creados nuevos: <strong>{importResult.creados ?? 0}</strong></p>
+                  <p>Ya existían: <strong>{importResult.existentes ?? 0}</strong></p>
+                  {importResult.errores?.length > 0 && (
+                    <p className="text-red-700">Con errores: {importResult.errores.join(', ')}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </FormModal>
+
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

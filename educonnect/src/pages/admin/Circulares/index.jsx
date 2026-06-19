@@ -10,8 +10,12 @@ import {
   ConfirmModal,
   FormModal,
   StatusBadge,
+  BtnEditar,
+  BtnArchivar,
 } from '../../../components/ui';
 import useSystemConfig from '../../../hooks/useSystemConfig';
+import useToast from '../../../hooks/useToast';
+import { Toast } from '../../../components/ui';
 
 const formatErrorMessage = (error) => {
   if (!error) return 'Ocurrió un error inesperado';
@@ -50,6 +54,7 @@ export default function CircularesList() {
     uploading,
     crearCircular,
     actualizarCircular,
+    archivarCircular,
   } = useCirculares();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -61,8 +66,7 @@ export default function CircularesList() {
   const [searchValue, setSearchValue] = useState('');
   const [filterEstado, setFilterEstado] = useState('');
   const [viewMode, setViewMode] = useState('activos');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
   const { getCatalog } = useSystemConfig();
   const circularStates = getCatalog('circulares_estados', [
     { value: 'Publicado', label: 'Publicado' },
@@ -74,11 +78,11 @@ export default function CircularesList() {
   }, [cargarCirculares]);
 
   const circularesActivas = circularesExistentes.filter(
-    (circular) => !['Inactivo', 'Archivado'].includes(circular.estado)
+    (circular) => circular.estado !== 'archivada'
   );
 
   const circularesArchivadas = circularesExistentes.filter(
-    (circular) => ['Inactivo', 'Archivado'].includes(circular.estado)
+    (circular) => circular.estado === 'archivada'
   );
 
   const circularesVisibles = viewMode === 'archivados' ? circularesArchivadas : circularesActivas;
@@ -117,12 +121,10 @@ export default function CircularesList() {
   const handleConfirmAction = async () => {
     const { circular } = confirmModal;
     try {
-      await actualizarCircular({ estado: 'Archivado' }, circular.id, null);
-      setSuccessMessage('Circular archivada con éxito');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      await archivarCircular(circular.id);
+      showSuccess('Circular archivada con éxito');
     } catch (error) {
-      setErrorMessage(formatErrorMessage(error));
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError(formatErrorMessage(error));
     } finally {
       setConfirmModal({ open: false, circular: null });
     }
@@ -136,17 +138,10 @@ export default function CircularesList() {
         await crearCircular(data, archivo);
       }
 
-      setSuccessMessage(
-        currentCircular
-          ? 'Circular actualizada con éxito'
-          : 'Circular creada con éxito'
-      );
-
+      showSuccess(currentCircular ? 'Circular actualizada con éxito' : 'Circular creada con éxito');
       handleCloseForm();
-      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      setErrorMessage(formatErrorMessage(error));
-      setTimeout(() => setErrorMessage(''), 4000);
+      showError(formatErrorMessage(error));
     }
   };
 
@@ -182,18 +177,8 @@ export default function CircularesList() {
       label: 'Acciones',
       render: (row) => (
         <div className="flex justify-end gap-2">
-          <button
-            onClick={() => handleEditCircular(row)}
-            className="rounded-md bg-[#185fa5] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#378add]"
-          >
-            Editar
-          </button>
-          <button
-            onClick={() => handleOpenConfirm(row)}
-            className="rounded-md bg-[#0b2545] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#081a31]"
-          >
-            Archivar
-          </button>
+          <BtnEditar onClick={() => handleEditCircular(row)} />
+          <BtnArchivar onClick={() => handleOpenConfirm(row)} />
         </div>
       ),
     },
@@ -275,17 +260,7 @@ export default function CircularesList() {
         loading={uploading}
       />
 
-      {successMessage && (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md bg-green-50 p-4 text-sm text-green-700 border border-green-200">
-          {successMessage}
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      )}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

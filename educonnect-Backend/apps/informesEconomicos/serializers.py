@@ -105,8 +105,6 @@ class InformeEconomicoWriteSerializer(serializers.ModelSerializer):
 
         # 2. Subida (Cloudinary con fallback local)
         upload_result = self._subir_archivo(archivo, repo.cloudinary_path)
-        ahora = timezone.now()
-
         # 3. Crear el nuevo documento vinculado al informe (sea nuevo o reutilizado)
         DocumentosDocumento.objects.create(
             repositorio=repo,
@@ -124,20 +122,28 @@ class InformeEconomicoWriteSerializer(serializers.ModelSerializer):
             etiquetas={'modulo': 'Patronato'},
             metadatos={
                 'public_id': upload_result.get('public_id'),
+                'resource_type': upload_result.get('resource_type', 'raw'),
                 'storage_backend': 'local' if upload_result.get('storage_path') else 'cloudinary',
                 'local_storage_path': upload_result.get('storage_path'),
             },
-            fecha_carga=ahora,
-            fecha_modificacion=ahora,
             cargado_por=request.user,
-            content_object=informe 
+            content_object=informe
         )
 
         return informe
     
 class InformeEconomicoReadSerializer(serializers.ModelSerializer):
     documento = serializers.SerializerMethodField()
-    responsable_nombre = serializers.CharField(source='responsable.persona.nombre', read_only=True, default="N/A")
+    responsable_nombre = serializers.SerializerMethodField()
+
+    def get_responsable_nombre(self, obj):
+        try:
+            persona = obj.responsable.persona
+            if persona:
+                return persona.nombre
+        except Exception:
+            pass
+        return 'N/A'
 
     class Meta:
         model = PatronatoInforme

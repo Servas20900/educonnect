@@ -111,8 +111,6 @@ export function SystemConfigProvider({ children }) {
           (item) => item.id !== 'academico'
             && item.id !== 'asistencia'
             && item.id !== 'riesgo'
-            && item.id !== 'incapacidades'
-            && item.id !== 'docente-incapacidades'
             && item.id !== 'exportaciones'
         );
 

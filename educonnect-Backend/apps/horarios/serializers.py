@@ -3,8 +3,6 @@ from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 from apps.databaseModels.models import HorariosAprobacion,HorariosDetalle,HorariosHorario, DocumentosDocumento
-from .services import HorarioNotificationService
-
 class HorariosDetalleReadSerializer(serializers.ModelSerializer):
     grupo = serializers.StringRelatedField()
     class Meta:
@@ -34,8 +32,8 @@ class ReadSerializerHorariosHorario(serializers.ModelSerializer):
         if obj.docente:
             persona = getattr(obj.docente, 'persona', None)
             return {
-                "id": obj.docente.id,
-                "nombre": f"{persona.nombre} {persona.primer_apellido}" if persona else obj.docente.username
+                "id": obj.docente.persona_id,
+                "nombre": f"{persona.nombre} {persona.primer_apellido}" if persona else str(obj.docente)
             }
         return None
 
@@ -162,9 +160,6 @@ class WriteSerializerHorariosHorario(serializers.ModelSerializer):
             HorariosDetalle.objects.filter(horario=instance).delete()
             self._process_detalles_bulk(instance, detalles_data)
             
-        if cambios_detectados:
-            transaction.on_commit(lambda: HorarioNotificationService.enviar_aviso_cambio(instance))
-
         return instance
     
     def _process_detalles_bulk(self, horario, detalles_data):

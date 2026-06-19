@@ -1,4 +1,5 @@
 import { Fragment, forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   archiveActa,
   createActa,
@@ -14,7 +15,9 @@ import {
   PageHeader,
   SearchFilter,
   StatusBadge,
+  Toast,
 } from '../../components/ui';
+import useToast from '../../hooks/useToast';
 
 const initialForm = {
   numero_acta: '',
@@ -137,6 +140,10 @@ const FormularioActa = forwardRef(function FormularioActa(
 
 export default function CrearActa() {
   const formRef = useRef(null);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const comiteId = searchParams.get('comite_id') || '';
+  const comiteNombre = searchParams.get('comite_nombre') || '';
 
   const [actas, setActas] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -150,16 +157,16 @@ export default function CrearActa() {
   const [modalOpen, setModalOpen] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState({ open: false, acta: null, action: null });
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const { toast, showSuccess, showError, clearToast } = useToast();
 
   const loadActas = async () => {
     setLoading(true);
     try {
-      const data = await fetchActas();
+      const params = comiteId ? { comite_id: comiteId } : {};
+      const data = await fetchActas(params);
       setActas(Array.isArray(data) ? data : data?.results || []);
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudieron cargar las actas.'));
+      showError(parseError(error, 'No se pudieron cargar las actas.'));
     } finally {
       setLoading(false);
     }
@@ -180,14 +187,14 @@ export default function CrearActa() {
 
   const handleSubmitActa = async (form, archivo) => {
     if (!form.numero_acta || !form.contenido || !form.acuerdos || !form.seguimientos) {
-      setErrorMessage('Completa número de acta, contenido, acuerdos y seguimientos.');
+      showError('Completa número de acta, contenido, acuerdos y seguimientos.');
       return;
     }
 
     setSaving(true);
     try {
-      const saved = await createActa({ ...form, reunion: null, estado: 'borrador' });
-      setSuccessMessage('Acta creada correctamente.');
+      const saved = await createActa({ ...form, reunion: null, estado: 'borrador', ...(comiteId ? { comite: comiteId } : {}) });
+      showSuccess('Acta creada correctamente.');
 
       if (archivo && saved?.id) {
         await uploadActaArchivo(saved.id, archivo);
@@ -196,7 +203,7 @@ export default function CrearActa() {
       setModalOpen(false);
       await loadActas();
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudo guardar el acta.'));
+      showError(parseError(error, 'No se pudo guardar el acta.'));
     } finally {
       setSaving(false);
     }
@@ -221,15 +228,15 @@ export default function CrearActa() {
     try {
       if (action === 'archive') {
         await archiveActa(acta.id);
-        setSuccessMessage('Acta archivada correctamente.');
+        showSuccess('Acta archivada correctamente.');
       }
       if (action === 'unarchive') {
         await unarchiveActa(acta.id);
-        setSuccessMessage('Acta desarchivada correctamente.');
+        showSuccess('Acta desarchivada correctamente.');
       }
       await loadActas();
     } catch (error) {
-      setErrorMessage(parseError(error, 'No se pudo completar la acción sobre el acta.'));
+      showError(parseError(error, 'No se pudo completar la acción sobre el acta.'));
     } finally {
       setSaving(false);
       setConfirmModal({ open: false, acta: null, action: null });
@@ -252,13 +259,11 @@ export default function CrearActa() {
 
   const handleDownloadActa = async (acta) => {
     if (!acta?.archivo_url) {
-      setErrorMessage('Esta acta no tiene un archivo cargado para descargar.');
+      showError('Esta acta no tiene un archivo cargado para descargar.');
       return;
     }
 
     setDownloadingId(acta.id);
-    setErrorMessage('');
-    setSuccessMessage('');
 
     try {
       const response = await downloadActaArchivo(acta.id);
@@ -298,10 +303,9 @@ export default function CrearActa() {
       document.body.removeChild(link);
       window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
 
-      setSuccessMessage(`Se descargó correctamente: ${fileName}`);
+      showSuccess(`Se descargó correctamente: ${fileName}`);
     } catch (error) {
-      const message = parseError(error, 'No se pudo descargar el archivo del acta.');
-      setErrorMessage(message);
+      showError(parseError(error, 'No se pudo descargar el archivo del acta.'));
     } finally {
       setDownloadingId(null);
     }
@@ -309,9 +313,17 @@ export default function CrearActa() {
 
   return (
     <div className="space-y-6">
+      {comiteNombre && (
+        <div className="flex items-center gap-3">
+          <span className="rounded-full bg-[#e6f1fb] px-3 py-1 text-xs font-semibold text-[#185fa5]">
+            {comiteNombre}
+          </span>
+        </div>
+      )}
+
       <PageHeader
         title="Actas"
-        subtitle="Crear, listar, descargar y archivar actas del comité"
+        subtitle={comiteNombre ? `Actas del comité: ${comiteNombre}` : 'Crear, listar, descargar y archivar actas del comité'}
         action={{
           label: 'Nueva Acta',
           onClick: openCreate,
@@ -482,17 +494,7 @@ export default function CrearActa() {
         loading={saving}
       />
 
-      {successMessage && (
-        <div className="fixed bottom-4 right-4 z-[1300] rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-700">
-          {successMessage}
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="fixed bottom-4 left-4 z-[1300] rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      )}
+      <Toast message={toast?.message} variant={toast?.variant} onClose={clearToast} />
     </div>
   );
 }

@@ -188,8 +188,11 @@ class RepositorioListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        repositorios = list(DocumentosRepositorio.objects.all().order_by('-fecha_creacion'))
+        include_archivados = _to_bool(request.query_params.get('include_archivados'))
+        qs = DocumentosRepositorio.objects.all().order_by('-fecha_creacion')
+        # activo field removed in migration 0012 — all repos are returned
 
+        repositorios = list(qs)
         if not _es_admin(request.user):
             repositorios = [
                 repo for repo in repositorios if _usuario_puede_leer_repositorio(request.user, repo)
@@ -273,13 +276,15 @@ class DocumentosPorObjetoView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, model_name, object_id):
-        repositorio = get_object_or_404(DocumentosRepositorio, id=object_id)
-
-        if not _usuario_puede_leer_repositorio(request.user, repositorio):
-            return Response(
-                {"error": "No tenés permiso para ver esta carpeta"},
-                status=status.HTTP_403_FORBIDDEN
-            )
+        # Cuando el objeto ES un repositorio aplicamos su control de acceso.
+        # Para otros modelos (informes, etc.) la autenticación ya es suficiente.
+        if model_name.lower() in ('documentosrepositorio', 'repositorio'):
+            repositorio = get_object_or_404(DocumentosRepositorio, id=object_id)
+            if not _usuario_puede_leer_repositorio(request.user, repositorio):
+                return Response(
+                    {"error": "No tenés permiso para ver esta carpeta"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
         try:
             ct = ContentType.objects.get(model=model_name.lower())
@@ -337,7 +342,7 @@ class RepositorioDetailView(APIView):
 
         if tiene_documentos_activos:
             return Response(
-                {"error": "No se puede eliminar la carpeta porque contiene documentos activos."},
+                {"error": "No se puede archivar la carpeta porque contiene documentos activos."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -362,14 +367,13 @@ class DocumentoRepositorioDetailView(APIView):
         if 'archivado' in request.data:
             archivado = _to_bool(request.data.get('archivado'))
             documento.es_version_actual = not archivado
-            documento.fecha_modificacion = timezone.now()
-            documento.save(update_fields=['es_version_actual', 'fecha_modificacion'])
+            documento.save(update_fields=['es_version_actual'])
             return Response(DocumentoReadSerializer(documento).data)
 
         serializer = DocumentoUpdateSerializer(documento, data=request.data, partial=True)
 
         if serializer.is_valid():
-            serializer.save(fecha_modificacion=timezone.now())
+            serializer.save()
             return Response(DocumentoReadSerializer(documento).data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -386,8 +390,7 @@ class DocumentoRepositorioDetailView(APIView):
             es_version_actual=True,
         )
         documento.es_version_actual = False
-        documento.fecha_modificacion = timezone.now()
-        documento.save(update_fields=['es_version_actual', 'fecha_modificacion'])
+        documento.save(update_fields=['es_version_actual'])
 
         return Response(
             {"message": "Documento archivado correctamente."},

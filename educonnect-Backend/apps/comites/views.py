@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from core.permissions import IsAuthenticated, IsComiteUser, IsAdmin, user_has_role, ROLE_ADMIN
 from django.conf import settings
 from django.http import FileResponse
 from django.http import HttpResponse
@@ -55,14 +55,20 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
     Permite crear, listar, actualizar y eliminar comités.
     """
     queryset = ComitesComite.objects.all().prefetch_related('comitesmiembro_set__persona')
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsComiteUser | IsAdmin]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nombre', 'tipo_comite', 'descripcion']
     ordering_fields = ['nombre', 'fecha_creacion', 'estado']
     ordering = ['-fecha_creacion']
 
     def _is_privileged(self, request):
-        return bool(request.user and (request.user.is_staff or request.user.is_superuser))
+        return bool(
+            request.user
+            and (
+                getattr(request.user, 'is_superuser', False)
+                or user_has_role(request.user, ROLE_ADMIN)
+            )
+        )
 
     def _get_user_comite_ids(self, request):
         persona = getattr(request.user, 'persona', None)
@@ -196,11 +202,12 @@ class ComitesComiteViewSet(viewsets.ModelViewSet):
         try:
             miembro = ComitesMiembro.objects.get(id=miembro_id, comite=comite)
             persona = miembro.persona
-            miembro.delete()
+            miembro.activo = False
+            miembro.save(update_fields=['activo'])
             if persona:
                 _remove_committee_role_if_unused(persona)
             return Response(
-                {'message': 'Miembro removido exitosamente'},
+                {'message': 'Miembro desactivado del comité'},
                 status=status.HTTP_200_OK
             )
         except ComitesMiembro.DoesNotExist:
@@ -345,7 +352,7 @@ class ComitesMiembroViewSet(viewsets.ModelViewSet):
     """
     queryset = ComitesMiembro.objects.all().select_related('comite', 'persona')
     serializer_class = ComitesMiembroSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsComiteUser | IsAdmin]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['persona__nombre', 'persona__primer_apellido', 'cargo']
     ordering_fields = ['fecha_nombramiento', 'cargo']
@@ -419,7 +426,7 @@ class PersonasDisponiblesViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = PersonasPersona.objects.all()
     serializer_class = PersonaSimpleSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsComiteUser | IsAdmin]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nombre', 'primer_apellido', 'segundo_apellido', 'email']
     ordering = ['primer_apellido', 'nombre']
@@ -447,7 +454,7 @@ class PersonasDisponiblesViewSet(viewsets.ReadOnlyModelViewSet):
 class ComitesActaViewSet(viewsets.ModelViewSet):
     queryset = ComitesActa.objects.all().select_related('reunion', 'elaborada_por', 'aprobada_por')
     serializer_class = ComitesActaSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsComiteUser | IsAdmin]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['numero_acta', 'contenido', 'acuerdos', 'seguimientos']
     ordering_fields = ['fecha_elaboracion', 'numero_acta', 'estado']
@@ -641,7 +648,7 @@ class ComitesActaViewSet(viewsets.ModelViewSet):
 class ComitesInformeOrganoViewSet(viewsets.ModelViewSet):
     queryset = ComitesInformeOrgano.objects.all().select_related('organo', 'periodo', 'elaborado_por')
     serializer_class = ComitesInformeOrganoSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsComiteUser | IsAdmin]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['tipo_informe', 'titulo', 'contenido', 'conclusiones', 'recomendaciones']
     ordering_fields = ['fecha_elaboracion', 'fecha_presentacion', 'titulo', 'estado']

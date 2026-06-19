@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Shield, Lock, Unlock, Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react'
 import * as PermisosAPI from '../../api/permisosService'
 import {
   ConfirmModal,
@@ -11,6 +10,9 @@ import {
   SearchFilter,
   StatusBadge,
   TabsLayout,
+  BtnEditar,
+  BtnActivar,
+  BtnDesactivar,
 } from '../../components/ui'
 import useSystemConfig from '../../hooks/useSystemConfig'
 
@@ -80,12 +82,6 @@ export default function GestionPermisosModulos() {
       const nombre = (u.persona?.nombre_completo || u.username || '').toLowerCase()
       const email = (u.email || '').toLowerCase()
       const q = busqueda.toLowerCase()
-      const isCorreoEstudiante = email.endsWith('@est.mep.go.cr')
-
-      if (isCorreoEstudiante) {
-        return false
-      }
-
       const coincideBusqueda = !q || nombre.includes(q) || email.includes(q)
 
       const estado = filtros.estado
@@ -267,23 +263,12 @@ export default function GestionPermisosModulos() {
         key: 'acciones',
         label: 'Acciones',
         render: (u) => (
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => abrirEditar(u)}
-              className="text-sm font-medium text-[#185fa5] hover:underline"
-            >
-              Editar
-            </button>
-            <button
-              type="button"
-              onClick={() => abrirToggle(u)}
-              className={`text-sm font-medium hover:underline ${
-                u.is_active ? 'text-red-600' : 'text-[#0f6e56]'
-              }`}
-            >
-              {u.is_active ? 'Desactivar' : 'Activar'}
-            </button>
+          <div className="flex gap-2">
+            <BtnEditar onClick={() => abrirEditar(u)} />
+            {u.is_active
+              ? <BtnDesactivar onClick={() => abrirToggle(u)} />
+              : <BtnActivar onClick={() => abrirToggle(u)} />
+            }
           </div>
         ),
       },
@@ -303,14 +288,8 @@ export default function GestionPermisosModulos() {
         }}
         activeLabel="Activos"
         archivedLabel="Inactivos"
-        activeCount={usuarios.filter((u) => {
-          const email = (u.email || '').toLowerCase()
-          return !email.endsWith('@est.mep.go.cr') && u.is_active
-        }).length}
-        archivedCount={usuarios.filter((u) => {
-          const email = (u.email || '').toLowerCase()
-          return !email.endsWith('@est.mep.go.cr') && !u.is_active
-        }).length}
+        activeCount={usuarios.filter((u) => u.is_active).length}
+        archivedCount={usuarios.filter((u) => !u.is_active).length}
       />
 
       <SearchFilter

@@ -36,10 +36,7 @@ def _ensure_committee_role_for_persona(persona, asignado_por=None):
     AuthUsuarioRol.objects.get_or_create(
         usuario=usuario,
         rol=rol_comite,
-        defaults={
-            'fecha_asignacion': timezone.now(),
-            'asignado_por': asignado_por,
-        }
+        defaults={'asignado_por': asignado_por},
     )
 
 

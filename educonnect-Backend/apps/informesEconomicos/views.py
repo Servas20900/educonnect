@@ -1,30 +1,19 @@
-from urllib.request import Request, urlopen
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.http import HttpResponse
 from django.contrib.contenttypes.models import ContentType
+from urllib.parse import quote
 from apps.databaseModels.models import DocumentosDocumento
+from apps.carpetas.views import _descargar_remoto
 from .models import PatronatoInforme
 from .serializers import InformeEconomicoWriteSerializer, InformeEconomicoReadSerializer
-
-
-DOWNLOAD_TIMEOUT_SECONDS = 15
-
-
-def fetch_remote_file_bytes(url):
-    request = Request(
-        url,
-        headers={
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': '*/*',
-        },
-    )
-    with urlopen(request, timeout=DOWNLOAD_TIMEOUT_SECONDS) as remote_file:
-        return remote_file.read()
+from core.permissions import IsAuthenticated, IsAdmin, IsAuxiliarUser
+from core.responses import success_response, created_response, error_response
 
 
 class PatronatoInformeViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuxiliarUser]
     queryset = PatronatoInforme.objects.all().order_by('-fecha_creacion')
 
     def get_queryset(self):
@@ -63,7 +52,10 @@ class PatronatoInformeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'])
     def desarchivar(self, request, pk=None):
-        informe = self.get_object()
+        try:
+            informe = PatronatoInforme.objects.get(pk=pk)
+        except PatronatoInforme.DoesNotExist:
+            return Response({'error': 'Informe no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
         informe.estado = 'Activo'
         informe.save(update_fields=['estado'])
         serializer = InformeEconomicoReadSerializer(informe)
@@ -91,16 +83,51 @@ class PatronatoInformeViewSet(viewsets.ModelViewSet):
 
         filename = documento.nombre or f'informe_{informe.id}'
         content_type_value = documento.mime_type or 'application/octet-stream'
+        content = None
 
+        # Intento 1: URL directa (funciona en desarrollo local)
         try:
-            file_bytes = fetch_remote_file_bytes(documento.ruta_archivo)
-            if not file_bytes:
-                raise ValueError('Archivo vacio')
-            file_response = HttpResponse(file_bytes, content_type=content_type_value)
-            file_response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            return file_response
+            content, ct = _descargar_remoto(documento.ruta_archivo)
+            if content:
+                content_type_value = ct or content_type_value
         except Exception:
+            pass
+
+        # Intento 2: Cloudinary via private_download_url (para access_mode=authenticated)
+        if not content:
+            try:
+                import cloudinary
+                from cloudinary.utils import private_download_url
+                from django.conf import settings as django_settings
+                import os
+                cld_conf = getattr(django_settings, 'CLOUDINARY_STORAGE', {})
+                cloud_name = cld_conf.get('CLOUD_NAME', '')
+                api_key = cld_conf.get('API_KEY', '')
+                api_secret = cld_conf.get('API_SECRET', '')
+                metadatos = documento.metadatos or {}
+                public_id = metadatos.get('public_id') or ''
+                resource_type = metadatos.get('resource_type') or 'raw'
+                if cloud_name and api_key and api_secret and public_id:
+                    cloudinary.config(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True)
+                    ext = os.path.splitext(filename)[1].lstrip(".") or "pdf"
+                    dl_url = private_download_url(
+                        public_id, ext,
+                        resource_type=resource_type, type='upload',
+                        cloud_name=cloud_name, api_key=api_key, api_secret=api_secret,
+                    )
+                    content, ct = _descargar_remoto(dl_url)
+                    if content:
+                        content_type_value = ct or content_type_value
+            except Exception:
+                pass
+
+        if not content:
             return Response(
                 {'error': 'No fue posible obtener el archivo del informe desde el almacenamiento.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        encoded = quote(filename)
+        file_response = HttpResponse(content, content_type=content_type_value)
+        file_response['Content-Disposition'] = f'attachment; filename="{filename}"; filename*=UTF-8\'\'{encoded}'
+        return file_response

@@ -7,9 +7,10 @@ const normalizeError = (error, fallbackMessage) => {
     throw new Error(fallbackMessage);
 };
 
-export const fetchRepositorios = async () => {
+export const fetchRepositorios = async ({ includeArchivados = false } = {}) => {
     try {
-        const response = await api.get('api/v1/documentos/repositorios/');
+        const params = includeArchivados ? { include_archivados: true } : {};
+        const response = await api.get('api/v1/carpetas/repositorios/', { params });
         return response.data;
     } catch (error) {
         normalizeError(error, 'Error al cargar carpetas');
@@ -26,7 +27,7 @@ export const fetchItemsByObject = async (modelName, objectId, options = {}) => {
             params.include_archivados = true;
         }
 
-        const response = await api.get(`api/v1/documentos/items/${modelName.toLowerCase()}/${objectId}/`, {
+        const response = await api.get(`api/v1/carpetas/items/${modelName.toLowerCase()}/${objectId}/`, {
             params,
         });
         return response.data;
@@ -42,7 +43,7 @@ export const uploadDocumentoGenerico = async (modelName, objectId, archivo, desc
         formData.append('descripcion', descripcion);
 
         const response = await api.post(
-            `api/v1/documentos/upload/${modelName.toLowerCase()}/${objectId}/`, 
+            `api/v1/carpetas/upload/${modelName.toLowerCase()}/${objectId}/`, 
             formData
         );
         return response.data;
@@ -53,7 +54,7 @@ export const uploadDocumentoGenerico = async (modelName, objectId, archivo, desc
 
 export const createRepositorio = async (repoData) => {
     try {
-        const response = await api.post('api/v1/documentos/repositorios/', repoData);
+        const response = await api.post('api/v1/carpetas/repositorios/', repoData);
         return response.data;
     } catch (error) {
         normalizeError(error, 'Error al crear el repositorio');
@@ -62,7 +63,7 @@ export const createRepositorio = async (repoData) => {
 
 export const updateRepositorio = async (id, data) => {
     try {
-        const response = await api.patch(`api/v1/documentos/repositorios/${id}/`, data);
+        const response = await api.patch(`api/v1/carpetas/repositorios/${id}/`, data);
         return response.data;
     } catch (error) {
         normalizeError(error, 'Error al actualizar');
@@ -72,7 +73,7 @@ export const updateRepositorio = async (id, data) => {
 export const updateDocumentoRepositorio = async (repositorioId, documentoId, data) => {
     try {
         const response = await api.patch(
-            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/`,
+            `api/v1/carpetas/repositorios/${repositorioId}/documentos/${documentoId}/`,
             data
         );
         return response.data;
@@ -84,7 +85,7 @@ export const updateDocumentoRepositorio = async (repositorioId, documentoId, dat
 export const deleteDocumentoRepositorio = async (repositorioId, documentoId) => {
     try {
         const response = await api.delete(
-            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/`
+            `api/v1/carpetas/repositorios/${repositorioId}/documentos/${documentoId}/`
         );
         return response.data;
     } catch (error) {
@@ -95,7 +96,7 @@ export const deleteDocumentoRepositorio = async (repositorioId, documentoId) => 
 export const downloadDocumentoRepositorioArchivo = async (repositorioId, documentoId) => {
     try {
         const response = await api.get(
-            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/descargar/`,
+            `api/v1/carpetas/repositorios/${repositorioId}/documentos/${documentoId}/descargar/`,
             { responseType: 'blob' }
         );
         return response;
@@ -109,7 +110,7 @@ export const downloadDocumentoRepositorioArchivo = async (repositorioId, documen
 export const archivarDocumentoRepositorio = async (repositorioId, documentoId) => {
     try {
         const response = await api.patch(
-            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/`,
+            `api/v1/carpetas/repositorios/${repositorioId}/documentos/${documentoId}/`,
             { archivado: true }
         );
         return response.data;
@@ -121,7 +122,7 @@ export const archivarDocumentoRepositorio = async (repositorioId, documentoId) =
 export const desarchivarDocumentoRepositorio = async (repositorioId, documentoId) => {
     try {
         const response = await api.patch(
-            `api/v1/documentos/repositorios/${repositorioId}/documentos/${documentoId}/`,
+            `api/v1/carpetas/repositorios/${repositorioId}/documentos/${documentoId}/`,
             { archivado: false }
         );
         return response.data;
@@ -130,11 +131,20 @@ export const desarchivarDocumentoRepositorio = async (repositorioId, documentoId
     }
 };
 
-export const deleteRepositorio = async (id) => {
+export const archivarRepositorio = async (id) => {
     try {
-        const response = await api.delete(`api/v1/documentos/repositorios/${id}/`);
+        const response = await api.delete(`api/v1/carpetas/repositorios/${id}/`);
         return response.data;
     } catch (error) {
-        normalizeError(error, 'Error al eliminar el repositorio');
+        normalizeError(error, 'Error al archivar el repositorio');
+    }
+};
+
+export const restaurarRepositorio = async (id) => {
+    try {
+        const response = await api.patch(`api/v1/carpetas/repositorios/${id}/`, { activo: true });
+        return response.data;
+    } catch (error) {
+        normalizeError(error, 'Error al restaurar el repositorio');
     }
 };

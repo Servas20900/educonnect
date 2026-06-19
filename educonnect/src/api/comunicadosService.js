@@ -1,6 +1,6 @@
 import { api } from './authService';
 
-const API_BASE = 'api/v1/ComunicacionesComunicado/';
+const API_BASE = 'api/v1/comunicados/';
 
 export const fetchComunicados = async () => {
     try {

@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import useHorarioEstudiante from './hooks/useHorarioEstudiante';
-import Paginador from '../../../components/ui/Paginador';
+import { DataTable } from '../../../components/ui';
 
 export default function ConsultaHorarios() {
     const {
@@ -101,60 +101,55 @@ export default function ConsultaHorarios() {
             </div>
 
             <div className="bg-white border border-gray-100 rounded-[2.5rem] overflow-hidden shadow-xl shadow-gray-100/50">
-                <Paginador items={horariosFiltrados} itemsPorPagina={4}>
-                    {(itemsPaginados) => (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-50">
-                                <thead>
-                                    <tr className="bg-gray-50/30">
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Cronograma</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Información de Curso</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Docente</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50 bg-white">
-                                    {itemsPaginados.length > 0 ? (
-                                        itemsPaginados.map((item) => (
-                                            <tr key={item.id} className="group hover:bg-purple-50/40 transition-all duration-300">
-                                                <td className="px-8 py-6">
-                                                    {item.detalles?.map(d => (
-                                                        <div key={d.id} className="mb-2 last:mb-0">
-                                                            <span className="block text-xs font-black text-purple-700 uppercase tracking-tighter">{d.dia_semana}</span>
-                                                            <span className="text-sm font-medium text-gray-500">
-                                                                {d.hora_inicio?.slice(0, 5)} - {d.hora_fin?.slice(0, 5)}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="text-sm font-black text-gray-800 uppercase tracking-tight leading-none mb-2">{item.nombre}</div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="px-2 py-0.5 bg-gray-100 text-[9px] font-bold text-gray-500 rounded-md">G{item.grupo}</span>
-                                                        <span className="px-2 py-0.5 bg-purple-100 text-[9px] font-bold text-purple-600 rounded-md uppercase tracking-tighter">{item.tipo_horario}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-purple-100 transition-transform group-hover:scale-110">
-                                                            {item.docente_info?.nombre?.charAt(0).toUpperCase() || '?'}
-                                                        </div>
-                                                        <div className="text-sm font-bold text-gray-700">{item.docente_info?.nombre || "No asignado"}</div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan="3" className="px-8 py-32 text-center">
-                                                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">No hay registros para este criterio</p>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </Paginador>
+                <DataTable
+                    loading={loading}
+                    data={horariosFiltrados}
+                    pageSize={4}
+                    emptyMessage="No hay registros para este criterio"
+                    columns={[
+                        {
+                            key: 'cronograma',
+                            label: 'Cronograma',
+                            render: (item) => (
+                                <div className="px-4 py-2">
+                                    {item.detalles?.map(d => (
+                                        <div key={d.id} className="mb-2 last:mb-0">
+                                            <span className="block text-xs font-black text-purple-700 uppercase tracking-tighter">{d.dia_semana}</span>
+                                            <span className="text-sm font-medium text-gray-500">
+                                                {d.hora_inicio?.slice(0, 5)} - {d.hora_fin?.slice(0, 5)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ),
+                        },
+                        {
+                            key: 'curso',
+                            label: 'Información de Curso',
+                            render: (item) => (
+                                <div className="px-4 py-2">
+                                    <div className="text-sm font-black text-gray-800 uppercase tracking-tight leading-none mb-2">{item.nombre}</div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-2 py-0.5 bg-gray-100 text-[9px] font-bold text-gray-500 rounded-md">G{item.grupo}</span>
+                                        <span className="px-2 py-0.5 bg-purple-100 text-[9px] font-bold text-purple-600 rounded-md uppercase tracking-tighter">{item.tipo_horario}</span>
+                                    </div>
+                                </div>
+                            ),
+                        },
+                        {
+                            key: 'docente',
+                            label: 'Docente',
+                            render: (item) => (
+                                <div className="flex items-center gap-3 px-4 py-2">
+                                    <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-xs font-black text-white shadow-lg shadow-purple-100">
+                                        {item.docente_info?.nombre?.charAt(0).toUpperCase() || '?'}
+                                    </div>
+                                    <div className="text-sm font-bold text-gray-700">{item.docente_info?.nombre || "No asignado"}</div>
+                                </div>
+                            ),
+                        },
+                    ]}
+                />
             </div>
         </div>
     );
