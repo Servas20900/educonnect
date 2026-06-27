@@ -67,6 +67,8 @@ function validarFormulario(data) {
     if (new Date(data.fecha_nacimiento) >= hoy)
       return 'La fecha de nacimiento no puede ser hoy ni una fecha futura.';
   }
+  if (data.email && !data.email.toLowerCase().endsWith('@mep.go.cr'))
+    return 'Solo se permiten correos institucionales @mep.go.cr.';
   return null;
 }
 
@@ -82,9 +84,9 @@ export default function Register() {
     password: '',
     fecha_nacimiento: '',
     genero: '',
-    rol: 'estudiante',
   });
   const [validationError, setValidationError] = useState(null);
+  const [registered, setRegistered] = useState(false);
 
   const handleChange = (e) => {
     setValidationError(null);
@@ -96,8 +98,38 @@ export default function Register() {
     const err = validarFormulario(formData);
     if (err) { setValidationError(err); return; }
     const result = await executeRegister(formData);
-    if (result.success) navigate('/login');
+    if (result.success) setRegistered(true);
   };
+
+  if (registered) {
+    return (
+      <div
+        className="w-full max-w-md rounded-xl p-8 border text-center"
+        style={{ background: '#fff', borderColor: '#e2e4e9' }}
+      >
+        <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#dbeafe' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h2 className="text-lg font-semibold mb-2" style={{ color: '#0b2545' }}>Cuenta creada</h2>
+        <p className="text-sm mb-4" style={{ color: '#64748b' }}>
+          Tu solicitud fue recibida. Un administrador revisará tu cuenta y te asignará un rol.
+          Recibirás acceso una vez que sea activada.
+        </p>
+        <p className="text-xs mb-5" style={{ color: '#94a3b8' }}>
+          Solo se permiten cuentas con correo institucional <strong>@mep.go.cr</strong>.
+        </p>
+        <Link
+          to="/login"
+          className="inline-block w-full py-2.5 rounded-lg text-sm font-medium text-white text-center"
+          style={{ background: '#0b2545' }}
+        >
+          Volver al inicio de sesión
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -118,7 +118,7 @@ class WriteSerializerComunicacionesComunicado(serializers.ModelSerializer):
 
 #Necesario para registrarse
 class RegistroSerializer(serializers.ModelSerializer):
-    DEFAULT_ALLOWED_EMAIL_DOMAINS = ['test.com', 'educonnect.ac.cr']
+    DEFAULT_ALLOWED_EMAIL_DOMAINS = ['mep.go.cr']
     nombre = serializers.CharField(write_only=True)
     primer_apellido = serializers.CharField(write_only=True)
     segundo_apellido = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
@@ -197,6 +197,7 @@ class RegistroSerializer(serializers.ModelSerializer):
 
             usuario = AuthUsuario.objects.create(
                 persona=persona,
+                is_active=False,
                 **validated_data
             )
 
