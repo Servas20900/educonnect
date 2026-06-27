@@ -102,31 +102,98 @@ export default function Register() {
   };
 
   if (registered) {
-    return (
-      <div
-        className="w-full max-w-md rounded-xl p-8 border text-center"
-        style={{ background: '#fff', borderColor: '#e2e4e9' }}
-      >
-        <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#dbeafe' }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    const steps = [
+      {
+        n: 1,
+        title: 'Enviá un correo a administración',
+        desc: (
+          <>
+            Escribí a <strong>admin@mep.go.cr</strong> con asunto{' '}
+            <em>"Activación de cuenta EduConnect"</em>. Incluí tu nombre completo y cédula.
+            Si necesitás un rol especial (auxiliar, comité, etc.) indícalo en el mensaje.
+          </>
+        ),
+        icon: (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
           </svg>
+        ),
+      },
+      {
+        n: 2,
+        title: 'Administración revisa tu solicitud',
+        desc: 'El equipo administrativo verificará que pertenezcas a la institución y te asignará el rol correspondiente (docente, auxiliar, miembro de comité, etc.).',
+        icon: (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        ),
+      },
+      {
+        n: 3,
+        title: 'Recibís confirmación y acceso',
+        desc: 'Una vez activada tu cuenta recibirás un correo de confirmación. Podrás iniciar sesión con tu cédula y contraseña registradas.',
+        icon: (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        ),
+      },
+    ];
+
+    return (
+      <div className="w-full max-w-lg rounded-xl border overflow-hidden" style={{ background: '#fff', borderColor: '#e2e4e9' }}>
+        {/* Header */}
+        <div className="px-8 pt-8 pb-6 text-center" style={{ background: '#f8faff', borderBottom: '1px solid #e2e4e9' }}>
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: '#dbeafe' }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold" style={{ color: '#0b2545' }}>¡Cuenta creada exitosamente!</h2>
+          <p className="text-sm mt-1" style={{ color: '#64748b' }}>
+            Tu cuenta está <strong>pendiente de activación</strong> por administración.
+          </p>
         </div>
-        <h2 className="text-lg font-semibold mb-2" style={{ color: '#0b2545' }}>Cuenta creada</h2>
-        <p className="text-sm mb-4" style={{ color: '#64748b' }}>
-          Tu solicitud fue recibida. Un administrador revisará tu cuenta y te asignará un rol.
-          Recibirás acceso una vez que sea activada.
-        </p>
-        <p className="text-xs mb-5" style={{ color: '#94a3b8' }}>
-          Solo se permiten cuentas con correo institucional <strong>@mep.go.cr</strong>.
-        </p>
-        <Link
-          to="/login"
-          className="inline-block w-full py-2.5 rounded-lg text-sm font-medium text-white text-center"
-          style={{ background: '#0b2545' }}
-        >
-          Volver al inicio de sesión
-        </Link>
+
+        {/* Steps */}
+        <div className="px-8 py-6 space-y-5">
+          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#378add' }}>
+            ¿Qué hacer ahora?
+          </p>
+          {steps.map((s) => (
+            <div key={s.n} className="flex gap-4 items-start">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+                {s.n}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  {s.icon}
+                  <p className="text-sm font-semibold" style={{ color: '#0b2545' }}>{s.title}</p>
+                </div>
+                <p className="text-xs leading-relaxed" style={{ color: '#64748b' }}>{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Note */}
+        <div className="mx-8 mb-6 rounded-lg px-4 py-3 text-xs" style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}>
+          <strong>Nota:</strong> Solo el personal institucional con correo <strong>@mep.go.cr</strong> puede registrarse.
+          Los estudiantes son creados directamente por administración.
+        </div>
+
+        <div className="px-8 pb-8">
+          <Link
+            to="/login"
+            className="inline-block w-full py-2.5 rounded-lg text-sm font-medium text-white text-center"
+            style={{ background: '#0b2545' }}
+          >
+            Volver al inicio de sesión
+          </Link>
+        </div>
       </div>
     );
   }
@@ -151,9 +218,13 @@ export default function Register() {
         Nueva cuenta
       </p>
       <h2 className="text-lg font-medium mb-1" style={{ color: '#0b2545' }}>Registrarse</h2>
-      <p className="text-xs leading-relaxed mb-5" style={{ color: '#8a8f9e' }}>
-        Completá el formulario con tus datos institucionales.
+      <p className="text-xs leading-relaxed mb-3" style={{ color: '#8a8f9e' }}>
+        Este registro es exclusivo para <strong style={{ color: '#0b2545' }}>docentes y personal institucional</strong> con correo <strong style={{ color: '#0b2545' }}>@mep.go.cr</strong>.
+        Los estudiantes son creados por administración.
       </p>
+      <div className="rounded-lg px-3 py-2 mb-4 text-xs" style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af' }}>
+        Tu cuenta quedará <strong>pendiente de activación</strong> hasta que un administrador la revise y asigne tu rol.
+      </div>
 
       {(validationError || error) && (
         <div
