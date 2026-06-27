@@ -47,6 +47,16 @@ const parseApiError = (error, fallbackMessage) => {
         };
     }
 
+    if (payload.success === false && payload.error) {
+        const err = payload.error;
+        const code = err?.code || '';
+        const msg = err?.message || '';
+        if (code === 'authentication_failed' || code === 'not_authenticated' || msg.toLowerCase().includes('no active account')) {
+            return { message: 'Usuario o contraseña incorrectos', details: payload };
+        }
+        return { message: msg || fallbackMessage, details: payload };
+    }
+
     if (payload.detail) {
         const detailText = String(payload.detail || '').toLowerCase();
         if (detailText.includes('no active account found') || detailText.includes('credentials')) {

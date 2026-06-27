@@ -13,22 +13,35 @@ export default function FileUpload({
   onFile,
   accept = '*',
   label = 'Subir archivo',
-  hint = 'PDF, Excel, Word \u2014 máx. 10MB',
+  hint = 'PDF, Excel, Word — máx. 10MB',
   currentFile,
   disabled = false,
 }) {
   const inputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [fileError, setFileError] = useState(null)
+
+  const allowedExtensions = accept === '*'
+    ? null
+    : accept.split(',').map((s) => s.trim().toLowerCase())
 
   const handleFile = (file) => {
-    if (file && !disabled) {
-      onFile(file)
+    if (!file || disabled) return
+    setFileError(null)
+    if (allowedExtensions) {
+      const ext = '.' + file.name.split('.').pop().toLowerCase()
+      if (!allowedExtensions.includes(ext)) {
+        setFileError(`Tipo de archivo no permitido. Solo se aceptan: ${allowedExtensions.join(', ')}`)
+        return
+      }
     }
+    onFile(file)
   }
 
   const handleInputChange = (event) => {
     const file = event.target.files?.[0]
     handleFile(file)
+    event.target.value = ''
   }
 
   const handleDrop = (event) => {
@@ -88,6 +101,10 @@ export default function FileUpload({
           </div>
         ) : null}
       </button>
+
+      {fileError && (
+        <p className="mt-2 text-xs text-red-600">{fileError}</p>
+      )}
     </div>
   )
 }

@@ -49,6 +49,27 @@ function StyledSelect({ children, ...props }) {
   );
 }
 
+const SOLO_LETRAS = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'-]+$/;
+const SOLO_NUMEROS = /^\d+$/;
+
+function validarFormulario(data) {
+  if (!SOLO_LETRAS.test(data.nombre) || data.nombre.trim().length < 2)
+    return 'El nombre solo puede contener letras y debe tener al menos 2 caracteres.';
+  if (!SOLO_LETRAS.test(data.primer_apellido) || data.primer_apellido.trim().length < 2)
+    return 'El apellido solo puede contener letras y debe tener al menos 2 caracteres.';
+  if (!SOLO_NUMEROS.test(data.username))
+    return 'La cédula solo puede contener números.';
+  if (data.username.length < 5 || data.username.length > 12)
+    return 'La cédula debe tener entre 5 y 12 dígitos.';
+  if (data.fecha_nacimiento) {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    if (new Date(data.fecha_nacimiento) >= hoy)
+      return 'La fecha de nacimiento no puede ser hoy ni una fecha futura.';
+  }
+  return null;
+}
+
 export default function Register() {
   const navigate = useNavigate();
   const { branding } = useSystemConfig();
@@ -63,12 +84,17 @@ export default function Register() {
     genero: '',
     rol: 'estudiante',
   });
+  const [validationError, setValidationError] = useState(null);
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
+    setValidationError(null);
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    const err = validarFormulario(formData);
+    if (err) { setValidationError(err); return; }
     const result = await executeRegister(formData);
     if (result.success) navigate('/login');
   };
@@ -97,12 +123,12 @@ export default function Register() {
         Completá el formulario con tus datos institucionales.
       </p>
 
-      {error && (
+      {(validationError || error) && (
         <div
           className="text-xs rounded-lg px-3 py-2.5 mb-4"
           style={{ background: '#fef2f2', color: '#b91c1c', border: '0.5px solid #fecaca' }}
         >
-          {error.message || 'No fue posible registrar el usuario'}
+          {validationError || error?.message || 'No fue posible registrar el usuario'}
         </div>
       )}
 
@@ -126,7 +152,13 @@ export default function Register() {
 
         <div className="grid grid-cols-2 gap-3">
           <Field label="Fecha de nacimiento">
-            <StyledInput type="date" name="fecha_nacimiento" onChange={handleChange} required />
+            <StyledInput
+              type="date"
+              name="fecha_nacimiento"
+              max={new Date().toISOString().split('T')[0]}
+              onChange={handleChange}
+              required
+            />
           </Field>
           <Field label="Género">
             <StyledSelect name="genero" onChange={handleChange} required>
