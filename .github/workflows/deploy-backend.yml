@@ -31,10 +31,7 @@ jobs:
         run: |
           ssh ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
           set -e
-          cd /home/ubuntu/educonnect/educonnect-Backend
+          cd /home/ubuntu/educonnect
           git pull origin main
-          source venv/bin/activate
-          pip install -r requirements.txt
-          python manage.py migrate
-          sudo systemctl restart gunicorn
+          docker-compose -f docker-compose.prod.yml up -d --build
           EOF
