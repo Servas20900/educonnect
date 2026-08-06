@@ -2,8 +2,8 @@ import { api } from './authService';
 
 const API_BASE = 'api/v1/evaluaciones';
 
-export async function fetchEvaluacionesPorGrupo(grupoId) {
-  const response = await api.get(`${API_BASE}/grupo/${grupoId}/`);
+export async function fetchEvaluacionesPorGrupo(grupoId, params = {}) {
+  const response = await api.get(`${API_BASE}/grupo/${grupoId}/`, { params });
   return response.data;
 }
 
@@ -23,6 +23,11 @@ export async function actualizarEvaluacion(evaluacionId, data) {
 
 export async function eliminarEvaluacion(evaluacionId) {
   const response = await api.delete(`${API_BASE}/${evaluacionId}/`);
+  return response.data;
+}
+
+export async function activarEvaluacion(evaluacionId) {
+  const response = await api.post(`${API_BASE}/${evaluacionId}/activar/`);
   return response.data;
 }
 

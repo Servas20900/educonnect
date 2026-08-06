@@ -10,12 +10,12 @@ import {
   FormModal,
   StatusBadge,
   BtnEditar,
-  BtnArchivar,
-  BtnReactivar,
+  BtnDesactivar,
+  BtnActivar,
   Toast,
 } from '../../../../components/ui';
 import useToast from '../../../../hooks/useToast';
-import { fetchDocentes, updateDocente, deleteDocente } from '../../../../api/usuariosService';
+import { fetchDocentes, updateDocente, deleteDocente, reactivateDocente } from '../../../../api/usuariosService';
 
 const defaultForm = {
   nombre: '',
@@ -51,7 +51,7 @@ export default function Docentes() {
   const loadDocentes = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const data = await fetchDocentes();
+      const data = await fetchDocentes({ incluir_archivados: true });
       const list = Array.isArray(data) ? data : data?.results || [];
       setDocentes(list);
     } catch (error) {
@@ -67,7 +67,7 @@ export default function Docentes() {
   useAutoRefresh(() => loadDocentes(true));
 
   const docentesFiltrados = useMemo(() => {
-    // Primero filtrar por estado (activos o archivados)
+    // Primero filtrar por estado (activos o inactivos)
     const docentesTabla = activeTab === 'activos'
       ? docentes.filter((d) => d.persona?.activo !== false && d.persona?.activo !== 'false')
       : docentes.filter((d) => d.persona?.activo === false || d.persona?.activo === 'false');
@@ -136,7 +136,7 @@ export default function Docentes() {
     }
   };
 
-  const handleArchive = async () => {
+  const handleToggleActive = async () => {
     const docente = confirmModal.docente;
     const personaId = getPersonaId(docente);
     if (!personaId) {
@@ -145,8 +145,13 @@ export default function Docentes() {
     }
 
     try {
-      await deleteDocente(personaId);
-      showSuccess(`Docente ${activeTab === 'activos' ? 'archivado' : 'reactivado'} correctamente.`);
+      if (activeTab === 'activos') {
+        await deleteDocente(personaId);
+        showSuccess('Docente desactivado correctamente.');
+      } else {
+        await reactivateDocente(personaId);
+        showSuccess('Docente activado correctamente.');
+      }
       setConfirmModal({ open: false, docente: null });
       await loadDocentes();
     } catch (error) {
@@ -190,8 +195,8 @@ export default function Docentes() {
         <div className="flex justify-end gap-2">
           <BtnEditar onClick={() => openEditForm(row)} />
           {activeTab === 'activos'
-            ? <BtnArchivar onClick={() => setConfirmModal({ open: true, docente: row })} />
-            : <BtnReactivar onClick={() => setConfirmModal({ open: true, docente: row })} />
+            ? <BtnDesactivar onClick={() => setConfirmModal({ open: true, docente: row })} />
+            : <BtnActivar onClick={() => setConfirmModal({ open: true, docente: row })} />
           }
         </div>
       ),
@@ -202,7 +207,7 @@ export default function Docentes() {
     <div className="space-y-6">
       <PageHeader
         title="Usuarios - Docentes"
-        subtitle="Administra, edita y archiva docentes del sistema"
+        subtitle="Administra, edita y desactiva docentes del sistema"
         action={{
           label: 'Volver a Usuarios',
           onClick: () => navigate('/usuarios'),
@@ -214,7 +219,7 @@ export default function Docentes() {
         viewMode={activeTab}
         onChange={setActiveTab}
         activeLabel="Docentes Activos"
-        archivedLabel="Docentes Archivados"
+        archivedLabel="Docentes Inactivos"
         activeCount={docentes.filter((d) => d.persona?.activo !== false && d.persona?.activo !== 'false').length}
         archivedCount={docentes.filter((d) => d.persona?.activo === false || d.persona?.activo === 'false').length}
       />
@@ -321,15 +326,15 @@ export default function Docentes() {
 
       <ConfirmModal
         open={confirmModal.open}
-        title={activeTab === 'activos' ? 'Archivar Docente' : 'Reactivar Docente'}
+        title={activeTab === 'activos' ? 'Desactivar Docente' : 'Activar Docente'}
         message={
           activeTab === 'activos'
             ? 'Este docente pasará a estado inactivo y dejará de aparecer en listados activos.'
             : 'Este docente volverá a estar activo en el sistema.'
         }
         variant={activeTab === 'activos' ? 'warning' : 'info'}
-        confirmLabel={activeTab === 'activos' ? 'Archivar' : 'Reactivar'}
-        onConfirm={handleArchive}
+        confirmLabel={activeTab === 'activos' ? 'Desactivar' : 'Activar'}
+        onConfirm={handleToggleActive}
         onCancel={() => setConfirmModal({ open: false, docente: null })}
       />
 

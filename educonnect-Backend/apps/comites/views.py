@@ -488,7 +488,7 @@ class ComitesActaViewSet(viewsets.ModelViewSet):
     def desarchivar(self, request, pk=None):
         acta = self.get_object()
         if str(acta.estado or '').lower() == 'archivado':
-            acta.estado = 'borrador'
+            acta.estado = 'activo'
             acta.save(update_fields=['estado'])
         return Response({'message': 'Acta desarchivada correctamente', 'estado': acta.estado})
 

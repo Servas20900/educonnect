@@ -73,6 +73,11 @@ class HorariosAprobacionWriteSerializer(serializers.ModelSerializer):
 class WriteSerializerHorariosHorario(serializers.ModelSerializer):
     detalles = HorariosDetalleWriteSerializer(many=True, required=False, default=[])
     aprobaciones = HorariosAprobacionWriteSerializer(many=True, required=False, default=[])
+    # El modelo no define default para 'estado' (CharField sin blank/default),
+    # así que DRF lo marca required por defecto con fields='__all__'. El cliente
+    # nunca lo envía a propósito: perform_create/perform_update en la vista son
+    # los que lo fijan ('Publicado' salvo que se indique otro estado explícito).
+    estado = serializers.CharField(required=False)
 
     class Meta:
         model = HorariosHorario

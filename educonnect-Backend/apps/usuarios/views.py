@@ -184,17 +184,32 @@ class ViewDocentes(viewsets.ModelViewSet):
         if not self._verificar_admin():
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('No tienes permisos para consultar docentes.')
-        
-        return PersonasDocente.objects.select_related('persona').filter(
-            persona__activo=True
-        )
+
+        queryset = PersonasDocente.objects.select_related('persona')
+
+        # Por defecto solo activos (para selectores de docente_guia, etc.).
+        # La pantalla de administración de Docentes pide ?incluir_archivados=true
+        # para poder mostrar también los archivados y sus contadores.
+        incluir_archivados = str(
+            self.request.query_params.get('incluir_archivados', '')
+        ).lower() in ('1', 'true', 'yes')
+
+        if incluir_archivados:
+            return queryset
+        return queryset.filter(persona__activo=True)
 
     def partial_update(self, request, *args, **kwargs):
         if not self._verificar_admin():
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('No tienes permisos para editar docentes.')
 
-        instance = self.get_object()
+        # Se busca directo (no via get_object/get_queryset) para poder editar
+        # también docentes archivados sin depender de ?incluir_archivados=true.
+        try:
+            instance = PersonasDocente.objects.select_related('persona').get(pk=kwargs.get('pk'))
+        except PersonasDocente.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Docente no encontrado.')
         persona = instance.persona
 
         # Campos de persona editables desde el módulo.
@@ -228,21 +243,39 @@ class ViewDocentes(viewsets.ModelViewSet):
             raise PermissionDenied('No tienes permisos para archivar docentes.')
 
         instance = self.get_object()
-        persona = instance.persona
 
-        # Archivado lógico.
-        persona.activo = False
-        persona.save()
+        # Única fuente de verdad: sincroniza persona.activo, AuthUsuario.is_active
+        # y estado_laboral en un solo lugar (core.utils.set_persona_active_state),
+        # para que quede igual sin importar si luego se consulta desde Docentes
+        # o desde Usuarios y Permisos.
+        from core.utils import set_persona_active_state
+        set_persona_active_state(instance.persona, False)
 
-        instance.estado_laboral = 'inactivo'
-        if not instance.fecha_salida:
-            instance.fecha_salida = timezone.now().date()
-        instance.save()
+        return Response({'mensaje': 'Docente desactivado correctamente.'}, status=status.HTTP_200_OK)
 
-        # Desactivar usuario asociado si existe.
-        AuthUsuario.objects.filter(persona=persona).update(is_active=False)
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
+    def reactivar(self, request, pk=None):
+        """Revierte el archivado: reactiva persona, docente y usuario asociado."""
+        if not self._verificar_admin():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('No tienes permisos para reactivar docentes.')
 
-        return Response({'mensaje': 'Docente archivado correctamente.'}, status=status.HTTP_200_OK)
+        # Se busca directo (sin pasar por get_queryset/get_object) para que
+        # funcione sin importar si el request trae ?incluir_archivados=true.
+        try:
+            instance = PersonasDocente.objects.select_related('persona').get(pk=pk)
+        except PersonasDocente.DoesNotExist:
+            return Response({'error': 'Docente no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        from core.utils import set_persona_active_state
+        set_persona_active_state(instance.persona, True)
+        instance.refresh_from_db()
+
+        serializer = self.get_serializer(instance)
+        return Response(
+            {'mensaje': 'Docente activado correctamente.', 'data': serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=False, methods=['get'], permission_classes=[IsAdmin])
     def catalogo(self, request):
@@ -431,17 +464,32 @@ class ViewEstudiantes(viewsets.ModelViewSet):
 
         for persona_id in personas_estudiantes:
             _asegurar_estudiante_por_persona_id(persona_id)
-        
-        return PersonasEstudiante.objects.select_related('persona').filter(
-            persona__activo=True
-        )
+
+        queryset = PersonasEstudiante.objects.select_related('persona')
+
+        # Por defecto solo activos (para selectores de matrícula, etc.).
+        # La pantalla de administración de Estudiantes pide ?incluir_archivados=true
+        # para poder mostrar también los archivados y sus contadores.
+        incluir_archivados = str(
+            self.request.query_params.get('incluir_archivados', '')
+        ).lower() in ('1', 'true', 'yes')
+
+        if incluir_archivados:
+            return queryset
+        return queryset.filter(persona__activo=True)
 
     def partial_update(self, request, *args, **kwargs):
         if not self._verificar_admin():
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('No tienes permisos para editar estudiantes.')
 
-        instance = self.get_object()
+        # Se busca directo (no via get_object/get_queryset) para poder editar
+        # también estudiantes archivados sin depender de ?incluir_archivados=true.
+        try:
+            instance = PersonasEstudiante.objects.select_related('persona').get(pk=kwargs.get('pk'))
+        except PersonasEstudiante.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Estudiante no encontrado.')
         persona = instance.persona
 
         persona_fields = [
@@ -472,19 +520,35 @@ class ViewEstudiantes(viewsets.ModelViewSet):
             raise PermissionDenied('No tienes permisos para archivar estudiantes.')
 
         instance = self.get_object()
-        persona = instance.persona
 
-        persona.activo = False
-        persona.save()
+        from core.utils import set_persona_active_state
+        set_persona_active_state(instance.persona, False)
 
-        instance.estado_estudiante = 'inactivo'
-        if not instance.fecha_retiro:
-            instance.fecha_retiro = timezone.now().date()
-        instance.save()
+        return Response({'mensaje': 'Estudiante desactivado correctamente.'}, status=status.HTTP_200_OK)
 
-        AuthUsuario.objects.filter(persona=persona).update(is_active=False)
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
+    def reactivar(self, request, pk=None):
+        """Revierte el archivado: reactiva persona, estudiante y usuario asociado."""
+        if not self._verificar_admin():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('No tienes permisos para reactivar estudiantes.')
 
-        return Response({'mensaje': 'Estudiante archivado correctamente.'}, status=status.HTTP_200_OK)
+        # Se busca directo (sin pasar por get_queryset/get_object) para que
+        # funcione sin importar si el request trae ?incluir_archivados=true.
+        try:
+            instance = PersonasEstudiante.objects.select_related('persona').get(pk=pk)
+        except PersonasEstudiante.DoesNotExist:
+            return Response({'error': 'Estudiante no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        from core.utils import set_persona_active_state
+        set_persona_active_state(instance.persona, True)
+        instance.refresh_from_db()
+
+        serializer = self.get_serializer(instance)
+        return Response(
+            {'mensaje': 'Estudiante activado correctamente.', 'data': serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
     def create(self, request, *args, **kwargs):
         if not self._verificar_admin():
@@ -683,11 +747,20 @@ class ViewGrupos(viewsets.ModelViewSet):
         return rol
 
     def get_queryset(self):
-        return AcademicoGrupo.objects.select_related(
+        queryset = AcademicoGrupo.objects.select_related(
             'grado', 'docente_guia', 'docente_guia__persona'
-        ).filter(
-            grado__activo=True
-        ).order_by('grado__numero_grado', 'nombre')
+        ).filter(grado__activo=True)
+
+        # Por defecto solo grupos activos. La pantalla de administración de
+        # Grados y Grupos pide ?incluir_archivados=true para poder mostrar
+        # también los inactivos y sus contadores (mismo patrón que Docentes/Estudiantes).
+        incluir_archivados = str(
+            self.request.query_params.get('incluir_archivados', '')
+        ).lower() in ('1', 'true', 'yes')
+        if not incluir_archivados:
+            queryset = queryset.filter(estado='activo')
+
+        return queryset.order_by('grado__numero_grado', 'nombre')
 
     def create(self, request, *args, **kwargs):
         if not self._verificar_admin():
@@ -753,6 +826,13 @@ class ViewGrupos(viewsets.ModelViewSet):
             else:
                 instance.docente_guia = None
 
+        if 'estado' in request.data:
+            nuevo_estado = str(request.data.get('estado') or '').strip().lower()
+            if nuevo_estado != 'activo':
+                bloqueo = self._error_si_tiene_estudiantes_activos(instance)
+                if bloqueo:
+                    return bloqueo
+
         for field in ('nombre', 'aula', 'estado', 'periodo', 'seccion'):
             if field in request.data:
                 setattr(instance, field, request.data.get(field))
@@ -769,6 +849,74 @@ class ViewGrupos(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+    def _error_si_tiene_estudiantes_activos(self, instance):
+        """
+        Devuelve una Response 409 si el grupo aún tiene estudiantes matriculados
+        activos, o None si está libre para desactivarse. Un grupo no debe poder
+        desactivarse mientras tenga estudiantes, porque quedarían sin grupo.
+        """
+        total = AcademicoMatricula.objects.filter(
+            grupo=instance, estado='activo'
+        ).count()
+        if total > 0:
+            return Response(
+                {
+                    'error': (
+                        f'No se puede desactivar el grupo "{instance.nombre}" porque tiene '
+                        f'{total} estudiante(s) matriculado(s). Primero debes moverlos a otro '
+                        'grupo o retirarlos, y luego desactivar el grupo vacío.'
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        return None
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        'Eliminar' un grupo en realidad lo desactiva (nunca se borra la fila):
+        el historial de matrículas, asistencia y horarios queda intacto.
+        Se bloquea si el grupo todavía tiene estudiantes matriculados activos.
+        """
+        if not self._verificar_admin():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('No tienes permisos para desactivar grupos.')
+
+        instance = self.get_object()
+
+        bloqueo = self._error_si_tiene_estudiantes_activos(instance)
+        if bloqueo:
+            return bloqueo
+
+        instance.estado = 'inactivo'
+        instance.fecha_modificacion = timezone.now()
+        instance.save(update_fields=['estado', 'fecha_modificacion'])
+
+        return Response({'mensaje': 'Grupo desactivado correctamente.'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
+    def activar(self, request, pk=None):
+        """Revierte la desactivación de un grupo."""
+        if not self._verificar_admin():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('No tienes permisos para activar grupos.')
+
+        # Se busca directo (no via get_object/get_queryset) para que funcione
+        # sin depender de ?incluir_archivados=true.
+        try:
+            instance = AcademicoGrupo.objects.get(pk=pk)
+        except AcademicoGrupo.DoesNotExist:
+            return Response({'error': 'Grupo no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        instance.estado = 'activo'
+        instance.fecha_modificacion = timezone.now()
+        instance.save(update_fields=['estado', 'fecha_modificacion'])
+
+        serializer = self.get_serializer(instance)
+        return Response(
+            {'mensaje': 'Grupo activado correctamente.', 'data': serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
     @action(detail=True, methods=['get'], permission_classes=[IsAdmin])
     def estudiantes(self, request, pk=None):
@@ -884,7 +1032,15 @@ class ViewGrupos(viewsets.ModelViewSet):
         """
         Retorna grupos organizados por grado.
         Estructura: { "grado_id": <id>, "grado_nombre": "", "grupos": [...] }
+
+        Por defecto solo trae grupos activos. Con ?incluir_archivados=true trae
+        también los inactivos, para que la pantalla de administración pueda
+        armar las pestañas de Activos/Inactivos (mismo patrón que Docentes/Estudiantes).
         """
+        incluir_archivados = str(
+            request.query_params.get('incluir_archivados', '')
+        ).lower() in ('1', 'true', 'yes')
+
         grados = AcademicoGrado.objects.filter(activo=True).order_by('numero_grado')
         result = []
 
@@ -892,6 +1048,8 @@ class ViewGrupos(viewsets.ModelViewSet):
             grupos = AcademicoGrupo.objects.filter(
                 grado=grado
             ).select_related('docente_guia', 'docente_guia__persona')
+            if not incluir_archivados:
+                grupos = grupos.filter(estado='activo')
 
             grupos_serializados = GrupoSerializer(grupos, many=True).data
 

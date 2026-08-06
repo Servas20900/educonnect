@@ -118,6 +118,7 @@ def _validate_porcentaje_disponible(docente_grupo, fecha_evaluacion, valor_porce
 
     evaluaciones = EvaluacionesEvaluacion.objects.filter(
         docente_grupo=docente_grupo,
+        estado='activo',
     )
 
     if exclude_evaluacion_id:
@@ -177,10 +178,20 @@ class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
         if not docente_ids:
             return EvaluacionesEvaluacion.objects.none()
 
-        return EvaluacionesEvaluacion.objects.filter(
+        queryset = EvaluacionesEvaluacion.objects.filter(
             docente_grupo__docente_id__in=docente_ids,
             docente_grupo__activo=True,
         ).select_related('docente_grupo')
+
+        # Por defecto solo activas. Se pide ?incluir_archivados=true para ver
+        # también las archivadas (mismo patrón que Docentes/Estudiantes/Grupos).
+        incluir_archivados = str(
+            self.request.query_params.get('incluir_archivados', '')
+        ).lower() in ('1', 'true', 'yes')
+        if not incluir_archivados:
+            queryset = queryset.filter(estado='activo')
+
+        return queryset
 
     @action(detail=False, methods=['get'], url_path='grupo/(?P<grupo_id>[0-9]+)')
     def por_grupo(self, request, grupo_id=None):
@@ -200,8 +211,48 @@ class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
             docente_grupo_id__in=docentes_grupo
         ).select_related('docente_grupo')
 
+        incluir_archivados = str(
+            request.query_params.get('incluir_archivados', '')
+        ).lower() in ('1', 'true', 'yes')
+        if not incluir_archivados:
+            evaluaciones = evaluaciones.filter(estado='activo')
+
         serializer = self.get_serializer(evaluaciones, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='activar')
+    def activar(self, request, pk=None):
+        """Revierte el archivado de una evaluación."""
+        docente_ids = _get_docente_ids_for_user(request.user)
+
+        evaluacion = EvaluacionesEvaluacion.objects.filter(
+            id=pk,
+            docente_grupo__docente_id__in=docente_ids,
+        ).first()
+
+        if not evaluacion:
+            return Response({'detail': 'Evaluación no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
+        evaluacion.estado = 'activo'
+        evaluacion.save(update_fields=['estado', 'fecha_modificacion'])
+
+        serializer = EvaluacionesEvaluacionSerializer(evaluacion, context=self.get_serializer_context())
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        'Eliminar' una evaluación en realidad la archiva: nunca se borra la
+        fila, porque las calificaciones ya registradas por los estudiantes
+        quedarían huérfanas (EvaluacionesCalificacion.evaluacion es SET_NULL).
+        """
+        instance = self.get_object()
+        instance.estado = 'inactivo'
+        instance.save(update_fields=['estado', 'fecha_modificacion'])
+        serializer = EvaluacionesEvaluacionSerializer(instance, context=self.get_serializer_context())
+        return Response(
+            {'mensaje': 'Evaluación archivada correctamente.', 'data': serializer.data},
+            status=status.HTTP_200_OK,
+        )
 
     @action(
         detail=False,
@@ -235,6 +286,7 @@ class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
             docente_grupo__grupo_id=grupo_id,
             docente_grupo__docente_id__in=docente_ids,
             docente_grupo__activo=True,
+            estado='activo',
         ).order_by('fecha_evaluacion', 'id')
 
         calificaciones = EvaluacionesCalificacion.objects.filter(
@@ -321,6 +373,7 @@ class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
                 evaluacion__docente_grupo__grupo_id=grupo_id,
                 evaluacion__docente_grupo__docente_id__in=docente_ids,
                 evaluacion__docente_grupo__activo=True,
+                evaluacion__estado='activo',
             ).select_related('evaluacion')
 
             sem_1 = Decimal('0')
@@ -367,6 +420,7 @@ class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
                 docente_grupo__grupo_id=grupo_id,
                 docente_grupo__docente_id__in=docente_ids,
                 docente_grupo__activo=True,
+                estado='activo',
             ).only('id', 'nota_maxima', 'valor_porcentual', 'nombre', 'tipo_evaluacion', 'fecha_evaluacion')
         )
 
@@ -493,6 +547,7 @@ class EvaluacionesEvaluacionViewSet(viewsets.ModelViewSet):
                 docente_grupo__grupo_id=grupo_id,
                 docente_grupo__docente_id__in=docente_ids,
                 docente_grupo__activo=True,
+                estado='activo',
             ).order_by('fecha_evaluacion', 'id')
         )
 

@@ -6,6 +6,7 @@ import { Controller, useForm } from 'react-hook-form';
 import {
   PageHeader,
   SearchFilter,
+  ActiveArchiveToggle,
   ConfirmModal,
   FormModal,
   Toast,
@@ -18,8 +19,11 @@ import {
   createGrupo,
   updateGrupo,
   deleteGrupo,
+  activarGrupo,
   fetchDocentes,
 } from '../../../../api/usuariosService';
+
+const esGrupoActivo = (grupo) => String(grupo?.estado || 'activo').toLowerCase() === 'activo';
 
 const GRADOS_ORDEN = [
   { numero: 1, nombre: 'Primero' },
@@ -80,6 +84,7 @@ export default function GradosGrupos() {
   const [searchValue, setSearchValue] = useState('');
   const { toast, showSuccess, showError, clearToast } = useToast();
   const [expandedGrados, setExpandedGrados] = useState({});
+  const [activeTab, setActiveTab] = useState('activos');
 
   const [formOpen, setFormOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
@@ -91,7 +96,7 @@ export default function GradosGrupos() {
     if (!silent) setLoading(true);
     try {
       const [gruposData, docentesData] = await Promise.all([
-        fetchGruposPorGrado(),
+        fetchGruposPorGrado({ incluir_archivados: true }),
         fetchDocentes(),
       ]);
 
@@ -148,19 +153,33 @@ export default function GradosGrupos() {
     }));
   };
 
+  const { activeCount, archivedCount } = useMemo(() => {
+    let activos = 0;
+    let inactivos = 0;
+    gruposPorGrado.forEach((grado) => {
+      grado.grupos.forEach((grupo) => {
+        if (esGrupoActivo(grupo)) activos += 1;
+        else inactivos += 1;
+      });
+    });
+    return { activeCount: activos, archivedCount: inactivos };
+  }, [gruposPorGrado]);
+
   const gruposFiltrados = useMemo(() => {
-    if (!searchValue.trim()) return gruposPorGrado;
     const term = searchValue.toLowerCase().trim();
 
     return gruposPorGrado.map((grado) => ({
       ...grado,
       grupos: grado.grupos.filter((item) => {
+        const coincideEstado = activeTab === 'activos' ? esGrupoActivo(item) : !esGrupoActivo(item);
+        if (!coincideEstado) return false;
+        if (!term) return true;
         const nombre = String(item.nombre || '').toLowerCase();
         const docente = String(item.docente_guia_nombre || '').toLowerCase();
         return nombre.includes(term) || docente.includes(term);
       }),
     }));
-  }, [gruposPorGrado, searchValue]);
+  }, [gruposPorGrado, searchValue, activeTab]);
 
   const gradosParaFormulario = useMemo(() => {
     if (gradosActivos.length > 0) return gradosActivos;
@@ -235,15 +254,23 @@ export default function GradosGrupos() {
     }
   };
 
-  const handleArchive = async () => {
+  const handleToggleActive = async () => {
     const grupo = confirmModal.grupo;
     try {
-      await deleteGrupo(grupo.id);
-      showSuccess('Grupo archivado correctamente.');
+      if (activeTab === 'activos') {
+        await deleteGrupo(grupo.id);
+        showSuccess('Grupo desactivado correctamente.');
+      } else {
+        await activarGrupo(grupo.id);
+        showSuccess('Grupo activado correctamente.');
+      }
       setConfirmModal({ open: false, grupo: null });
       await loadData();
     } catch (error) {
-      showError('No fue posible archivar el grupo.');
+      // El backend bloquea la desactivación (409) si el grupo aún tiene
+      // estudiantes matriculados, con un mensaje explicando cuántos son.
+      const mensaje = error?.response?.data?.error || 'No fue posible completar la acción.';
+      showError(mensaje);
       setConfirmModal({ open: false, grupo: null });
     }
   };
@@ -258,6 +285,15 @@ export default function GradosGrupos() {
           onClick: openNewForm,
           icon: '+',
         }}
+      />
+
+      <ActiveArchiveToggle
+        viewMode={activeTab}
+        onChange={setActiveTab}
+        activeLabel="Grupos Activos"
+        archivedLabel="Grupos Inactivos"
+        activeCount={activeCount}
+        archivedCount={archivedCount}
       />
 
       <SearchFilter
@@ -379,13 +415,23 @@ export default function GradosGrupos() {
                               >
                                 Editar
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmModal({ open: true, grupo })}
-                                className="rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
-                              >
-                                Archivar
-                              </button>
+                              {activeTab === 'activos' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmModal({ open: true, grupo })}
+                                  className="rounded-md border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+                                >
+                                  Desactivar
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmModal({ open: true, grupo })}
+                                  className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+                                >
+                                  Activar
+                                </button>
+                              )}
                             </div>
                           </div>
                         );
@@ -506,11 +552,15 @@ export default function GradosGrupos() {
 
       <ConfirmModal
         open={confirmModal.open}
-        title="Archivar Grupo"
-        message="Este grupo se moverá a la vista de archivados."
-        variant="warning"
-        confirmLabel="Archivar"
-        onConfirm={handleArchive}
+        title={activeTab === 'activos' ? 'Desactivar Grupo' : 'Activar Grupo'}
+        message={
+          activeTab === 'activos'
+            ? 'El grupo pasará a inactivo y dejará de aparecer en los listados activos. Si todavía tiene estudiantes matriculados, no se podrá desactivar hasta moverlos o retirarlos.'
+            : 'El grupo volverá a estar activo y disponible para matricular estudiantes.'
+        }
+        variant={activeTab === 'activos' ? 'warning' : 'info'}
+        confirmLabel={activeTab === 'activos' ? 'Desactivar' : 'Activar'}
+        onConfirm={handleToggleActive}
         onCancel={() => setConfirmModal({ open: false, grupo: null })}
       />
 

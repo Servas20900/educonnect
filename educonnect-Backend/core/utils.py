@@ -18,6 +18,53 @@ def get_persona_for_user(user) -> Optional[object]:
     return getattr(user, "persona", None)
 
 
+# ─── Activar/desactivar persona (única fuente de verdad) ──────────────────────
+
+def set_persona_active_state(persona, activo: bool) -> None:
+    """
+    Único punto del sistema que activa/desactiva a una persona.
+
+    Sincroniza en la misma operación:
+      - PersonasPersona.activo
+      - AuthUsuario.is_active (del usuario ligado a esa persona, si existe)
+      - PersonasDocente.estado_laboral / fecha_salida (si la persona es docente)
+      - PersonasEstudiante.estado_estudiante / fecha_retiro (si es estudiante)
+
+    Se usa desde apps/usuarios (Docentes, Estudiantes) y apps/permisos
+    (Usuarios y Permisos) para que una decisión tomada en cualquiera de esas
+    pantallas se refleje igual en todas las demás, en vez de que cada vista
+    mantenga su propio campo "activo" desincronizado del resto.
+    """
+    from django.utils import timezone
+    from apps.databaseModels.models import AuthUsuario, PersonasDocente, PersonasEstudiante
+
+    if persona is None:
+        return
+
+    persona.activo = activo
+    persona.save(update_fields=["activo"])
+
+    AuthUsuario.objects.filter(persona=persona).update(is_active=activo)
+
+    docente = PersonasDocente.objects.filter(persona=persona).first()
+    if docente is not None:
+        docente.estado_laboral = "activo" if activo else "inactivo"
+        if activo:
+            docente.fecha_salida = None
+        elif not docente.fecha_salida:
+            docente.fecha_salida = timezone.now().date()
+        docente.save(update_fields=["estado_laboral", "fecha_salida"])
+
+    estudiante = PersonasEstudiante.objects.filter(persona=persona).first()
+    if estudiante is not None:
+        estudiante.estado_estudiante = "activo" if activo else "inactivo"
+        if activo:
+            estudiante.fecha_retiro = None
+        elif not estudiante.fecha_retiro:
+            estudiante.fecha_retiro = timezone.now().date()
+        estudiante.save(update_fields=["estado_estudiante", "fecha_retiro"])
+
+
 # ─── Docente ──────────────────────────────────────────────────────────────────
 
 def get_docente_for_user(user) -> Optional[object]:

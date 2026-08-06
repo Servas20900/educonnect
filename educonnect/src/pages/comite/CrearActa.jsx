@@ -193,7 +193,7 @@ export default function CrearActa() {
 
     setSaving(true);
     try {
-      const saved = await createActa({ ...form, reunion: null, estado: 'borrador', ...(comiteId ? { comite: comiteId } : {}) });
+      const saved = await createActa({ ...form, reunion: null, estado: 'activo', ...(comiteId ? { comite: comiteId } : {}) });
       showSuccess('Acta creada correctamente.');
 
       if (archivo && saved?.id) {
@@ -380,7 +380,7 @@ export default function CrearActa() {
                     <tr className="transition-colors hover:bg-[#e6f1fb]">
                       <td className="px-4 py-3 text-sm font-medium text-slate-900">{row.numero_acta}</td>
                       <td className="px-4 py-3 text-sm text-slate-700">
-                        <StatusBadge status={row.estado || 'borrador'} size="sm" />
+                        <StatusBadge status={row.estado || 'activo'} size="sm" />
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-600">
                         {row.fecha_elaboracion ? String(row.fecha_elaboracion).split('T')[0] : 'N/A'}

@@ -1,4 +1,3 @@
-import json
 from rest_framework import serializers
 
 from apps.databaseModels.models import ComunicacionesCircular
@@ -15,9 +14,7 @@ class ReadSerializerComunicacionesCircular(serializers.ModelSerializer):
 
 class WriteSerializerComunicacionesCircular(serializers.ModelSerializer):
     autor_nombre = serializers.ReadOnlyField(source='creada_por.username')
-    destinatarios = serializers.CharField(required=False, default='todos')
-
-    DESTINATARIOS_VALIDOS = {'docentes', 'estudiantes', 'todos'}
+    destinatarios = serializers.CharField(required=False, default='docentes')
 
     class Meta:
         model = ComunicacionesCircular
@@ -40,27 +37,7 @@ class WriteSerializerComunicacionesCircular(serializers.ModelSerializer):
         return value
 
     def validate_destinatarios(self, value):
-        if value in (None, ''):
-            return 'todos'
-
-        # Parsear JSON string enviado desde FormData (ej: '["docentes"]')
-        if isinstance(value, str):
-            stripped = value.strip()
-            if stripped.startswith('[') or stripped.startswith('"'):
-                try:
-                    value = json.loads(stripped)
-                except (ValueError, TypeError):
-                    pass
-
-        # Acepta tanto string directo como lista legacy del frontend
-        if isinstance(value, list):
-            if not value:
-                return 'todos'
-            value = value[0]
-
-        destino = str(value).strip().lower()
-        if destino not in self.DESTINATARIOS_VALIDOS:
-            raise serializers.ValidationError(
-                f'Destinatario invalido. Use: {", ".join(sorted(self.DESTINATARIOS_VALIDOS))}.'
-            )
-        return destino
+        # Las circulares solo las puede consultar personal docente (no existe
+        # ninguna pantalla de circulares para estudiantes en el sistema), así
+        # que se fuerza siempre a 'docentes' sin importar qué envíe el cliente.
+        return 'docentes'

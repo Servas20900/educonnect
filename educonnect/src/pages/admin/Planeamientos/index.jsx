@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import useAutoRefresh from '../../../hooks/useAutoRefresh';
-import { ActiveArchiveToggle, DataTable, PageHeader, SearchFilter, BtnDescargar, Toast } from '../../../components/ui';
+import { ActiveArchiveToggle, DataTable, PageHeader, SearchFilter, BtnDescargar, StatusBadge, Toast } from '../../../components/ui';
 import useToast from '../../../hooks/useToast';
 import {
   descargarArchivoPlaneamiento,
@@ -34,16 +34,7 @@ const triggerBrowserDownload = (url, nombre = 'planeamiento') => {
   window.URL.revokeObjectURL(url);
 };
 
-const estadoBadge = (estado) => {
-  const map = {
-    'Borrador': 'bg-gray-100 text-gray-700',
-    'En revisión': 'bg-yellow-100 text-yellow-800',
-    'Aprobado': 'bg-green-100 text-green-800',
-    'Archivado': 'bg-red-100 text-red-700',
-  };
-  const cls = map[estado] || 'bg-gray-100 text-gray-600';
-  return <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{estado || 'Borrador'}</span>;
-};
+const estadoBadge = (estado) => <StatusBadge status={estado || 'Borrador'} size="sm" />;
 
 function RevisionModal({ planeamiento, onClose, onRefresh, showError, showSuccess }) {
   const [comentario, setComentario] = useState('');
@@ -92,7 +83,9 @@ function RevisionModal({ planeamiento, onClose, onRefresh, showError, showSucces
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      // z-[1300] para quedar por encima del AppBar/Drawer de MUI (z-index 1100/1200),
+      // igual que el resto de los modales del sistema (Dialog de MUI usa 1300).
+      className="fixed inset-0 z-[1300] flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="w-full max-w-md rounded-xl bg-white shadow-2xl flex flex-col max-h-[90vh]">
@@ -202,7 +195,7 @@ function RevisionModal({ planeamiento, onClose, onRefresh, showError, showSucces
                 type="button"
                 onClick={() => handleAction('rechazar')}
                 disabled={loading}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50 transition-colors"
               >
                 {accionPendiente === 'rechazar' ? 'Rechazando...' : 'Rechazar'}
               </button>
@@ -210,7 +203,7 @@ function RevisionModal({ planeamiento, onClose, onRefresh, showError, showSucces
                 type="button"
                 onClick={() => handleAction('aprobar')}
                 disabled={loading}
-                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                className="rounded-lg bg-[#0f6e56] px-4 py-2 text-sm font-medium text-white hover:bg-[#085041] disabled:opacity-50 transition-colors"
               >
                 {accionPendiente === 'aprobar' ? 'Aprobando...' : 'Aprobar'}
               </button>

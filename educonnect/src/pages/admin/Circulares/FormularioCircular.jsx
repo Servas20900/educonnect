@@ -3,25 +3,6 @@ import { Controller, useForm } from 'react-hook-form';
 import { FileUpload } from '../../../components/ui';
 import useSystemConfig from '../../../hooks/useSystemConfig';
 
-const parseDestinatarios = (value) => {
-  if (Array.isArray(value) && value.length > 0) {
-    return value;
-  }
-
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    } catch {
-      return ['docentes'];
-    }
-  }
-
-  return ['docentes'];
-};
-
 const getTodayDateISO = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -36,7 +17,6 @@ const getDefaultValues = (circular) => ({
   archivo_adjunto: null,
   fecha_vigencia_inicio: getTodayDateISO(),
   tipo_comunicado: circular?.tipo_comunicado || 'informativo',
-  destinatarios: parseDestinatarios(circular?.destinatarios),
 });
 
 const FormularioCircular = forwardRef(function FormularioCircular(
@@ -48,10 +28,6 @@ const FormularioCircular = forwardRef(function FormularioCircular(
   ref
 ) {
   const { getCatalog } = useSystemConfig();
-  const DESTINATARIOS_OPTIONS = getCatalog('circulares_destinatarios', [
-    { id: 'docentes', label: 'Docentes' },
-    { id: 'estudiantes', label: 'Estudiantes' },
-  ]);
   const TIPO_COMUNICADO_OPTIONS = getCatalog('circulares_tipos', [
     { value: 'informativo', label: 'Informativo' },
     { value: 'urgente', label: 'Urgente' },
@@ -96,7 +72,9 @@ const FormularioCircular = forwardRef(function FormularioCircular(
       fecha_vigencia_fin: null,
       categoria: 'General',
       tipo_comunicado: data.tipo_comunicado,
-      destinatarios: data.destinatarios,
+      // Las circulares solo las ve personal docente (no hay pantalla de
+      // circulares para estudiantes), así que el destinatario es siempre fijo.
+      destinatarios: 'docentes',
       visible: true,
     };
 
@@ -219,55 +197,8 @@ const FormularioCircular = forwardRef(function FormularioCircular(
         />
       </div>
 
-      <div className="space-y-3">
-        <label className="block text-sm font-semibold text-slate-700">
-          Destinatarios
-        </label>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <Controller
-            name="destinatarios"
-            control={control}
-            rules={{
-              validate: (value) =>
-                Array.isArray(value) && value.length > 0
-                  ? true
-                  : 'Debes elegir al menos un destinatario',
-            }}
-            render={({ field }) => (
-              <>
-                {DESTINATARIOS_OPTIONS.map((option) => (
-                  <label
-                    key={option.id}
-                    className={`flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 transition-colors ${
-                      field.value?.includes(option.id)
-                        ? 'border-[#185fa5] bg-[#e6f1fb]'
-                        : 'border-slate-300 bg-white hover:border-[#378add]'
-                    }`}
-                  >
-                    <span className="text-sm font-medium text-slate-700">{option.label}</span>
-                    <input
-                      type="checkbox"
-                      checked={field.value?.includes(option.id) || false}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          field.onChange([...(field.value || []), option.id]);
-                        } else {
-                          field.onChange(field.value.filter((v) => v !== option.id));
-                        }
-                      }}
-                      className="h-4 w-4 rounded border-slate-300 text-[#185fa5] focus:ring-[#185fa5]"
-                    />
-                  </label>
-                ))}
-              </>
-            )}
-          />
-          {errors.destinatarios && (
-            <p className="mt-1 text-xs text-red-500 font-medium">
-              {errors.destinatarios.message}
-            </p>
-          )}
-        </div>
+      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+        Destinatarios: <span className="font-semibold">Docentes</span> — las circulares solo son visibles para personal docente.
       </div>
 
       <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">

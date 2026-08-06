@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.contrib.contenttypes.models import ContentType
 from urllib.parse import quote
 from apps.databaseModels.models import DocumentosDocumento
-from apps.carpetas.views import _descargar_remoto
+from apps.carpetas.views import _descargar_remoto, _leer_archivo_local
 from .models import PatronatoInforme
 from .serializers import InformeEconomicoWriteSerializer, InformeEconomicoReadSerializer
 from core.permissions import IsAuthenticated, IsAdmin, IsAuxiliarUser
@@ -85,15 +85,24 @@ class PatronatoInformeViewSet(viewsets.ModelViewSet):
         content_type_value = documento.mime_type or 'application/octet-stream'
         content = None
 
-        # Intento 1: URL directa (funciona en desarrollo local)
-        try:
-            content, ct = _descargar_remoto(documento.ruta_archivo)
-            if content:
-                content_type_value = ct or content_type_value
-        except Exception:
-            pass
+        # Intento 1: filesystem local (archivos subidos con USE_CLOUDINARY=False,
+        # como en desarrollo). Sin esto, cualquier informe subido localmente
+        # queda imposible de descargar porque nunca hay una URL remota real
+        # que probar ni un public_id de Cloudinary en sus metadatos.
+        content, ct = _leer_archivo_local(documento)
+        if content:
+            content_type_value = ct or content_type_value
 
-        # Intento 2: Cloudinary via private_download_url (para access_mode=authenticated)
+        # Intento 2: URL directa (funciona cuando ruta_archivo es una URL real)
+        if not content:
+            try:
+                content, ct = _descargar_remoto(documento.ruta_archivo)
+                if content:
+                    content_type_value = ct or content_type_value
+            except Exception:
+                pass
+
+        # Intento 3: Cloudinary via private_download_url (para access_mode=authenticated)
         if not content:
             try:
                 import cloudinary

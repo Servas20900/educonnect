@@ -64,6 +64,7 @@ class EvaluacionesEvaluacionSerializer(serializers.ModelSerializer):
             'instrucciones',
             'visible_estudiantes',
             'permite_recuperacion',
+            'estado',
             'fecha_creacion',
             'fecha_modificacion',
             'calificaciones',

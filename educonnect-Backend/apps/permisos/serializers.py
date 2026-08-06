@@ -63,12 +63,25 @@ class UsuarioUpdateSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         rol_id = validated_data.pop('rol_id', None)
-        
+        # is_active se maneja aparte con set_persona_active_state para que
+        # quede sincronizado con persona.activo/estado_laboral/estado_estudiante
+        # (mismo criterio que toggle_active y que Docentes/Estudiantes).
+        nuevo_is_active = validated_data.pop('is_active', None)
+
         # Actualizar campos básicos
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-        
+
+        if nuevo_is_active is not None:
+            if instance.persona:
+                from core.utils import set_persona_active_state
+                set_persona_active_state(instance.persona, nuevo_is_active)
+                instance.refresh_from_db()
+            else:
+                instance.is_active = nuevo_is_active
+                instance.save(update_fields=['is_active'])
+
         # Actualizar rol si se proporciona
         if rol_id is not None:
             try:

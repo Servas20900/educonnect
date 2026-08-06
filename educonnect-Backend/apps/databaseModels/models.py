@@ -677,6 +677,7 @@ class EvaluacionesEvaluacion(models.Model):
     instrucciones = models.TextField()
     visible_estudiantes = models.BooleanField()
     permite_recuperacion = models.BooleanField()
+    estado = models.CharField(max_length=20, default='activo', db_index=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
 

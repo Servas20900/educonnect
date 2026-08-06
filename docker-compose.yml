@@ -26,6 +26,11 @@ services:
     env_file:
       - ./educonnect-Backend/.env
     environment:
+      # El resto de variables (DEBUG, cookies, Cloudinary, etc.) ya vienen listas
+      # para desarrollo local desde ./educonnect-Backend/.env (env_file arriba).
+      # Solo se sobreescribe la conexion a la BD porque, DENTRO de la red de
+      # Docker, el contenedor debe usar el nombre del servicio "postgres",
+      # no "localhost" (que dentro del contenedor se referiria a si mismo).
       DATABASE_URL: postgresql://postgres:ProyectoG7!@postgres:5432/educonnect_db
       DB_HOST: postgres
     volumes:

@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { BookOpen, Calendar, ClipboardList, Eye, RefreshCw, X } from 'lucide-react';
-import { ConfirmModal, DataTable, PageHeader, BtnEditar, BtnArchivar } from '../../../components/ui';
+import { BookOpen, Calendar, ClipboardList, RefreshCw, X } from 'lucide-react';
+import { ActiveArchiveToggle, ConfirmModal, DataTable, PageHeader, BtnEditar, BtnArchivar, BtnRestaurar } from '../../../components/ui';
 import { fetchGruposDocente } from '../../../api/registroEstudiantesService';
-import { fetchEvaluacionesPorGrupo, crearEvaluacion, actualizarEvaluacion, eliminarEvaluacion } from '../../../api/evaluacionesService';
+import {
+  fetchEvaluacionesPorGrupo,
+  crearEvaluacion,
+  actualizarEvaluacion,
+  eliminarEvaluacion,
+  activarEvaluacion,
+} from '../../../api/evaluacionesService';
 
 const DOCENTE_GRUPO_STORAGE_KEY = 'docente_academico_hub_grupo_id';
 
@@ -37,29 +43,7 @@ const DEFAULT_FORM = {
   valor_porcentual: '',
   nota_maxima: '100',
   instrucciones: '',
-  visible_estudiantes: true,
-  permite_recuperacion: false,
 };
-
-function Toggle({ checked, onChange, label }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#185fa5] focus:ring-offset-2 ${
-        checked ? 'bg-[#185fa5]' : 'bg-gray-200'
-      }`}
-    >
-      <span
-        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
-          checked ? 'translate-x-5' : 'translate-x-0'
-        }`}
-      />
-    </button>
-  );
-}
 
 function DateField({ label, value, onChange, min, error, hint }) {
   return (
@@ -104,6 +88,7 @@ export default function EvaluacionesListado() {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState('activos');
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ open: false, id: null });
@@ -146,7 +131,7 @@ export default function EvaluacionesListado() {
     if (!grupoId) { setEvaluaciones([]); return; }
     setLoading(true); setError('');
     try {
-      const data = await fetchEvaluacionesPorGrupo(grupoId);
+      const data = await fetchEvaluacionesPorGrupo(grupoId, { incluir_archivados: true });
       setEvaluaciones(Array.isArray(data) ? data : data.results || []);
     } catch {
       setError('No se pudieron cargar las evaluaciones.');
@@ -163,15 +148,27 @@ export default function EvaluacionesListado() {
   useEffect(() => { if (grupoId) localStorage.setItem(DOCENTE_GRUPO_STORAGE_KEY, grupoId); }, [grupoId]);
   useEffect(() => { loadEvaluaciones(); }, [grupoId]);
 
+  const esActiva = (ev) => String(ev?.estado || 'activo').toLowerCase() === 'activo';
+
+  const evaluacionesActivas = useMemo(
+    () => evaluaciones.filter(esActiva),
+    [evaluaciones]
+  );
+  const evaluacionesArchivadas = useMemo(
+    () => evaluaciones.filter((e) => !esActiva(e)),
+    [evaluaciones]
+  );
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return evaluaciones;
+    const base = viewMode === 'archivados' ? evaluacionesArchivadas : evaluacionesActivas;
+    if (!search.trim()) return base;
     const term = search.trim().toLowerCase();
-    return evaluaciones.filter((e) =>
+    return base.filter((e) =>
       (e.nombre || '').toLowerCase().includes(term) ||
       (e.descripcion || '').toLowerCase().includes(term) ||
       (e.tipo_evaluacion || '').toLowerCase().includes(term)
     );
-  }, [evaluaciones, search]);
+  }, [evaluacionesActivas, evaluacionesArchivadas, viewMode, search]);
 
   const abrirModal = (ev = null) => {
     setFormErrors({});
@@ -186,8 +183,6 @@ export default function EvaluacionesListado() {
         valor_porcentual: ev.valor_porcentual || '',
         nota_maxima: '100',
         instrucciones: ev.instrucciones || '',
-        visible_estudiantes: ev.visible_estudiantes !== false,
-        permite_recuperacion: ev.permite_recuperacion === true,
       });
     } else {
       setEditando(null);
@@ -231,7 +226,11 @@ export default function EvaluacionesListado() {
 
     setSaving(true);
     try {
-      const payload = { ...formData, nota_maxima: '100' };
+      // visible_estudiantes/permite_recuperacion no tienen ningún efecto real en
+      // el sistema (no hay pantalla de estudiante que los lea ni lógica de
+      // recuperación en ningún lado), pero el backend los sigue exigiendo por
+      // ahora, así que se mandan fijos en vez de exponerlos en el formulario.
+      const payload = { ...formData, nota_maxima: '100', visible_estudiantes: true, permite_recuperacion: false };
       if (editando) {
         await actualizarEvaluacion(editando, payload);
         setMensaje('Evaluación actualizada correctamente.');
@@ -248,15 +247,20 @@ export default function EvaluacionesListado() {
     }
   };
 
-  const handleEliminarConfirmado = async () => {
+  const handleToggleArchivoConfirmado = async () => {
     const { id } = confirmModal;
     setConfirmModal({ open: false, id: null });
     try {
-      await eliminarEvaluacion(id);
-      setMensaje('Evaluación eliminada correctamente.');
+      if (viewMode === 'archivados') {
+        await activarEvaluacion(id);
+        setMensaje('Evaluación restaurada correctamente.');
+      } else {
+        await eliminarEvaluacion(id);
+        setMensaje('Evaluación archivada correctamente.');
+      }
       await loadEvaluaciones();
     } catch (err) {
-      setMensaje(err?.response?.data?.detail || 'No se pudo eliminar la evaluación.');
+      setMensaje(err?.response?.data?.detail || 'No se pudo completar la acción.');
     }
   };
 
@@ -279,6 +283,15 @@ export default function EvaluacionesListado() {
           {error}
         </div>
       )}
+
+      <ActiveArchiveToggle
+        viewMode={viewMode}
+        onChange={setViewMode}
+        activeLabel="Activas"
+        archivedLabel="Archivadas"
+        activeCount={evaluacionesActivas.length}
+        archivedCount={evaluacionesArchivadas.length}
+      />
 
       {/* ── Filtros ── */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm space-y-4">
@@ -343,30 +356,16 @@ export default function EvaluacionesListado() {
               render: (e) => <span className="font-medium text-gray-700">{e.valor_porcentual ?? '—'}%</span>,
             },
             {
-              key: 'visible',
-              label: 'Visible',
-              render: (e) => (
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${e.visible_estudiantes ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {e.visible_estudiantes ? 'Sí' : 'No'}
-                </span>
-              ),
-            },
-            {
-              key: 'recuperable',
-              label: 'Recuperable',
-              render: (e) => (
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${e.permite_recuperacion ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                  {e.permite_recuperacion ? 'Sí' : 'No'}
-                </span>
-              ),
-            },
-            {
               key: 'acciones',
               label: 'Acciones',
               render: (e) => (
                 <div className="flex justify-end gap-2">
                   <BtnEditar onClick={() => abrirModal(e)} />
-                  <BtnArchivar onClick={() => setConfirmModal({ open: true, id: e.id })} />
+                  {viewMode === 'archivados' ? (
+                    <BtnRestaurar onClick={() => setConfirmModal({ open: true, id: e.id })} />
+                  ) : (
+                    <BtnArchivar onClick={() => setConfirmModal({ open: true, id: e.id })} />
+                  )}
                 </div>
               ),
             },
@@ -377,22 +376,27 @@ export default function EvaluacionesListado() {
       {/* ── Modal ── */}
       {modalAbierto && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          // z-[1300]: el header (AppBar de MUI) y el sidebar (Drawer de MUI) usan
+          // z-index 1100/1200 por defecto. Con z-50 este modal quedaba dibujado
+          // DETRÁS de ambos. 1300 es el mismo z-index que usa el Dialog de MUI
+          // (el que usan el resto de los formularios vía el componente FormModal),
+          // así este modal queda por encima de todo igual que los demás.
+          className="fixed inset-0 z-[1300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) cerrarModal(); }}
         >
           <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
             {/* Header del modal */}
-            <div className="bg-gradient-to-r from-[#0b2545] to-[#185fa5] px-6 py-5 flex items-center justify-between">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
-                  <ClipboardList className="h-5 w-5 text-white" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#e6f1fb] text-[#185fa5]">
+                  <ClipboardList className="h-4 w-4" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">
+                  <h2 className="text-lg font-semibold text-[#0b2545]">
                     {editando ? 'Editar evaluación' : 'Nueva evaluación'}
                   </h2>
-                  <p className="text-xs text-blue-200">
+                  <p className="text-xs text-slate-500">
                     {editando ? 'Modifica los datos de la evaluación' : 'Completa los datos para crear la evaluación'}
                   </p>
                 </div>
@@ -400,9 +404,10 @@ export default function EvaluacionesListado() {
               <button
                 type="button"
                 onClick={cerrarModal}
-                className="rounded-lg p-1.5 text-white/70 hover:bg-white/15 hover:text-white transition-colors"
+                className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Cerrar"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -540,40 +545,10 @@ export default function EvaluacionesListado() {
 
               <hr className="border-slate-100" />
 
-              {/* Sección: Opciones */}
-              <section>
-                <div className="flex items-center gap-2 mb-3">
-                  <Eye className="h-4 w-4 text-[#185fa5]" />
-                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Opciones</h3>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">Visible para estudiantes</p>
-                      <p className="text-xs text-slate-400">Los estudiantes podrán ver esta evaluación en su portal</p>
-                    </div>
-                    <Toggle
-                      checked={formData.visible_estudiantes}
-                      onChange={(val) => set('visible_estudiantes', val)}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">Permite recuperación</p>
-                      <p className="text-xs text-slate-400">Se habilitará una instancia de recuperación para esta evaluación</p>
-                    </div>
-                    <Toggle
-                      checked={formData.permite_recuperacion}
-                      onChange={(val) => set('permite_recuperacion', val)}
-                    />
-                  </div>
-                </div>
-              </section>
-
               {/* Nota máxima informativa */}
-              <div className="rounded-xl bg-blue-50 border border-blue-100 px-4 py-3 flex items-center gap-3">
-                <RefreshCw className="h-4 w-4 text-blue-500 shrink-0" />
-                <p className="text-xs text-blue-700">
+              <div className="rounded-xl bg-[#e6f1fb] border border-[#cfe4f6] px-4 py-3 flex items-center gap-3">
+                <RefreshCw className="h-4 w-4 text-[#185fa5] shrink-0" />
+                <p className="text-xs text-[#185fa5]">
                   La escala de calificación es fija de <strong>0 a 100</strong> puntos para todas las evaluaciones.
                 </p>
               </div>
@@ -603,11 +578,15 @@ export default function EvaluacionesListado() {
 
       <ConfirmModal
         open={confirmModal.open}
-        title="Eliminar evaluación"
-        message="¿Seguro que deseas eliminar esta evaluación? Esta acción no se puede deshacer."
-        confirmLabel="Eliminar"
-        variant="danger"
-        onConfirm={handleEliminarConfirmado}
+        title={viewMode === 'archivados' ? 'Restaurar evaluación' : 'Archivar evaluación'}
+        message={
+          viewMode === 'archivados'
+            ? 'La evaluación volverá a estar activa y contará de nuevo en calificaciones, promedios y riesgo académico.'
+            : 'La evaluación dejará de contar en calificaciones, promedios y riesgo académico. Las notas ya registradas no se pierden y se puede restaurar luego.'
+        }
+        confirmLabel={viewMode === 'archivados' ? 'Restaurar' : 'Archivar'}
+        variant={viewMode === 'archivados' ? 'info' : 'warning'}
+        onConfirm={handleToggleArchivoConfirmado}
         onCancel={() => setConfirmModal({ open: false, id: null })}
       />
     </div>

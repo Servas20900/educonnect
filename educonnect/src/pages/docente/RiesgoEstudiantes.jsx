@@ -272,7 +272,9 @@ export default function RiesgoEstudiantes() {
       </div>
 
       {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-200/40 backdrop-blur-[1px] p-4">
+        // z-[1300] para quedar por encima del AppBar/Drawer de MUI (z-index 1100/1200),
+        // igual que el resto de los modales del sistema (Dialog de MUI usa 1300).
+        <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-200/40 backdrop-blur-[1px] p-4">
           <div className="w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>

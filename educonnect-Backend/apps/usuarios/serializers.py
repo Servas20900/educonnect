@@ -18,7 +18,9 @@ class PersonaSerializerMini(serializers.ModelSerializer):
 
     class Meta:
         model = PersonasPersona
-        fields = ['id', 'nombre', 'primer_apellido', 'segundo_apellido', 'identificacion', 'nombre_completo']
+        # 'activo' es imprescindible: el frontend usa persona.activo para separar
+        # las pestañas de "Activos" vs "Archivados" en Docentes/Estudiantes.
+        fields = ['id', 'nombre', 'primer_apellido', 'segundo_apellido', 'identificacion', 'nombre_completo', 'activo']
 
     def get_nombre_completo(self, obj):
         return f"{obj.nombre} {obj.primer_apellido} {obj.segundo_apellido}".strip()

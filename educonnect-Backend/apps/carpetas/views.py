@@ -130,7 +130,14 @@ def _urls_descarga_documento(documento):
             if version:
                 options['version'] = version
 
-            generated_url, _ = cloudinary_url(public_id, **options)
+            # Si Cloudinary no está configurado (p. ej. USE_CLOUDINARY=False en
+            # desarrollo local) cloudinary_url() lanza ValueError incluso solo
+            # para construir el string — no debe tumbar la descarga completa,
+            # simplemente se descarta ese candidato y se sigue con los demás.
+            try:
+                generated_url, _ = cloudinary_url(public_id, **options)
+            except Exception:
+                continue
             agregar(generated_url)
 
     return candidatos
@@ -425,8 +432,10 @@ class DocumentoRepositorioDownloadView(APIView):
         content, remote_content_type = _leer_archivo_local(documento)
         errores_descarga = []
 
-        # Intento 1: URLs directas y transformadas.
-        for url_descarga in _urls_descarga_documento(documento):
+        # Intento 1: URLs directas y transformadas (solo si no se encontró ya
+        # localmente; si no, un candidato remoto podría sobreescribir con None
+        # un contenido que ya se había leído bien del disco).
+        for url_descarga in [] if content else _urls_descarga_documento(documento):
             parsed = urlparse(str(url_descarga or ''))
             if parsed.scheme not in {'http', 'https'}:
                 continue

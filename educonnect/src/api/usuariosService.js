@@ -53,6 +53,16 @@ export const deleteDocente = async (id) => {
   }
 };
 
+export const reactivateDocente = async (id) => {
+  try {
+    const response = await api.post(`api/v1/usuarios/docentes/${id}/reactivar/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error reactivating docente:', error);
+    throw error;
+  }
+};
+
 export const fetchCatalogoDocentes = async () => {
   try {
     const response = await api.get('api/v1/usuarios/docentes/catalogo/');
@@ -137,6 +147,16 @@ export const deleteEstudiante = async (id) => {
   }
 };
 
+export const reactivateEstudiante = async (id) => {
+  try {
+    const response = await api.post(`api/v1/usuarios/estudiantes/${id}/reactivar/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error reactivating estudiante:', error);
+    throw error;
+  }
+};
+
 export const fetchEstudiantesPorGrupo = async (grupoId, params = {}) => {
   try {
     const response = await api.get('api/v1/usuarios/estudiantes/por_grupo/', {
@@ -214,9 +234,21 @@ export const deleteGrupo = async (id) => {
   }
 };
 
-export const fetchGruposPorGrado = async () => {
+export const activarGrupo = async (id) => {
   try {
-    const response = await api.get('api/v1/usuarios/grupos/por_grado/');
+    const response = await api.post(`api/v1/usuarios/grupos/${id}/activar/`);
+    return response.data;
+  } catch (error) {
+    console.error('Error activating grupo:', error);
+    throw error;
+  }
+};
+
+export const fetchGruposPorGrado = async (params = {}) => {
+  try {
+    const response = await api.get('api/v1/usuarios/grupos/por_grado/', {
+      params,
+    });
     return response.data;
   } catch (error) {
     console.error('Error fetching grupos por grado:', error);

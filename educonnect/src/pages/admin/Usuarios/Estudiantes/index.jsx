@@ -10,8 +10,8 @@ import {
   FormModal,
   StatusBadge,
   BtnEditar,
-  BtnArchivar,
-  BtnReactivar,
+  BtnDesactivar,
+  BtnActivar,
   Toast,
 } from '../../../../components/ui';
 import useToast from '../../../../hooks/useToast';
@@ -20,6 +20,7 @@ import {
   createEstudiante,
   updateEstudiante,
   deleteEstudiante,
+  reactivateEstudiante,
   importarEstudiantes,
   fetchGrupos,
 } from '../../../../api/usuariosService';
@@ -85,7 +86,7 @@ export default function Estudiantes() {
   const loadEstudiantes = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const data = await fetchEstudiantesUsuarios();
+      const data = await fetchEstudiantesUsuarios({ incluir_archivados: true });
       const list = Array.isArray(data) ? data : data?.results || [];
       setEstudiantes(list);
     } catch (error) {
@@ -176,7 +177,7 @@ export default function Estudiantes() {
     }
   };
 
-  const handleArchive = async () => {
+  const handleToggleActive = async () => {
     const estudiante = confirmModal.estudiante;
     const personaId = getPersonaId(estudiante);
     if (!personaId) {
@@ -185,8 +186,13 @@ export default function Estudiantes() {
     }
 
     try {
-      await deleteEstudiante(personaId);
-      showSuccess(`Estudiante ${activeTab === 'activos' ? 'archivado' : 'reactivado'} correctamente.`);
+      if (activeTab === 'activos') {
+        await deleteEstudiante(personaId);
+        showSuccess('Estudiante desactivado correctamente.');
+      } else {
+        await reactivateEstudiante(personaId);
+        showSuccess('Estudiante activado correctamente.');
+      }
       setConfirmModal({ open: false, estudiante: null });
       await loadEstudiantes();
     } catch (error) {
@@ -290,8 +296,8 @@ export default function Estudiantes() {
         <div className="flex justify-end gap-2">
           <BtnEditar onClick={() => openEditForm(row)} />
           {activeTab === 'activos'
-            ? <BtnArchivar onClick={() => setConfirmModal({ open: true, estudiante: row })} />
-            : <BtnReactivar onClick={() => setConfirmModal({ open: true, estudiante: row })} />
+            ? <BtnDesactivar onClick={() => setConfirmModal({ open: true, estudiante: row })} />
+            : <BtnActivar onClick={() => setConfirmModal({ open: true, estudiante: row })} />
           }
         </div>
       ),
@@ -331,7 +337,7 @@ export default function Estudiantes() {
         viewMode={activeTab}
         onChange={setActiveTab}
         activeLabel="Estudiantes Activos"
-        archivedLabel="Estudiantes Archivados"
+        archivedLabel="Estudiantes Inactivos"
         activeCount={estudiantes.filter((e) => {
           const persona = typeof e.persona === 'object' ? e.persona : {};
           return persona.activo !== false && persona.activo !== 'false';
@@ -439,15 +445,15 @@ export default function Estudiantes() {
 
       <ConfirmModal
         open={confirmModal.open}
-        title={activeTab === 'activos' ? 'Archivar Estudiante' : 'Reactivar Estudiante'}
+        title={activeTab === 'activos' ? 'Desactivar Estudiante' : 'Activar Estudiante'}
         message={
           activeTab === 'activos'
             ? 'Este estudiante pasará a estado inactivo y dejará de aparecer en listados activos.'
             : 'Este estudiante volverá a estar activo en el sistema.'
         }
         variant={activeTab === 'activos' ? 'warning' : 'info'}
-        confirmLabel={activeTab === 'activos' ? 'Archivar' : 'Reactivar'}
-        onConfirm={handleArchive}
+        confirmLabel={activeTab === 'activos' ? 'Desactivar' : 'Activar'}
+        onConfirm={handleToggleActive}
         onCancel={() => setConfirmModal({ open: false, estudiante: null })}
       />
 

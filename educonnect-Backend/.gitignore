@@ -1,0 +1,47 @@
+# Dependencias
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Entorno - NUNCA commitear
+.env
+.env.*
+!.env.example
+!educonnect/.env.production
+
+# Backend .env real (tiene secretos)
+educonnect-Backend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+
+# Django
+media/
+staticfiles/
+*.sqlite3
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+educonnect-Backend/.env.example
+*.example

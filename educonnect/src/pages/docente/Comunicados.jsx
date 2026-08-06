@@ -10,8 +10,7 @@ import { ConfirmModal, DataTable, PageHeader, BtnEditar, BtnArchivar, BtnActivar
 
 const initialForm = {
   titulo: '',
-  contenido: '',
-  fecha_vigencia: ''
+  contenido: ''
 };
 
 const formatDate = (value) => {
@@ -89,18 +88,13 @@ export default function Comunicados() {
     setError('');
     setMensaje('');
     try {
-      const normalizedFecha = form.fecha_vigencia ? new Date(form.fecha_vigencia) : null;
-      if (form.fecha_vigencia && Number.isNaN(normalizedFecha.getTime())) {
-        setError('La fecha de vigencia no tiene un formato válido.');
-        setSubmitting(false);
-        return;
-      }
-
       const payload = {
         ...form,
         tipo_comunicado: 'aviso',
         destinatarios: ['estudiantes', 'encargados'],
-        fecha_vigencia: normalizedFecha ? normalizedFecha.toISOString() : null
+        // No se le pide fecha al docente: los comunicados nuevos siempre
+        // se marcan con la fecha/hora actual. Al editar no se toca (PATCH).
+        ...(editingId ? {} : { fecha_vigencia: new Date().toISOString() }),
       };
 
       if (editingId) {
@@ -131,10 +125,7 @@ export default function Comunicados() {
     setMensaje('Editando comunicado seleccionado.');
     setForm({
       titulo: comunicado.titulo || '',
-      contenido: comunicado.contenido || '',
-      fecha_vigencia: comunicado.fecha_vigencia
-        ? new Date(comunicado.fecha_vigencia).toISOString().slice(0, 16)
-        : ''
+      contenido: comunicado.contenido || ''
     });
   };
 
@@ -237,14 +228,6 @@ export default function Comunicados() {
         <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
           Destinatarios automáticos: Estudiantes y Encargados
         </div>
-
-        <input
-          type="datetime-local"
-          name="fecha_vigencia"
-          value={form.fecha_vigencia}
-          onChange={handleFieldChange}
-          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm md:w-72"
-        />
 
         <button
           type="submit"

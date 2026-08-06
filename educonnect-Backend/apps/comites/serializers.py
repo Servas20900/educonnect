@@ -13,6 +13,7 @@ from apps.databaseModels.models import (
 )
 from django.utils import timezone
 from django.db import transaction
+from core.permissions import invalidate_user_roles_cache
 
 
 COMITE_CARGOS_PERMITIDOS = {
@@ -33,11 +34,16 @@ def _ensure_committee_role_for_persona(persona, asignado_por=None):
     if not rol_comite:
         return
 
-    AuthUsuarioRol.objects.get_or_create(
+    _, creado = AuthUsuarioRol.objects.get_or_create(
         usuario=usuario,
         rol=rol_comite,
         defaults={'asignado_por': asignado_por},
     )
+    if creado:
+        # Sin esto, el permiso IsComiteUser sigue viendo los roles viejos
+        # (cacheados 60s) y el usuario recibe 403 justo después de que lo
+        # agregan al comité, hasta que la caché expira sola.
+        invalidate_user_roles_cache(usuario.pk)
 
 
 def _remove_committee_role_if_unused(persona):
@@ -48,10 +54,12 @@ def _remove_committee_role_if_unused(persona):
     if ComitesMiembro.objects.filter(persona=persona, activo=True).exists():
         return
 
-    AuthUsuarioRol.objects.filter(
+    eliminados, _ = AuthUsuarioRol.objects.filter(
         usuario=usuario,
         rol__nombre__iexact='comite'
     ).delete()
+    if eliminados:
+        invalidate_user_roles_cache(usuario.pk)
 
 
 class PersonaSimpleSerializer(serializers.ModelSerializer):
@@ -294,9 +302,24 @@ class ComitesActaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'elaborada_por', 'fecha_elaboracion', 'aprobada_por', 'fecha_aprobacion']
 
+    def validate_estado(self, value):
+        # Un acta solo tiene dos estados reales: activo o archivado. El
+        # archivado/desarchivado se maneja con las acciones dedicadas
+        # (archivar/desarchivar), no editando este campo directamente.
+        permitidos = {'activo', 'archivado'}
+        if str(value or '').strip().lower() not in permitidos:
+            raise serializers.ValidationError(
+                "Estado inválido. Usa las acciones 'archivar'/'desarchivar' en vez de editar el estado directamente."
+            )
+        return value
+
     def create(self, validated_data):
         request = self.context.get('request')
-        validated_data.setdefault('estado', 'borrador')
+        # Solo dos estados tienen sentido para un acta: activo/archivado (ver
+        # las acciones archivar/desarchivar). Se fuerza siempre a 'activo' al
+        # crear, sin importar qué mande el cliente — nunca hubo un flujo real
+        # de "aprobación" que sacara a un acta de 'borrador'.
+        validated_data['estado'] = 'activo'
         validated_data['fecha_elaboracion'] = timezone.now()
         if request and request.user.is_authenticated:
             validated_data['elaborada_por'] = request.user

@@ -10,7 +10,7 @@ from .serializers import (
     UsuarioListSerializer, UsuarioDetailSerializer, UsuarioUpdateSerializer,
     RolSerializer, RolUpdateSerializer, PermisoSerializer, ModuloSerializer
 )
-from core.permissions import IsAuthenticated, IsAdmin
+from core.permissions import IsAuthenticated, IsAdmin, invalidate_user_roles_cache
 from core.responses import success_response, error_response
 
 
@@ -37,10 +37,26 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def toggle_active(self, request, pk=None):
-        """Activa o desactiva un usuario"""
+        """
+        Activa o desactiva un usuario.
+
+        Usa la misma función central que Docentes/Estudiantes
+        (core.utils.set_persona_active_state) para que el cambio se refleje
+        igual en persona.activo y estado_laboral/estado_estudiante — así una
+        cuenta desactivada aquí no sigue apareciendo "Activa" en las pantallas
+        de Usuarios (Docentes/Estudiantes), y viceversa.
+        """
         usuario = self.get_object()
-        usuario.is_active = not usuario.is_active
-        usuario.save()
+        nuevo_estado = not usuario.is_active
+
+        if usuario.persona:
+            from core.utils import set_persona_active_state
+            set_persona_active_state(usuario.persona, nuevo_estado)
+            usuario.refresh_from_db()
+        else:
+            usuario.is_active = nuevo_estado
+            usuario.save(update_fields=['is_active'])
+
         return Response({
             'message': f'Usuario {"activado" if usuario.is_active else "desactivado"} exitosamente',
             'is_active': usuario.is_active
@@ -77,6 +93,11 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 {'message': f'El usuario ya tiene el rol {rol.nombre}'}
             )
 
+        # Sin esto, los permisos basados en rol (IsComiteUser, IsAuxiliarUser,
+        # etc.) siguen usando la lista de roles vieja hasta 60s después de
+        # asignar el nuevo rol, y el usuario ve 403 en el módulo recién habilitado.
+        invalidate_user_roles_cache(usuario.pk)
+
         return Response(
             {'message': f'Rol {rol.nombre} agregado exitosamente'}
         )
@@ -103,6 +124,8 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 {'error': 'El usuario no tiene ese rol'},
                 status=status.HTTP_404_NOT_FOUND
             )
+
+        invalidate_user_roles_cache(usuario.pk)
 
         return Response(
             {'message': 'Rol removido exitosamente'}
