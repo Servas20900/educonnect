@@ -246,7 +246,7 @@ export default function GestionPermisosModulos() {
           if (!lista.length) return <StatusBadge status="Sin rol" size="sm" />
 
           return (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-col items-start gap-1">
               {lista.map((rol) => (
                 <StatusBadge key={rol.id ?? rol} status={rol.nombre ?? rol} size="sm" />
               ))}

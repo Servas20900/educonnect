@@ -39,9 +39,15 @@ def _generar_codigo_empleado():
 
 
 def _generar_codigo_estudiante():
-    """Genera código único para estudiante: EST-XXXX"""
-    estudiante_count = PersonasEstudiante.objects.all().count() + 1
-    return f"EST-{estudiante_count:04d}"
+    """Genera código único para estudiante: EST-XXXXX (mismo formato/lógica que
+    apps.usuarios.views._crear_estudiante_usuario, para no volver a generar
+    códigos con padding inconsistente que colisionan entre sí)."""
+    num = 0
+    for codigo in PersonasEstudiante.objects.values_list('codigo_estudiante', flat=True):
+        match = re.search(r'(\d+)$', str(codigo or ''))
+        if match:
+            num = max(num, int(match.group(1)))
+    return f"EST-{num + 1:05d}"
 
 
 def _generar_codigo_grupo_desde_nombre(nombre):
@@ -395,11 +401,16 @@ def _crear_estudiante_usuario(identificacion, nombre, primer_apellido, segundo_a
             },
         )
 
-        ultimo = PersonasEstudiante.objects.order_by('-codigo_estudiante').values_list('codigo_estudiante', flat=True).first()
-        try:
-            num = int(str(ultimo or '0').split('-')[-1]) + 1
-        except ValueError:
-            num = PersonasEstudiante.objects.count() + 1
+        # No usar order_by('-codigo_estudiante') ni tomar solo el último: es un
+        # ordenamiento de texto y códigos con distinto padding (p. ej. "EST-0081"
+        # vs "EST-00082") lo rompen, generando colisiones con el unique constraint.
+        # Se calcula el máximo numérico real recorriendo todos los códigos.
+        num = 0
+        for codigo in PersonasEstudiante.objects.values_list('codigo_estudiante', flat=True):
+            match = re.search(r'(\d+)$', str(codigo or ''))
+            if match:
+                num = max(num, int(match.group(1)))
+        num += 1
 
         est, _ = PersonasEstudiante.objects.get_or_create(
             persona=persona,

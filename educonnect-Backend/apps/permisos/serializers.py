@@ -19,13 +19,16 @@ class UsuarioListSerializer(serializers.ModelSerializer):
     """Serializer para listar usuarios con información básica"""
     persona = PersonaSimpleSerializer(read_only=True)
     rol = serializers.SerializerMethodField()
-    
+    roles = serializers.SerializerMethodField()
+
     class Meta:
         model = AuthUsuario
-        fields = ['id', 'username', 'email', 'is_active', 'persona', 'rol', 'fecha_registro']
-    
+        fields = ['id', 'username', 'email', 'is_active', 'persona', 'rol', 'roles', 'fecha_registro']
+
     def get_rol(self, obj):
-        # Obtiene el primer rol del usuario (si tiene varios)
+        # Obtiene el primer rol del usuario (si tiene varios). Se mantiene
+        # por compatibilidad: Horarios/ConsultaHorarios filtran por
+        # usuario.rol.nombre para armar la lista de docentes.
         usuario_rol = AuthUsuarioRol.objects.filter(usuario=obj).first()
         if usuario_rol and usuario_rol.rol:
             return {
@@ -34,6 +37,13 @@ class UsuarioListSerializer(serializers.ModelSerializer):
                 'tipo_rol': usuario_rol.rol.tipo_rol
             }
         return None
+
+    def get_roles(self, obj):
+        # Todos los roles del usuario, para pantallas (Permisos y Roles) que
+        # necesitan mostrarlos/editarlos completos, no solo el primero.
+        roles_usuario = AuthUsuarioRol.objects.filter(usuario=obj).select_related('rol')
+        return [{'id': ur.rol.id, 'nombre': ur.rol.nombre, 'tipo_rol': ur.rol.tipo_rol}
+                for ur in roles_usuario if ur.rol]
 
 
 class UsuarioDetailSerializer(serializers.ModelSerializer):

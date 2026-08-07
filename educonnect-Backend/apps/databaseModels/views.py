@@ -1,3 +1,4 @@
+import re
 from django.shortcuts import render
 from .serializers import *
 from rest_framework import viewsets, permissions, status, response, filters
@@ -453,15 +454,15 @@ class GrupoEstudiantesImportView(APIView):
 
 
 def _generar_codigo_estudiante():
-    ultimo = PersonasEstudiante.objects.order_by("-codigo_estudiante").values_list("codigo_estudiante", flat=True).first()
-    if ultimo:
-        try:
-            num = int(str(ultimo).split("-")[-1]) + 1
-        except ValueError:
-            num = PersonasEstudiante.objects.count() + 1
-    else:
-        num = 1
-    return f"EST-{num:05d}"
+    # No usar order_by("-codigo_estudiante"): es un ordenamiento de texto y
+    # códigos con distinto padding (p. ej. "EST-0081" vs "EST-00082") lo
+    # rompen, generando colisiones con el unique constraint.
+    num = 0
+    for codigo in PersonasEstudiante.objects.values_list("codigo_estudiante", flat=True):
+        match = re.search(r"(\d+)$", str(codigo or ""))
+        if match:
+            num = max(num, int(match.group(1)))
+    return f"EST-{num + 1:05d}"
 
 
 def _crear_usuario_estudiante(identificacion, nombre, primer_apellido, segundo_apellido="", email="", password=None):

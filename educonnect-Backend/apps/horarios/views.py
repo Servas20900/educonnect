@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, response, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from apps.databaseModels.models import HorariosHorario, AuthUsuarioRol, DocumentosDocumento
+from apps.usuarios.views import _asegurar_docente_por_persona_id
 from .serializers import ReadSerializerHorariosHorario, WriteSerializerHorariosHorario
 from django.db.models import Case, Value, When, IntegerField
 from django.contrib.contenttypes.models import ContentType
@@ -84,10 +85,30 @@ class ViewHorariosHorario(viewsets.ModelViewSet):
             return WriteSerializerHorariosHorario
         return ReadSerializerHorariosHorario
 
+    def create(self, request, *args, **kwargs):
+        # El dropdown de docente en el form viene de la lista genérica de
+        # Usuarios con rol "docente" (persona_id), no de PersonasDocente —
+        # si a esa persona nunca se le materializó su registro de docente
+        # (p. ej. se le asignó el rol pero nadie abrió la pantalla de
+        # Docentes todavía), el FK persona_id no existe aún y el
+        # PrimaryKeyRelatedField del serializer falla con "Invalid pk".
+        # Se materializa aquí antes de validar, igual que ya se hace para
+        # docente_guia en AcademicoGrupo.
+        docente_persona_id = request.data.get('docente')
+        if docente_persona_id:
+            _asegurar_docente_por_persona_id(docente_persona_id)
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         if not self._es_admin(self.request.user):
             raise PermissionDenied('Solo administración puede crear horarios.')
         serializer.save(creado_por=self.request.user, estado='Publicado')
+
+    def update(self, request, *args, **kwargs):
+        docente_persona_id = request.data.get('docente')
+        if docente_persona_id:
+            _asegurar_docente_por_persona_id(docente_persona_id)
+        return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         if not self._es_admin(self.request.user):
